@@ -37,7 +37,7 @@ function WelcomeScreen() {
 type ExportType = 'note' | 'topic' | 'all';
 
 export function NoteDisplay() {
-  const { activeNote, updateNote, isDirty, setIsDirty, isSaving, notes, activeTopic, topics } = useNotes();
+  const { activeNote, updateNote, isDirty, setIsDirty, isSaving, notes, activeTopic, topics, getAllNotes } = useNotes();
   const { toast } = useToast();
   
   const [title, setTitle] = useState(activeNote?.title || '');
@@ -47,15 +47,20 @@ export function NoteDisplay() {
   const [exportType, setExportType] = useState<ExportType>('note');
 
   useEffect(() => {
-    if (activeNote) {
+    // Only update local state from activeNote if there are no unsaved changes.
+    // This prevents overwriting the user's input during autosave.
+    if (activeNote && !isDirty) {
       setTitle(activeNote.title);
       setContent(activeNote.content);
-      setIsDirty(false);
-    } else {
-      setTitle('');
-      setContent('');
     }
-  }, [activeNote, setIsDirty]);
+    // If activeNote is null (e.g., topic deleted), clear the fields.
+    if (!activeNote) {
+        setTitle('');
+        setContent('');
+        setIsDirty(false);
+    }
+  }, [activeNote, isDirty, setIsDirty]);
+
 
   // Debounce saving
   useEffect(() => {
@@ -101,7 +106,7 @@ export function NoteDisplay() {
     setIsExporting(true);
     setIsExportDialogOpen(false);
     try {
-      let notesToExport = [];
+      let notesToExport: any[] = [];
       let exportFilename = "CodeNote-Export.pdf";
 
       if (exportType === 'note' && activeNote && activeTopic) {
@@ -111,31 +116,8 @@ export function NoteDisplay() {
         notesToExport = notes.map(note => ({ ...note, topicName: activeTopic.name }));
         exportFilename = `${activeTopic.name}-Notes.pdf`;
       } else if (exportType === 'all') {
-         // This is a simplified approach. A more robust implementation would fetch all notes
-         // for all topics, which might require changes in NotesContext. For now, we'll
-         // assume we want to export all currently loaded notes associated with their topics.
-         const allNotesWithTopics = topics.flatMap(topic => 
-            notes.filter(n => n.topicId === topic.id).map(note => ({ ...note, topicName: topic.name }))
-         );
-         // This logic is flawed if notes are only loaded for the active topic.
-         // A proper implementation needs to fetch all notes.
-         // For this example, let's just export the notes from the current topic as a proxy for "all".
-         // A full implementation would be much more complex.
-         // Let's refine this to be more accurate based on what we have.
-         // A more correct "all" would require fetching all notes for all topics.
-         // Let's assume for now `notes` context could be expanded to hold all notes, or we fetch here.
-         // For simplicity, let's just export the current topic's notes when "all" is selected.
-         // This is a placeholder for a more complex data fetching strategy.
-         notesToExport = notes.map(note => ({ ...note, topicName: activeTopic?.name || 'Unknown Topic' }));
-         exportFilename = `All-Notes.pdf`;
-
-         // A better "all" implementation:
-         // This requires fetching all notes for all topics, which we don't do by default.
-         // We will simulate it by just exporting the current topic's notes to avoid major refactoring.
-         if (activeTopic) {
-            notesToExport = notes.map(note => ({ ...note, topicName: activeTopic.name }));
-            exportFilename = `Full-Notebook.pdf`;
-         }
+         notesToExport = await getAllNotes();
+         exportFilename = `Full-Notebook.pdf`;
       }
 
       if (notesToExport.length > 0) {
