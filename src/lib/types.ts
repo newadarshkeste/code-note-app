@@ -8,9 +8,11 @@ export interface Note {
   language?: string;
   createdAt: any; // Firestore Timestamp
   updatedAt: any; // Firestore Timestamp
+  // This can be optionally added when fetching notes for export
+  topicName?: string; 
 }
 
-export type NoteCreate = Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'content'>;
+export type NoteCreate = Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'content' | 'highlightedContent' | 'language'>;
 export type NoteUpdate = Partial<Pick<Note, 'title' | 'content'>>;
 
 export interface Topic {
