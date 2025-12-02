@@ -1,9 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { useAuth as useFirebaseAuth, useFirebase, useFirestore } from '@/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut, AuthError } from 'firebase/auth';
+import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -21,14 +21,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) {
+        setLoading(false);
+        return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // User is signed in, see if we need to create a user document
         const userRef = doc(firestore, 'users', user.uid);
-        const userSnap = await require('firebase/firestore').getDoc(userRef);
+        const userSnap = await getDoc(userRef);
         if (!userSnap.exists()) {
           // New user, create a document for them
           await setDoc(userRef, {
+            id: user.uid,
             displayName: user.displayName,
             email: user.email,
             photoURL: user.photoURL,
@@ -48,15 +53,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [auth, firestore]);
 
   const loginWithGoogle = async () => {
+    if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
     } catch (error) {
-      console.error("Error during Google sign-in:", error);
+      // Don't log an error if the user closes the popup
+      if ((error as AuthError).code !== 'auth/popup-closed-by-user') {
+        console.error("Error during Google sign-in:", error);
+      }
     }
   };
 
   const logout = async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
     } catch (error) {
