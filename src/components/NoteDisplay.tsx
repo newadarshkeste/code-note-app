@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useNotes } from '@/context/NotesContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -9,7 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Save, Loader2, Code, Type, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { CodeEditor } from '@/components/CodeEditor';
-import { RichTextEditor } from '@/components/RichTextEditor';
+import { Skeleton } from './ui/skeleton';
+
+const RichTextEditor = dynamic(() => import('@/components/RichTextEditor').then(mod => mod.RichTextEditor), {
+  ssr: false,
+  loading: () => <Skeleton className="h-full w-full rounded-none" />,
+});
+
 
 function WelcomeScreen() {
   return (
