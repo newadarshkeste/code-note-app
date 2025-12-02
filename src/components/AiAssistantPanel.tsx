@@ -87,7 +87,7 @@ export function AiAssistantPanel() {
                     <div key={index} className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}>
                       {message.role === 'assistant' && <Bot className="h-5 w-5 text-primary flex-shrink-0" />}
                       <div className={`rounded-lg p-3 text-sm ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                        <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: message.content.replace(/\n/g, '<br />') }} />
+                        <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: message.content }} />
                       </div>
                        {message.role === 'user' && <User className="h-5 w-5 text-muted-foreground flex-shrink-0" />}
                     </div>

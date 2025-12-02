@@ -135,38 +135,40 @@ export function TopicSidebar() {
             return (
               <SidebarMenuItem key={topic.id} className="w-full">
                 <Collapsible defaultOpen={!!searchTerm}>
-                  <div className="flex items-center group">
+                  <div className="flex items-center group w-full">
                     <CollapsibleTrigger asChild>
-                      <SidebarMenuButton className="w-full justify-start">
+                      <SidebarMenuButton className="flex-grow justify-start overflow-hidden">
                         <div className="flex items-center gap-2 flex-grow overflow-hidden">
-                          <Folder className="text-accent" />
+                          <Folder className="text-accent shrink-0" />
                           <span className="truncate">{topic.name}</span>
                         </div>
                         <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 opacity-50 hover:opacity-100">
-                          <Trash2 className="h-4 w-4 text-destructive"/>
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently delete the topic "{topic.name}" and all its notes. This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteTopic(topic.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => openNewNoteDialog(topic.id)}>
-                      <FilePlus2 className="h-4 w-4"/>
-                    </Button>
+                    <div className="flex-shrink-0">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 opacity-50 hover:opacity-100">
+                            <Trash2 className="h-4 w-4 text-destructive"/>
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete the topic "{topic.name}" and all its notes. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteTopic(topic.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => openNewNoteDialog(topic.id)}>
+                        <FilePlus2 className="h-4 w-4"/>
+                      </Button>
+                    </div>
                   </div>
                   <CollapsibleContent>
                     <SidebarMenuSub>
@@ -181,7 +183,7 @@ export function TopicSidebar() {
                                 'bg-sidebar-accent text-sidebar-accent-foreground'
                             )}
                           >
-                            <File className="h-4 w-4" />
+                            <File className="h-4 w-4 shrink-0" />
                             <span className="truncate">{note.title}</span>
                           </SidebarMenuSubButton>
                           <AlertDialog>

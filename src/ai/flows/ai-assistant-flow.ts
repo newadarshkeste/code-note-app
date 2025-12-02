@@ -19,7 +19,7 @@ const AiAssistantInputSchema = z.object({
 export type AiAssistantInput = z.infer<typeof AiAssistantInputSchema>;
 
 const AiAssistantOutputSchema = z.object({
-  answer: z.string().describe('The AI\'s answer to the user\'s prompt.'),
+  answer: z.string().describe('The AI\'s answer to the user\'s prompt, formatted in HTML.'),
 });
 
 export type AiAssistantOutput = z.infer<typeof AiAssistantOutputSchema>;
@@ -39,8 +39,8 @@ Your task is to understand the user's request and provide a helpful answer.
 Follow these rules:
 1.  Analyze the user's prompt to understand their intent (e.g., "explain this function", "what does this code do?", "how can I improve this?").
 2.  Provide a clear and concise answer to the user's question based on the provided code.
-3.  Format your answer using markdown for readability if necessary (e.g., for code blocks, lists).
-4.  Your output must ONLY be the answer, formatted as a raw string inside the 'answer' JSON field. Do not add any extra explanations.
+3.  Format your answer using markdown. Your final output MUST be rendered as a single HTML string. For example, use <p> for paragraphs, <ul> and <li> for lists, <pre><code> for code blocks, etc.
+4.  Your output must ONLY be the answer, formatted as a raw HTML string inside the 'answer' JSON field. Do not add any extra explanations or markdown backticks.
 
 User Prompt:
 "{{{prompt}}}"
