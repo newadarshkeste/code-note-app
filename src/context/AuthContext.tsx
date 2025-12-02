@@ -1,14 +1,27 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, GoogleAuthProvider, signInWithRedirect, signOut, AuthError, getRedirectResult } from 'firebase/auth';
+import { 
+  onAuthStateChanged, 
+  User, 
+  GoogleAuthProvider, 
+  signInWithRedirect, 
+  signOut, 
+  AuthError, 
+  getRedirectResult,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
+} from 'firebase/auth';
 import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   loginWithGoogle: () => Promise<void>;
+  signUpWithEmail: (email: string, password: string) => Promise<boolean>;
+  signInWithEmail: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
@@ -19,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!auth || !firestore) {
@@ -60,10 +74,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userSnap = await getDoc(userRef);
         if (!userSnap.exists()) {
           // New user, create a document for them.
-          // This acts as a fallback for getRedirectResult.
+          // This handles email signups and acts as a fallback for getRedirectResult.
           await setDoc(userRef, {
             id: user.uid,
-            displayName: user.displayName,
+            displayName: user.displayName || user.email, // Fallback for email signup
             email: user.email,
             photoURL: user.photoURL,
             createdAt: serverTimestamp(),
@@ -93,6 +107,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const signUpWithEmail = async (email: string, password: string): Promise<boolean> => {
+    if (!auth) return false;
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      return true;
+    } catch (error) {
+      const authError = error as AuthError;
+      toast({
+        variant: 'destructive',
+        title: 'Sign Up Failed',
+        description: authError.message || 'An unexpected error occurred.',
+      });
+      return false;
+    }
+  };
+
+  const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
+    if (!auth) return false;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      return true;
+    } catch (error) {
+      const authError = error as AuthError;
+      toast({
+        variant: 'destructive',
+        title: 'Sign In Failed',
+        description: authError.message || 'Invalid credentials. Please try again.',
+      });
+      return false;
+    }
+  };
+
   const logout = async () => {
     if (!auth) return;
     try {
@@ -102,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value = { user, loading, loginWithGoogle, logout };
+  const value = { user, loading, loginWithGoogle, signUpWithEmail, signInWithEmail, logout };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

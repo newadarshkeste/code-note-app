@@ -1,8 +1,14 @@
 'use client';
 
+import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from './ui/button';
 import { CodeNoteLogo } from './CodeNoteLogo';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Loader2 } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 
 const GoogleIcon = (props: React.ComponentProps<'svg'>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}>
@@ -14,29 +20,134 @@ const GoogleIcon = (props: React.ComponentProps<'svg'>) => (
 );
 
 
+export function LoginForm() {
+    const { signInWithEmail } = useAuth();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        await signInWithEmail(email, password);
+        // Loading state is handled by the global auth loading state now
+        // so we don't need to set it back to false here.
+    };
+    
+    return (
+        <form onSubmit={handleLogin}>
+            <CardContent className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input id="login-email" type="email" placeholder="m@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
+                    <Input id="login-password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
+                </div>
+            </CardContent>
+            <CardFooter className="flex-col gap-4">
+                <Button className="w-full" type="submit" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Sign In
+                </Button>
+            </CardFooter>
+        </form>
+    );
+}
+
+export function SignUpForm() {
+    const { signUpWithEmail } = useAuth();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleSignUp = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        await signUpWithEmail(email, password);
+    };
+
+    return (
+         <form onSubmit={handleSignUp}>
+            <CardContent className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input id="signup-email" type="email" placeholder="m@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <Input id="signup-password" type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} />
+                </div>
+            </CardContent>
+            <CardFooter className="flex-col gap-4">
+                <Button className="w-full" type="submit" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create Account
+                </Button>
+            </CardFooter>
+        </form>
+    );
+}
+
 export function LoginPage() {
-    const { loginWithGoogle } = useAuth();
+    const { loginWithGoogle, loading } = useAuth();
 
     return (
         <div className="flex h-dvh w-screen flex-col items-center justify-center bg-background">
-            <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px] p-8">
+            <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[400px] p-8">
                 <div className="flex flex-col space-y-2 text-center items-center">
                     <CodeNoteLogo />
                     <h1 className="text-2xl font-semibold tracking-tight mt-4">
                         Welcome to CodeNote
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Sign in to continue to your notes
+                        Your personal code snippet organizer.
                     </p>
                 </div>
                 
-                <Button variant="outline" type="button" onClick={loginWithGoogle} className="h-12 text-base">
-                    <GoogleIcon className="mr-2 h-6 w-6" />
+                <Tabs defaultValue="signin" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="signin">Sign In</TabsTrigger>
+                        <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="signin">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Sign In</CardTitle>
+                                <CardDescription>Access your existing account.</CardDescription>
+                            </CardHeader>
+                            <LoginForm />
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="signup">
+                        <Card>
+                             <CardHeader>
+                                <CardTitle>Sign Up</CardTitle>
+                                <CardDescription>Create a new account to get started.</CardDescription>
+                            </CardHeader>
+                            <SignUpForm />
+                        </Card>
+                    </TabsContent>
+                </Tabs>
+                 <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">
+                        Or continue with
+                        </span>
+                    </div>
+                </div>
+
+                <Button variant="outline" type="button" onClick={loginWithGoogle} className="h-12 text-base" disabled={loading}>
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-6 w-6" />}
                     Sign in with Google
                 </Button>
 
                 <p className="px-8 text-center text-sm text-muted-foreground">
-                    By clicking continue, you agree to our{" "}
+                    By continuing, you agree to our{" "}
                     <a
                         href="/terms"
                         className="underline underline-offset-4 hover:text-primary"
