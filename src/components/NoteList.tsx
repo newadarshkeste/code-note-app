@@ -29,11 +29,13 @@ import { File, FilePlus2, Search, Trash2, Pencil, Type, Code } from 'lucide-reac
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Note } from '@/lib/types';
+import { Skeleton } from './ui/skeleton';
 
 export function NoteList() {
     const {
         activeTopic,
-        getNotesByTopic,
+        notes,
+        notesLoading,
         activeNoteId,
         setActiveNoteId,
         addNote,
@@ -48,18 +50,18 @@ export function NoteList() {
     const [renameNote, setRenameNote] = useState<Note | null>(null);
     const [renamingTitle, setRenamingTitle] = useState('');
 
-    const handleAddNote = () => {
+    const handleAddNote = async () => {
         if (newNoteTitle.trim() && activeTopic) {
-            addNote(activeTopic.id, newNoteTitle.trim(), newNoteType);
+            await addNote({ topicId: activeTopic.id, title: newNoteTitle.trim(), type: newNoteType });
             setNewNoteTitle('');
             setNewNoteType('code');
             setIsNoteDialogOpen(false);
         }
     };
 
-    const handleRenameNote = () => {
+    const handleRenameNote = async () => {
         if (renameNote && renamingTitle.trim()) {
-            updateNote(renameNote.id, renamingTitle.trim(), renameNote.content);
+            await updateNote(renameNote.id, { title: renamingTitle.trim() });
             setRenameNote(null);
             setRenamingTitle('');
         }
@@ -73,7 +75,6 @@ export function NoteList() {
         );
     }
     
-    const notes = getNotesByTopic(activeTopic.id);
     const filteredNotes = notes.filter(note =>
         note.title.toLowerCase().includes(noteSearch.toLowerCase())
     );
@@ -85,7 +86,7 @@ export function NoteList() {
                     <h2 className="text-lg font-headline font-semibold truncate" title={activeTopic.name}>{activeTopic.name}</h2>
                 </header>
                 
-                <div className="p-4 flex-shrink-0">
+                <div className="p-4 flex-shrink-0 space-y-4">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -95,9 +96,7 @@ export function NoteList() {
                             onChange={(e) => setNoteSearch(e.target.value)}
                         />
                     </div>
-                </div>
-                 <div className="px-4 pb-4 border-b flex-shrink-0">
-                    <Button
+                     <Button
                         className="w-full justify-center gap-2"
                         onClick={() => setIsNoteDialogOpen(true)}
                     >
@@ -106,53 +105,64 @@ export function NoteList() {
                     </Button>
                 </div>
 
-                <ScrollArea className="flex-grow min-h-0">
+                <ScrollArea className="flex-grow min-h-0 border-t">
                     <nav className="p-4 pt-2">
-                        <ul>
-                            {filteredNotes.map((note) => (
-                                <li key={note.id} className="group flex items-center gap-1">
-                                    <Button
-                                        variant="ghost"
-                                        onClick={() => setActiveNoteId(note.id)}
-                                        className={cn(
-                                            "w-full justify-start gap-2 h-10 text-sm",
-                                            activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent'
-                                        )}
-                                    >
-                                        {note.type === 'code' ? (
-                                            <Code className="h-4 w-4 flex-shrink-0" />
-                                        ) : (
-                                            <Type className="h-4 w-4 flex-shrink-0" />
-                                        )}
-                                        <span className="truncate flex-grow text-left">{note.title}</span>
-                                    </Button>
-                                    <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setRenameNote(note); setRenamingTitle(note.title); }}>
-                                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                        {notesLoading ? (
+                            <div className="space-y-2">
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                        ) : (
+                            <ul>
+                                {filteredNotes.map((note) => (
+                                    <li key={note.id} className="group flex items-center gap-1">
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => setActiveNoteId(note.id)}
+                                            className={cn(
+                                                "w-full justify-start gap-2 h-10 text-sm",
+                                                activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent'
+                                            )}
+                                        >
+                                            {note.type === 'code' ? (
+                                                <Code className="h-4 w-4 flex-shrink-0" />
+                                            ) : (
+                                                <Type className="h-4 w-4 flex-shrink-0" />
+                                            )}
+                                            <span className="truncate flex-grow text-left">{note.title}</span>
                                         </Button>
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                        <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setRenameNote(note); setRenamingTitle(note.title); }}>
+                                                <Pencil className="h-4 w-4 text-muted-foreground" />
                                             </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                This will permanently delete the note "{note.title}". This action cannot be undone.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => deleteNote(note.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                    This will permanently delete the note "{note.title}". This action cannot be undone.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => deleteNote(note.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                         {notes.length === 0 && !notesLoading && (
+                             <p className="text-sm text-center text-muted-foreground pt-4">No notes in this topic.</p>
+                         )}
                     </nav>
                 </ScrollArea>
             </div>

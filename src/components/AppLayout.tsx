@@ -14,11 +14,11 @@ export function AppLayout() {
   return (
     <div className="h-dvh w-screen flex text-foreground bg-background font-body overflow-hidden">
       <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={20} minSize={15} maxSize={25} className="w-[240px] flex-none">
+        <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="w-[240px] flex-none">
           <TopicSidebar />
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={22} minSize={18} maxSize={30} className="w-[260px] flex-none">
+        <ResizablePanel defaultSize={22} minSize={18} maxSize={35} className="w-[260px] flex-none">
           <NoteList />
         </ResizablePanel>
         <ResizableHandle withHandle />
@@ -28,7 +28,7 @@ export function AppLayout() {
                     <NoteDisplay />
                 </ResizablePanel>
                 <ResizableHandle withHandle />
-                <ResizablePanel defaultSize={35} minSize={25}>
+                <ResizablePanel defaultSize={35} minSize={25} maxSize={40}>
                     <AiAssistantPanel />
                 </ResizablePanel>
             </ResizablePanelGroup>

@@ -31,8 +31,7 @@ function WelcomeScreen() {
 }
 
 export function NoteDisplay() {
-  const { activeNote, updateNote, isDirty, setIsDirty } = useNotes();
-  const [isSaving, setIsSaving] = useState(false);
+  const { activeNote, updateNote, isDirty, setIsDirty, isSaving } = useNotes();
   const { toast } = useToast();
   
   const [title, setTitle] = useState(activeNote?.title || '');
@@ -49,6 +48,21 @@ export function NoteDisplay() {
     }
   }, [activeNote, setIsDirty]);
 
+  // Debounce saving
+  useEffect(() => {
+    if (!isDirty || !activeNote) return;
+
+    const handler = setTimeout(() => {
+      handleSave();
+    }, 1500); // Auto-save after 1.5 seconds of inactivity
+
+    return () => {
+      clearTimeout(handler);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, content, isDirty]);
+
+
   const handleContentChange = (newContent: string | undefined) => {
     setContent(newContent || '');
     if (!isDirty) setIsDirty(true);
@@ -61,22 +75,16 @@ export function NoteDisplay() {
 
   const handleSave = async () => {
     if (!activeNote || !isDirty) return;
-    setIsSaving(true);
     try {
-      await updateNote(activeNote.id, title, content);
+      await updateNote(activeNote.id, { title, content });
       setIsDirty(false);
-      toast({
-        title: 'Note Saved',
-        description: `"${title}" has been updated.`,
-      });
+      // Optional: Add a subtle save indicator instead of a toast for autosave
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Error Saving Note',
         description: 'Could not save the note. Please try again.',
       });
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -108,9 +116,9 @@ export function NoteDisplay() {
             </Badge>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-            <Button onClick={handleSave} disabled={isSaving || !isDirty}>
-              {isSaving ? <Loader2 className="animate-spin" /> : <Save className="h-4 w-4" />}
-              <span className="ml-2 hidden md:inline">Save</span>
+            <Button onClick={handleSave} disabled={isSaving || !isDirty} size="sm">
+              {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="h-4 w-4" />}
+              <span className="ml-2 hidden md:inline">{isSaving ? 'Saving...' : 'Save'}</span>
             </Button>
         </div>
       </header>
