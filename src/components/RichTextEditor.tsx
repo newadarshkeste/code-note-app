@@ -137,9 +137,7 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
 export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        codeBlock: false, // We'll configure it separately if needed
-      }),
+      StarterKit.configure(),
       Underline,
       Link.configure({
         openOnClick: false,
