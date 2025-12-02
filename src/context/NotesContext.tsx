@@ -15,10 +15,13 @@ import {
   doc, 
   serverTimestamp,
   where,
-  writeBatch
+  writeBatch,
+  getDocs,
 } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { getHighlightedCode } from '@/app/actions';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 interface NotesContextType {
   topics: Topic[];
@@ -63,7 +66,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   const topicsRef = useMemo(() => user ? collection(firestore, 'users', user.uid, 'topics') : null, [user, firestore]);
-  const notesRef = useMemo(() => user ? collection(firestore, 'users', user.uid, 'notes') : null, [user, firestore]);
+  const notesCollectionRef = useMemo(() => user ? collection(firestore, 'users', user.uid, 'notes') : null, [user, firestore]);
 
   // Fetch topics
   useEffect(() => {
@@ -85,36 +88,40 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
       }
       setTopicsLoading(false);
     }, (error) => {
-      console.error("Error fetching topics:", error);
-      toast({ variant: 'destructive', title: "Error fetching topics" });
-      setTopicsLoading(false);
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: topicsRef.path,
+            operation: 'list',
+        }));
+        setTopicsLoading(false);
     });
 
     return () => unsubscribe();
-  }, [topicsRef, activeTopicId, toast]);
+  }, [topicsRef, activeTopicId]);
 
   // Fetch notes for the active topic
   useEffect(() => {
-    if (!notesRef || !activeTopicId) {
+    if (!notesCollectionRef || !activeTopicId) {
         setNotes([]);
         setNotesLoading(false);
         return;
     }
     setNotesLoading(true);
-    const q = query(notesRef, where('topicId', '==', activeTopicId), orderBy('title', 'asc'));
+    const q = query(notesCollectionRef, where('topicId', '==', activeTopicId), orderBy('title', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedNotes = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Note));
       setNotes(fetchedNotes);
       setNotesLoading(false);
     }, (error) => {
-      console.error("Error fetching notes:", error);
-      toast({ variant: 'destructive', title: "Error fetching notes" });
-      setNotesLoading(false);
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: notesCollectionRef.path,
+            operation: 'list',
+        }));
+        setNotesLoading(false);
     });
 
     return () => unsubscribe();
 
-  }, [notesRef, activeTopicId, toast]);
+  }, [notesCollectionRef, activeTopicId]);
 
   // Reset active note if topic changes
   useEffect(() => {
@@ -122,83 +129,102 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   }, [activeTopicId]);
 
   const addTopic = async (name: string) => {
-    if (!topicsRef) return;
-    try {
-      const docRef = await addDoc(topicsRef, { name, createdAt: serverTimestamp() });
-      setActiveTopicId(docRef.id);
-      toast({ title: 'Topic Created', description: `Successfully created topic: ${name}` });
-    } catch (error) {
-      console.error("Error adding topic: ", error);
-      toast({ variant: 'destructive', title: 'Error Creating Topic' });
-    }
+    if (!topicsRef || !user) return;
+    const newTopicData = { name, createdAt: serverTimestamp(), userId: user.uid };
+    addDoc(topicsRef, newTopicData)
+      .then(docRef => {
+        setActiveTopicId(docRef.id);
+        toast({ title: 'Topic Created', description: `Successfully created topic: ${name}` });
+      })
+      .catch(() => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: topicsRef.path,
+            operation: 'create',
+            requestResourceData: newTopicData
+        }));
+      });
   };
 
   const updateTopic = async (topicId: string, name: string) => {
     if (!user) return;
     const topicDocRef = doc(firestore, 'users', user.uid, 'topics', topicId);
-    try {
-      await updateDoc(topicDocRef, { name });
-      toast({ title: 'Topic Renamed', description: `Topic has been renamed to: ${name}` });
-    } catch (error) {
-      console.error("Error updating topic: ", error);
-      toast({ variant: 'destructive', title: 'Error Renaming Topic' });
-    }
+    const updatedData = { name };
+    updateDoc(topicDocRef, updatedData)
+        .then(() => {
+            toast({ title: 'Topic Renamed', description: `Topic has been renamed to: ${name}` });
+        })
+        .catch(() => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: topicDocRef.path,
+                operation: 'update',
+                requestResourceData: updatedData
+            }));
+        });
   };
 
   const deleteTopic = async (topicId: string) => {
-    if (!user || !notesRef) return;
+    if (!user || !notesCollectionRef) return;
     
-    try {
-      const batch = writeBatch(firestore);
-      
-      // Delete the topic
-      const topicDocRef = doc(firestore, 'users', user.uid, 'topics', topicId);
-      batch.delete(topicDocRef);
-      
-      // Find and delete all notes in that topic
-      const notesQuery = query(notesRef, where('topicId', '==', topicId));
-      const notesSnapshot = await require('firebase/firestore').getDocs(notesQuery);
-      notesSnapshot.forEach(noteDoc => {
-        batch.delete(noteDoc.ref);
-      });
-      
-      await batch.commit();
+    const topicDocRef = doc(firestore, 'users', user.uid, 'topics', topicId);
+    const notesQuery = query(notesCollectionRef, where('topicId', '==', topicId));
 
-      toast({ title: 'Topic Deleted', description: `Successfully deleted topic and its notes.` });
-    } catch (error) {
-        console.error("Error deleting topic: ", error);
-        toast({ variant: 'destructive', title: 'Error Deleting Topic' });
-    }
+    getDocs(notesQuery).then(notesSnapshot => {
+        const batch = writeBatch(firestore);
+        batch.delete(topicDocRef);
+        notesSnapshot.forEach(noteDoc => {
+            batch.delete(noteDoc.ref);
+        });
+        return batch.commit();
+    })
+    .then(() => {
+        toast({ title: 'Topic Deleted', description: `Successfully deleted topic and its notes.` });
+    })
+    .catch((error) => {
+        // This could fail on the getDocs or the commit. We'll report the most likely one.
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: topicDocRef.path,
+            operation: 'delete',
+        }));
+    });
   };
 
   const addNote = async (note: NoteCreate) => {
-    if (!notesRef) return;
-    try {
-      const content = note.type === 'code' ? `// Start writing your ${note.title} note here...` : `<p>Start writing your ${note.title} note here...</p>`;
-      const docRef = await addDoc(notesRef, { 
+    if (!notesCollectionRef || !user) return;
+    const content = note.type === 'code' ? `// Start writing your ${note.title} note here...` : `<p>Start writing your ${note.title} note here...</p>`;
+    const newNoteData = { 
         ...note, 
         content,
+        userId: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
-      setActiveNoteId(docRef.id);
-      toast({ title: 'Note Created', description: `Successfully created note: ${note.title}` });
-    } catch (error) {
-      console.error("Error adding note: ", error);
-      toast({ variant: 'destructive', title: 'Error Creating Note' });
-    }
+    };
+    addDoc(notesCollectionRef, newNoteData)
+        .then(docRef => {
+            setActiveNoteId(docRef.id);
+            toast({ title: 'Note Created', description: `Successfully created note: ${note.title}` });
+        })
+        .catch(() => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: notesCollectionRef.path,
+                operation: 'create',
+                requestResourceData: newNoteData
+            }));
+        });
   };
 
   const deleteNote = async (noteId: string) => {
     if (!user) return;
     const noteDocRef = doc(firestore, 'users', user.uid, 'notes', noteId);
-    try {
-      await deleteDoc(noteDocRef);
-      toast({ title: 'Note Deleted' });
-    } catch (error) {
-      console.error("Error deleting note: ", error);
-      toast({ variant: 'destructive', title: 'Error Deleting Note' });
-    }
+    deleteDoc(noteDocRef)
+        .then(() => {
+            toast({ title: 'Note Deleted' });
+        })
+        .catch(() => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: noteDocRef.path,
+                operation: 'delete',
+            }));
+        });
   };
 
   const updateNote = async (noteId: string, data: NoteUpdate) => {
@@ -206,27 +232,34 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     setIsSaving(true);
     const noteDocRef = doc(firestore, 'users', user.uid, 'notes', noteId);
     
-    try {
-      let finalData: NoteUpdate & { updatedAt: any; highlightedContent?: string; language?: string } = {
-        ...data,
-        updatedAt: serverTimestamp(),
-      };
+    let finalData: NoteUpdate & { updatedAt: any; highlightedContent?: string; language?: string } = {
+      ...data,
+      updatedAt: serverTimestamp(),
+    };
 
-      const noteToUpdate = notes.find(n => n.id === noteId);
-      if (noteToUpdate && noteToUpdate.type === 'code' && data.content) {
-        const { highlightedCode, language } = await getHighlightedCode(data.content);
-        finalData.highlightedContent = highlightedCode;
-        finalData.language = language;
-      }
-
-      await updateDoc(noteDocRef, finalData);
-    } catch (error) {
-      console.error("Error updating note: ", error);
-      toast({ variant: 'destructive', title: 'Error Saving Note' });
-      throw error;
-    } finally {
-      setIsSaving(false);
+    const noteToUpdate = notes.find(n => n.id === noteId);
+    if (noteToUpdate && noteToUpdate.type === 'code' && data.content) {
+      const { highlightedCode, language } = await getHighlightedCode(data.content);
+      finalData.highlightedContent = highlightedCode;
+      finalData.language = language;
     }
+
+    updateDoc(noteDocRef, finalData)
+        .then(() => {
+            // Success
+        })
+        .catch(() => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: noteDocRef.path,
+                operation: 'update',
+                requestResourceData: finalData
+            }));
+            // Re-throw to inform the caller the save failed
+            throw new Error("Update failed due to permissions");
+        })
+        .finally(() => {
+            setIsSaving(false);
+        });
   };
   
   const activeNote = useMemo(() => {
