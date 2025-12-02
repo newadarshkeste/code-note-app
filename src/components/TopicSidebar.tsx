@@ -54,7 +54,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import { ThemeToggle } from './ThemeToggle';
 
 export function TopicSidebar() {
   const {
@@ -103,7 +104,10 @@ export function TopicSidebar() {
     <>
       <SidebarHeader className="flex items-center justify-between">
         <CodeNoteLogo />
-        <SidebarTrigger />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <SidebarTrigger />
+        </div>
       </SidebarHeader>
       <div className="p-2">
         <div className="relative">
