@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useMemo, useCallback } from
 import type { Topic, Note } from '@/lib/types';
 import { initialTopics, initialNotes } from '@/lib/placeholder-data';
 import { useToast } from '@/hooks/use-toast';
+import { getHighlightedCode } from '@/app/actions';
 
 interface NotesContextType {
   topics: Topic[];
@@ -19,10 +20,12 @@ interface NotesContextType {
   deleteTopic: (topicId: string) => void;
   addNote: (topicId: string, title: string) => void;
   deleteNote: (noteId: string) => void;
-  updateNote: (noteId: string, title: string, content: string, highlightedContent?: string, language?: string) => void;
+  updateNote: (noteId: string, title: string, content: string) => void;
   activeNote: Note | null;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
+  isDirty: boolean;
+  setIsDirty: (dirty: boolean) => void;
 }
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
@@ -33,6 +36,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   const [activeTopicId, setActiveTopicId] = useState<string | null>(topics[0]?.id || null);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isDirty, setIsDirty] = useState(false);
   const { toast } = useToast();
   
   const getNotesByTopic = useCallback((topicId: string) => {
@@ -104,18 +108,13 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const updateNote = (noteId: string, title: string, content: string, highlightedContent?: string, language?: string) => {
+  const updateNote = async (noteId: string, title: string, content: string) => {
+    const { highlightedCode, language } = await getHighlightedCode(content);
     setNotes(prev =>
       prev.map(note =>
         note.id === noteId ? { ...note, title, content, highlightedContent, language } : note
       )
     );
-     if (highlightedContent === undefined && language === undefined) {
-        toast({
-            title: 'Note Renamed',
-            description: `Note has been renamed to: ${title}`,
-        });
-    }
   };
   
   const activeNote = useMemo(() => {
@@ -144,6 +143,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     activeNote,
     searchTerm,
     setSearchTerm,
+    isDirty,
+    setIsDirty,
   };
 
   return <NotesContext.Provider value={value}>{children}</NotesContext.Provider>;

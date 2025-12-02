@@ -2,25 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNotes } from '@/context/NotesContext';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { getHighlightedCode } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Save, Loader2, Code, FileText, PanelLeft } from 'lucide-react';
+import { Save, Loader2, Code, FileText } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-const noteSchema = z.object({
-  title: z.string().min(1, 'Title is required.'),
-  content: z.string(),
-});
-
-export type NoteFormData = z.infer<typeof noteSchema>;
+import { CodeEditor } from '@/components/CodeEditor';
 
 function WelcomeScreen() {
   return (
@@ -35,40 +24,45 @@ function WelcomeScreen() {
 }
 
 export function NoteDisplay() {
-  const { activeNote, updateNote } = useNotes();
+  const { activeNote, updateNote, isDirty, setIsDirty } = useNotes();
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('edit');
   const { toast } = useToast();
-
-  const { control, handleSubmit, reset, watch } = useForm<NoteFormData>({
-    resolver: zodResolver(noteSchema),
-    defaultValues: { title: '', content: '' },
-  });
   
-  const watchedContent = watch('content');
-  const watchedTitle = watch('title');
+  const [title, setTitle] = useState(activeNote?.title || '');
+  const [content, setContent] = useState(activeNote?.content || '');
 
   useEffect(() => {
     if (activeNote) {
-      reset({
-        title: activeNote.title,
-        content: activeNote.content,
-      });
+      setTitle(activeNote.title);
+      setContent(activeNote.content);
       setActiveTab('edit');
+      setIsDirty(false);
     } else {
-      reset({ title: '', content: '' });
+      setTitle('');
+      setContent('');
     }
-  }, [activeNote, reset]);
+  }, [activeNote]);
 
-  const onSave = async (data: NoteFormData) => {
-    if (!activeNote) return;
+  const handleContentChange = (newContent: string | undefined) => {
+    setContent(newContent || '');
+    if (!isDirty) setIsDirty(true);
+  };
+  
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTitle(e.target.value);
+    if (!isDirty) setIsDirty(true);
+  }
+
+  const handleSave = async () => {
+    if (!activeNote || !isDirty) return;
     setIsSaving(true);
     try {
-      const { highlightedCode, language } = await getHighlightedCode(data.content);
-      updateNote(activeNote.id, data.title, data.content, highlightedCode, language);
+      updateNote(activeNote.id, title, content);
+      setIsDirty(false);
       toast({
         title: 'Note Saved',
-        description: `"${data.title}" has been updated.`,
+        description: `"${title}" has been updated.`,
       });
     } catch (error) {
       toast({
@@ -81,16 +75,6 @@ export function NoteDisplay() {
     }
   };
 
-  const handlePreview = async () => {
-    if (!activeNote) return;
-    try {
-      const { highlightedCode, language } = await getHighlightedCode(watchedContent);
-      updateNote(activeNote.id, watchedTitle, watchedContent, highlightedCode, language);
-    } catch (error) {
-      console.error("Failed to update highlight on preview", error);
-    }
-  }
-
   if (!activeNote) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-background/80">
@@ -101,64 +85,47 @@ export function NoteDisplay() {
 
   return (
     <div className="h-full w-full flex flex-col bg-background">
-       <Tabs value={activeTab} onValueChange={(value) => {
-          if (value === 'preview') handlePreview();
-          setActiveTab(value);
-        }} className="flex flex-col flex-grow min-h-0">
-        <form onSubmit={handleSubmit(onSave)} className="flex flex-col flex-grow min-h-0">
-            <header className="flex-shrink-0 flex items-center justify-between p-4 border-b h-[65px] bg-background">
-            <div className="flex items-center flex-grow min-w-0">
-                <Controller
-                    name="title"
-                    control={control}
-                    render={({ field }) => (
-                    <Input
-                        {...field}
-                        placeholder="Note Title"
-                        className="text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-xl h-auto p-0 bg-transparent truncate"
-                    />
-                    )}
-                />
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                <TabsList>
-                <TabsTrigger value="edit"><FileText className="w-4 h-4 mr-2"/>Edit</TabsTrigger>
-                <TabsTrigger value="preview"><Code className="w-4 h-4 mr-2"/>Preview</TabsTrigger>
-                </TabsList>
-                <Button type="submit" disabled={isSaving}>
+       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
+        <header className="flex-shrink-0 flex items-center justify-between p-4 border-b h-[65px] bg-background">
+          <div className="flex items-center flex-grow min-w-0">
+              <Input
+                  value={title}
+                  onChange={handleTitleChange}
+                  placeholder="Note Title"
+                  className="text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-xl h-auto p-0 bg-transparent truncate"
+              />
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+              <TabsList>
+              <TabsTrigger value="edit"><FileText className="w-4 h-4 mr-2"/>Edit</TabsTrigger>
+              <TabsTrigger value="preview"><Code className="w-4 h-4 mr-2"/>Preview</TabsTrigger>
+              </TabsList>
+              <Button onClick={handleSave} disabled={isSaving || !isDirty}>
                 {isSaving ? <Loader2 className="animate-spin" /> : <Save className="h-4 w-4" />}
                 <span className="ml-2 hidden md:inline">Save</span>
-                </Button>
-            </div>
-            </header>
+              </Button>
+          </div>
+        </header>
 
-            <div className="flex-grow relative min-h-0">
-                <TabsContent value="edit" className="h-full w-full absolute inset-0 mt-0 focus-visible:ring-0">
-                    <Controller
-                        name="content"
-                        control={control}
-                        render={({ field }) => (
-                            <Textarea
-                                {...field}
-                                spellCheck="false"
-                                placeholder="Write your code or notes here..."
-                                className="h-full w-full resize-none border-0 rounded-none font-code text-base focus-visible:ring-0 p-6 bg-transparent"
-                            />
-                        )}
-                    />
-                </TabsContent>
-                <TabsContent value="preview" className="h-full w-full absolute inset-0 mt-0 focus-visible:ring-0">
-                    <ScrollArea className="h-full w-full">
-                        <div
-                            className="prose dark:prose-invert max-w-none p-6 font-code [&>pre]:bg-muted [&>pre]:p-4 [&>pre]:rounded-md"
-                            dangerouslySetInnerHTML={{
-                            __html: activeNote.highlightedContent || `<pre><code>${activeNote.content}</code></pre>`,
-                            }}
-                        />
-                    </ScrollArea>
-                </TabsContent>
-            </div>
-        </form>
+        <div className="flex-grow relative min-h-0">
+          <TabsContent value="edit" className="h-full w-full absolute inset-0 mt-0 focus-visible:ring-0">
+              <CodeEditor
+                value={content}
+                onChange={handleContentChange}
+                language={activeNote?.language || 'plaintext'}
+              />
+          </TabsContent>
+          <TabsContent value="preview" className="h-full w-full absolute inset-0 mt-0 focus-visible:ring-0">
+              <ScrollArea className="h-full w-full">
+                  <div
+                      className="prose dark:prose-invert max-w-none p-6 font-code [&>pre]:bg-muted [&>pre]:p-4 [&>pre]:rounded-md"
+                      dangerouslySetInnerHTML={{
+                      __html: activeNote.highlightedContent || `<pre><code>${content}</code></pre>`,
+                      }}
+                  />
+              </ScrollArea>
+          </TabsContent>
+        </div>
        </Tabs>
     </div>
   );
