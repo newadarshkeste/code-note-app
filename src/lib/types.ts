@@ -12,7 +12,7 @@ export interface Note {
   topicName?: string; 
 }
 
-export type NoteCreate = Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'content' | 'highlightedContent' | 'language'>;
+export type NoteCreate = { title: string, type: 'code' | 'text' };
 export type NoteUpdate = Partial<Pick<Note, 'title' | 'content'>>;
 
 export interface Topic {

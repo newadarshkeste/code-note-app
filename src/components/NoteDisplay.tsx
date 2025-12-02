@@ -36,76 +36,55 @@ function WelcomeScreen() {
 
 type ExportType = 'note' | 'topic' | 'all';
 
-// Debounce utility
-const debounce = <F extends (...args: any[]) => any>(func: F, waitFor: number) => {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-
-  const debounced = (...args: Parameters<F>) => {
-    if (timeout !== null) {
-      clearTimeout(timeout);
-    }
-    timeout = setTimeout(() => func(...args), waitFor);
-  };
-
-  return debounced as (...args: Parameters<F>) => void;
-};
-
-
 export function NoteDisplay() {
-  const { activeNote, updateNote, isDirty, setIsDirty, isSaving, notes, activeTopic, topics, getAllNotes } = useNotes();
+  const { activeNote, updateNote, isDirty, setIsDirty, isSaving, notes, activeTopic, getAllNotes } = useNotes();
   const { toast } = useToast();
   
   const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportType, setExportType] = useState<ExportType>('note');
   
-  // Set initial state when activeNote changes
+  // Set initial state only when the active note ID changes
   useEffect(() => {
     if (activeNote) {
       setTitle(activeNote.title);
+      setContent(activeNote.content);
       setIsDirty(false); // Reset dirty state on note change
     } else {
       setTitle('');
+      setContent('');
     }
-  }, [activeNote, setIsDirty]);
+  }, [activeNote?.id]); // Depend only on the ID to prevent re-renders while typing
   
   
-  const debouncedUpdateNote = useCallback(debounce((noteId: string, updatedData: { title?: string, content?: string }) => {
-    updateNote(noteId, updatedData);
-  }, 1500), [updateNote]);
-
-
   const handleContentChange = (newContent: string | undefined) => {
-    if (activeNote && newContent !== activeNote.content) {
+    if (newContent !== undefined) {
+      setContent(newContent);
       if (!isDirty) setIsDirty(true);
-      debouncedUpdateNote(activeNote.id, { content: newContent });
     }
   };
   
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTitle = e.target.value;
-    setTitle(newTitle);
-    if (activeNote && newTitle !== activeNote.title) {
-        if (!isDirty) setIsDirty(true);
-        debouncedUpdateNote(activeNote.id, { title: newTitle });
-    }
+    setTitle(e.target.value);
+    if (!isDirty) setIsDirty(true);
   }
 
   const handleManualSave = async () => {
     if (!activeNote || !isDirty) return;
     try {
-      // The debounced update will handle the save, we can just show a toast.
-      // Or trigger it immediately if needed. For now, let's just rely on debounce.
+      await updateNote(activeNote.id, { title, content });
       toast({
-        title: 'Saving...',
-        description: 'Your changes are being saved automatically.',
+        title: 'Note Saved!',
+        description: `"${title}" has been saved successfully.`,
       });
     } catch (error) {
+      // The context handles emitting the permission error
       toast({
         variant: 'destructive',
         title: 'Error Saving Note',
-        description: 'Could not save the note. Please try again.',
+        description: 'Could not save the note. Please check permissions and try again.',
       });
     }
   };
@@ -198,15 +177,15 @@ export function NoteDisplay() {
       <div className="flex-grow relative min-h-0">
         {activeNote.type === 'code' ? (
            <CodeEditor
-              key={activeNote.id} // Add key to force re-mount on note change
-              value={activeNote.content}
+              key={activeNote.id}
+              value={content}
               onChange={handleContentChange}
               language={activeNote?.language || 'plaintext'}
             />
         ) : (
           <RichTextEditor
-            key={activeNote.id} // Add key to force re-mount on note change
-            value={activeNote.content}
+            key={activeNote.id}
+            value={content}
             onChange={handleContentChange}
           />
         )}

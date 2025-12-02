@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
-import type { Topic, Note, NoteUpdate, NoteCreate } from '@/lib/types';
+import type { Topic, Note, NoteUpdate } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 import { 
@@ -14,7 +14,6 @@ import {
   deleteDoc, 
   doc, 
   serverTimestamp,
-  where,
   writeBatch,
   getDocs,
 } from 'firebase/firestore';
@@ -36,7 +35,7 @@ interface NotesContextType {
   addTopic: (name: string) => Promise<void>;
   updateTopic: (topicId: string, name: string) => Promise<void>;
   deleteTopic: (topicId: string) => Promise<void>;
-  addNote: (note: Omit<NoteCreate, 'topicId'>) => Promise<void>;
+  addNote: (note: { title: string; type: 'code' | 'text' }) => Promise<void>;
   deleteNote: (noteId: string) => Promise<void>;
   updateNote: (noteId: string, data: NoteUpdate) => Promise<void>;
   activeNote: Note | null;
@@ -192,7 +191,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const addNote = async (note: Omit<NoteCreate, 'topicId'>) => {
+  const addNote = async (note: { title: string; type: 'code' | 'text' }) => {
     if (!notesCollectionRef || !user || !activeTopicId) return;
     const content = note.type === 'code' ? `// Start writing your ${note.title} note here...` : `<p>Start writing your ${note.title} note here...</p>`;
     
@@ -254,29 +253,34 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
     const noteToUpdate = notes.find(n => n.id === noteId);
     if (noteToUpdate?.type === 'code' && data.content) {
-      const { highlightedCode, language } = await getHighlightedCode(data.content);
-      finalData.highlightedContent = highlightedCode;
-      finalData.language = language;
+      try {
+        const { highlightedCode, language } = await getHighlightedCode(data.content);
+        finalData.highlightedContent = highlightedCode;
+        finalData.language = language;
+      } catch (e) {
+        console.error("Syntax highlighting failed, saving raw content.", e);
+        finalData.highlightedContent = `<pre><code>${data.content.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`;
+        finalData.language = 'plaintext';
+      }
     } else if (noteToUpdate?.type === 'text' && data.content) {
       finalData.highlightedContent = data.content;
     }
 
 
-    updateDoc(noteDocRef, finalData)
-        .then(() => {
-            setIsDirty(false);
-        })
-        .catch(() => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: noteDocRef.path,
-                operation: 'update',
-                requestResourceData: finalData
-            }));
-            throw new Error("Update failed due to permissions");
-        })
-        .finally(() => {
-            setIsSaving(false);
-        });
+    try {
+        await updateDoc(noteDocRef, finalData);
+        setIsDirty(false);
+    } catch (error) {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: noteDocRef.path,
+            operation: 'update',
+            requestResourceData: finalData
+        }));
+        // Re-throw to inform the caller the save failed
+        throw new Error("Update failed due to permissions");
+    } finally {
+        setIsSaving(false);
+    }
   };
   
   const activeNote = useMemo(() => {
