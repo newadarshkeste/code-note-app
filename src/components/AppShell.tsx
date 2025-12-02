@@ -10,7 +10,7 @@ export function AppShell() {
   return (
     <NotesProvider>
       <SidebarProvider>
-        <div className="min-h-screen bg-background">
+        <div className="flex h-screen bg-background">
           <Sidebar>
             <TopicSidebar />
           </Sidebar>
