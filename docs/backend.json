@@ -1,0 +1,190 @@
+{
+  "entities": {
+    "Topic": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Topic",
+      "type": "object",
+      "description": "Represents a topic or category for organizing notes.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the topic."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Topic)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the topic."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the topic was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the topic was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "title",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Note": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Note",
+      "type": "object",
+      "description": "Represents a single note or code snippet within a topic.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the note."
+        },
+        "topicId": {
+          "type": "string",
+          "description": "Reference to Topic. (Relationship: Topic 1:N Note)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the note."
+        },
+        "content": {
+          "type": "string",
+          "description": "The content of the note, which could be code or text."
+        },
+        "language": {
+          "type": "string",
+          "description": "The programming language of the note (e.g., JavaScript, Python)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the note was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the note was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "topicId",
+        "title",
+        "content",
+        "language",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user (Firebase UID)."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "URL of the user's profile photo.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "displayName"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Collection to store user profiles.  Each document represents a user identified by their Firebase UID.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase UID of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/topics/{topicId}",
+        "definition": {
+          "entityName": "Topic",
+          "schema": {
+            "$ref": "#/backend/entities/Topic"
+          },
+          "description": "Subcollection to store topics created by a user. Includes denormalized 'userId' for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase UID of the user who owns the topic."
+            },
+            {
+              "name": "topicId",
+              "description": "The unique ID of the topic."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/topics/{topicId}/notes/{noteId}",
+        "definition": {
+          "entityName": "Note",
+          "schema": {
+            "$ref": "#/backend/entities/Note"
+          },
+          "description": "Subcollection to store notes within a topic. Includes denormalized 'userId' for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase UID of the user who owns the note."
+            },
+            {
+              "name": "topicId",
+              "description": "The unique ID of the topic to which the note belongs."
+            },
+            {
+              "name": "noteId",
+              "description": "The unique ID of the note."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to provide a secure, scalable, and debuggable solution for the CodeNote application, adhering to the core design principles and strategy mandates.  The primary goal is to ensure that each user can only access their own data, avoiding any possibility of cross-user data leakage.\n\n**Authorization Independence (CRITICAL):** The structure enforces Authorization Independence by embedding the `userId` within both the `topics` and `notes` documents. This eliminates the need for `get()` calls in security rules to verify ownership based on parent document data, simplifying rules and ensuring atomic operations.\n\n**Structural Segregation (Homogeneous Security Posture):** The design segregates user-specific data under the `/users/{userId}` path. This approach ensures that all documents within a given user's subcollections (`topics` and `notes`) share the same security requirements, thereby avoiding the complexity of mixed-access data within a single collection.\n\n**Access Modeling:** The structure leverages path-based ownership to control access. The `/users/{userId}/topics/{topicId}/notes/{noteId}` hierarchy clearly defines the ownership relationship: a user owns topics, and topics own notes. This model simplifies security rules based on the current user's `uid`.\n\n**QAPs (Rules are not Filters):** The chosen structure ensures secure `list` operations by restricting access to only the topics and notes belonging to the authenticated user. Since each user's data is stored under their unique `userId`, listing operations are inherently scoped to that user's data, preventing cross-user data access.\n\n**Data Clarity and Predictability:** The schema for `Topic` and `Note` includes explicit timestamps (`createdAt`, `updatedAt`) and a clear ownership structure, enhancing data clarity and predictability. The use of standard naming conventions (`userId`, `topicId`, `noteId`) further improves debuggability and maintainability."
+  }
+}
