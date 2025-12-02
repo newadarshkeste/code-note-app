@@ -41,6 +41,7 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@tiptap/extension-code-block-lowlight": "^2.7.0",
     "@tiptap/extension-link": "^2.7.0",
+    "@tiptap/extension-underline": "^2.7.0",
     "@tiptap/pm": "^2.7.0",
     "@tiptap/react": "^2.7.0",
     "@tiptap/starter-kit": "^2.7.0",

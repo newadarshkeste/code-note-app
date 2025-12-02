@@ -4,10 +4,11 @@ import React from 'react';
 import { useEditor, EditorContent, BubbleMenu, FloatingMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
+import Underline from '@tiptap/extension-underline';
 import {
   Bold,
   Italic,
-  Underline,
+  Underline as UnderlineIcon,
   Strikethrough,
   Heading1,
   Heading2,
@@ -64,7 +65,7 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
         pressed={editor.isActive('underline')}
         onPressedChange={() => editor.chain().focus().toggleUnderline().run()}
       >
-        <Underline className="h-4 w-4" />
+        <UnderlineIcon className="h-4 w-4" />
       </Toggle>
        <Toggle
         size="sm"
@@ -139,6 +140,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
       StarterKit.configure({
         codeBlock: false, // We'll configure it separately if needed
       }),
+      Underline,
       Link.configure({
         openOnClick: false,
         autolink: true,
