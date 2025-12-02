@@ -56,24 +56,24 @@ const createStyledContainer = () => {
           page-break-inside: avoid;
       }
       .note-title { 
-          font-size: 16px; 
+          font-size: 14px; 
           margin-top: 0;
-          margin-bottom: 8px; 
+          margin-bottom: 6px; 
           font-weight: 700;
           font-family: "Space Grotesk", sans-serif;
           color: #111827;
       }
       .metadata { 
-          font-size: 8px; 
+          font-size: 7px; 
           color: #4b5563; 
-          margin-bottom: 16px; 
+          margin-bottom: 12px; 
       }
       .metadata span {
           margin-right: 12px;
       }
       .content-body { 
-          font-size: 9px; 
-          line-height: 1.6;
+          font-size: 8px; 
+          line-height: 1.5;
           color: #374151;
       }
       /* General content styling from tiptap */
@@ -83,23 +83,23 @@ const createStyledContainer = () => {
       .content-body blockquote { padding-left: 1rem; border-left: 3px solid #d1d5db; font-style: italic; color: #4b5563; }
       .content-body a { color: #2563eb; text-decoration: underline; }
       .content-body h1, .content-body h2, .content-body h3 { font-family: "Space Grotesk", sans-serif; margin-bottom: 0.5em; font-weight: 600; }
-      .content-body h1 { font-size: 1.25em; }
-      .content-body h2 { font-size: 1.15em; }
-      .content-body h3 { font-size: 1.05em; }
+      .content-body h1 { font-size: 1.2em; }
+      .content-body h2 { font-size: 1.1em; }
+      .content-body h3 { font-size: 1.0em; }
 
       /* Code block specific styling for syntax highlighting */
       .content-body pre {
           background-color: #f3f4f6;
           color: #111827;
           font-family: "Source Code Pro", "Courier New", Courier, monospace;
-          font-size: 8px;
+          font-size: 7px;
           border: 1px solid #e5e7eb;
           border-radius: 6px;
-          padding: 10px;
+          padding: 8px;
           white-space: pre-wrap;
           word-break: break-all;
           overflow-x: auto;
-          margin: 12px 0;
+          margin: 10px 0;
       }
       .content-body code { font-family: "Source Code Pro", "Courier New", Courier, monospace; }
       .content-body pre code {
@@ -168,12 +168,10 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
   let currentTopicName = '';
 
   for (const note of notes) {
-    // When the topic changes, update the current topic name.
     if (note.topicName !== currentTopicName) {
         currentTopicName = note.topicName;
     }
 
-    // Start each note on a new page.
     doc.addPage();
     addHeader(doc, currentTopicName);
     addFooter(doc);
@@ -183,18 +181,16 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
     const imgData = canvas.toDataURL('image/png');
     const imgProps = doc.getImageProperties(imgData);
     
-    // Scale canvas image to fit PDF content width
     const pdfImgWidth = CONTENT_WIDTH;
     const pdfImgHeight = (imgProps.height * pdfImgWidth) / imgProps.width;
 
-    let yPos = PAGE_MARGIN + 10; // Start below header
+    let yPos = PAGE_MARGIN + 10;
     let heightLeft = pdfImgHeight;
-    let imgPos = 0; // The y-coordinate of the top of the image to draw
+    let imgPos = 0;
 
     while (heightLeft > 0) {
-      const spaceOnPage = (PAGE_HEIGHT - yPos) - (PAGE_MARGIN + 10); // Space between current y and footer
+      const spaceOnPage = (PAGE_HEIGHT - yPos) - (PAGE_MARGIN + 10);
       
-      // If the remaining image is zero, break out.
       if(spaceOnPage <= 0) {
           if (heightLeft > 0) {
               doc.addPage();
@@ -211,13 +207,12 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
       doc.addImage(
         imgData,
         'PNG',
-        PAGE_MARGIN, // x
-        yPos, // y
+        PAGE_MARGIN,
+        yPos,
         pdfImgWidth,
         pdfImgHeight,
         undefined,
         'FAST',
-        // Cropping parameters (srcX, srcY, srcWidth, srcHeight)
         0, imgPos, canvas.width, (heightToDraw * canvas.width) / pdfImgWidth
       );
       
@@ -233,7 +228,6 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
     }
   }
 
-  // Clean up the temporary container from the DOM
   document.body.removeChild(renderContainer);
   
   const safeFilename = notes.length === 1 
