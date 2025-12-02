@@ -195,27 +195,24 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     if (!notesCollectionRef || !user || !activeTopicId) return;
     const content = note.type === 'code' ? `// Start writing your ${note.title} note here...` : `<p>Start writing your ${note.title} note here...</p>`;
     
-    let highlightedContent: string | undefined;
-    let language: string | undefined;
-
-    if (note.type === 'code') {
-        const result = await getHighlightedCode(content);
-        highlightedContent = result.highlightedCode;
-        language = result.language;
-    } else {
-        highlightedContent = content;
-    }
-
-    const newNoteData = { 
+    const newNoteData: any = { 
         ...note, 
         topicId: activeTopicId,
         content,
-        highlightedContent,
-        language,
         userId: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
     };
+
+    if (note.type === 'code') {
+        const result = await getHighlightedCode(content);
+        newNoteData.highlightedContent = result.highlightedCode;
+        newNoteData.language = result.language;
+    } else {
+        newNoteData.highlightedContent = content;
+        newNoteData.language = 'text'; // Explicitly set for text notes
+    }
+
     addDoc(notesCollectionRef, newNoteData)
         .then(docRef => {
             setActiveNoteId(docRef.id);
@@ -341,3 +338,5 @@ export function useNotes() {
   }
   return context;
 }
+
+    
