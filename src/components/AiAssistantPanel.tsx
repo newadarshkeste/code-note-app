@@ -82,7 +82,7 @@ export function AiAssistantPanel() {
   };
   
   return (
-    <div className="h-full flex flex-col bg-card/50">
+    <div className="h-full flex flex-col bg-card/50 overflow-y-auto overflow-x-hidden">
       <header className="flex-shrink-0 p-4 flex items-center gap-2 border-b h-[65px]">
           <Sparkles className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-headline font-semibold">AI Assistant</h2>
@@ -101,14 +101,14 @@ export function AiAssistantPanel() {
                    </p>
                 )}
                 {messages.map((message, index) => (
-                  <div key={index} className={cn('flex items-start gap-3', message.role === 'user' ? 'justify-end' : 'justify-start')}>
+                  <div key={index} className={cn('flex items-start gap-3 w-full', message.role === 'user' ? 'justify-end' : 'justify-start')}>
                     {message.role === 'assistant' && <Bot className="h-5 w-5 text-primary flex-shrink-0 mt-1.5" />}
                     <div className={cn(
-                      'rounded-lg p-3 text-sm max-w-[85%]', 
+                      'rounded-lg p-3 text-sm max-w-[90%] w-auto', 
                       message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                     )}>
                       <div 
-                        className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-pre:my-2 prose-pre:bg-background/50 prose-pre:p-2" 
+                        className="ai-assistant-output" 
                         dangerouslySetInnerHTML={{ __html: message.content }} 
                       />
                     </div>

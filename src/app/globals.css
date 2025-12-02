@@ -131,6 +131,46 @@
     height: 0;
   }
 
+  /* AI Assistant Panel Content Styling */
+  .ai-assistant-output {
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    display: block;
+    max-width: 100%;
+  }
+
+  .ai-assistant-output > *:first-child {
+    margin-top: 0;
+  }
+
+  .ai-assistant-output > *:last-child {
+    margin-bottom: 0;
+  }
+
+  .ai-assistant-output p,
+  .ai-assistant-output ul,
+  .ai-assistant-output ol {
+    margin-bottom: 0.75rem;
+  }
+  
+  .ai-assistant-output pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+    @apply bg-background/50 text-sm my-3 p-2 rounded;
+  }
+
+  .ai-assistant-output code {
+    @apply bg-background/50 px-1 py-0.5 rounded text-sm;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  
+  .ai-assistant-output ul,
+  .ai-assistant-output ol {
+    @apply pl-4;
+  }
 }
 
 html, body, #__next {
