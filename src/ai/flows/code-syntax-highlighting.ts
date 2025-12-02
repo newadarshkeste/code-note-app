@@ -35,9 +35,9 @@ const prompt = ai.definePrompt({
   prompt: `You are a code syntax highlighter. You will be given a code snippet, and you will return the code snippet with syntax highlighting applied. You will also detect the programming language of the code snippet.
 
   Code Snippet:
-  ```
-  {{{code}}}
-  ```
+  \`\`\`
+  ${'{{{code}}}'}
+  \`\`\`
   `,
 });
 
