@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,8 +16,8 @@ const isValidUrl = (urlString: string) => {
 };
 
 export function WebviewPanel() {
-  const [inputValue, setInputValue] = useState('https://chat.lmsys.org/');
-  const [activeUrl, setActiveUrl] = useState('https://chat.lmsys.org/');
+  const [inputValue, setInputValue] = React.useState('https://www.wikipedia.org/');
+  const [activeUrl, setActiveUrl] = React.useState('https://www.wikipedia.org/');
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
@@ -28,8 +28,9 @@ export function WebviewPanel() {
     if (isValidUrl(inputValue)) {
       setActiveUrl(inputValue);
     } else if (isValidUrl(`https://${inputValue}`)) {
-      setActiveUrl(`https://${inputValue}`);
-      setInputValue(`https://${inputValue}`);
+      const newUrl = `https://${inputValue}`;
+      setActiveUrl(newUrl);
+      setInputValue(newUrl);
     } else {
       alert('Please enter a valid URL (e.g., https://example.com)');
     }
@@ -57,7 +58,7 @@ export function WebviewPanel() {
           <iframe
             key={activeUrl}
             src={activeUrl}
-            className="w-full h-full border-0"
+            className="w-full h-full border"
             title="Webview"
             sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation"
           />
