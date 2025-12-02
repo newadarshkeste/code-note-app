@@ -1,5 +1,12 @@
-import { AppShell } from '@/components/AppShell';
+'use client';
+
+import { NotesProvider } from '@/context/NotesContext';
+import { AppLayout } from '@/components/AppLayout';
 
 export default function Home() {
-  return <AppShell />;
+  return (
+    <NotesProvider>
+      <AppLayout />
+    </NotesProvider>
+  );
 }

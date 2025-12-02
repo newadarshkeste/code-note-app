@@ -8,6 +8,9 @@ import { useToast } from '@/hooks/use-toast';
 interface NotesContextType {
   topics: Topic[];
   notes: Note[];
+  activeTopicId: string | null;
+  activeTopic: Topic | null;
+  setActiveTopicId: (id: string | null) => void;
   activeNoteId: string | null;
   setActiveNoteId: (id: string | null) => void;
   getNotesByTopic: (topicId: string) => Note[];
@@ -19,7 +22,6 @@ interface NotesContextType {
   activeNote: Note | null;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  filteredTopics: Topic[];
 }
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
@@ -27,6 +29,7 @@ const NotesContext = createContext<NotesContextType | undefined>(undefined);
 export function NotesProvider({ children }: { children: React.ReactNode }) {
   const [topics, setTopics] = useState<Topic[]>(initialTopics);
   const [notes, setNotes] = useState<Note[]>(initialNotes);
+  const [activeTopicId, setActiveTopicId] = useState<string | null>(initialTopics[0]?.id || null);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -39,7 +42,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
   const addTopic = (name: string) => {
     const newTopic: Topic = { id: Date.now().toString(), name };
-    setTopics(prev => [...prev, newTopic]);
+    setTopics(prev => [...prev, newTopic].sort((a,b) => a.name.localeCompare(b.name)));
+    setActiveTopicId(newTopic.id);
     toast({
       title: 'Topic Created',
       description: `Successfully created topic: ${name}`,
@@ -50,9 +54,12 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const topic = topics.find(t => t.id === topicId);
     setTopics(prev => prev.filter(t => t.id !== topicId));
     setNotes(prev => prev.filter(n => n.topicId !== topicId));
-    if (activeNote && notes.some(n => n.topicId === topicId && n.id === activeNote.id)) {
-      setActiveNoteId(null);
+    
+    if(activeTopicId === topicId) {
+        setActiveTopicId(null);
+        setActiveNoteId(null);
     }
+    
     toast({
       title: 'Topic Deleted',
       description: `Successfully deleted topic: ${topic?.name}`,
@@ -99,33 +106,16 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     return notes.find(note => note.id === activeNoteId) || null;
   }, [activeNoteId, notes]);
 
-  const filteredTopics = useMemo(() => {
-    if (!searchTerm) return topics;
-    
-    const lowercasedFilter = searchTerm.toLowerCase();
-    const notesMap = new Map<string, Note[]>();
-    notes.forEach(note => {
-      if (!notesMap.has(note.topicId)) {
-        notesMap.set(note.topicId, []);
-      }
-      notesMap.get(note.topicId)!.push(note);
-    });
-
-    return topics.filter(topic => {
-      const topicMatch = topic.name.toLowerCase().includes(lowercasedFilter);
-      if (topicMatch) return true;
-
-      const topicNotes = notesMap.get(topic.id) || [];
-      return topicNotes.some(note => 
-        note.title.toLowerCase().includes(lowercasedFilter) || 
-        note.content.toLowerCase().includes(lowercasedFilter)
-      );
-    });
-  }, [searchTerm, topics, notes]);
+  const activeTopic = useMemo(() => {
+    return topics.find(topic => topic.id === activeTopicId) || null;
+  }, [activeTopicId, topics]);
 
   const value = {
     topics,
     notes,
+    activeTopicId,
+    activeTopic,
+    setActiveTopicId,
     activeNoteId,
     setActiveNoteId,
     getNotesByTopic,
@@ -137,7 +127,6 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     activeNote,
     searchTerm,
     setSearchTerm,
-    filteredTopics,
   };
 
   return <NotesContext.Provider value={value}>{children}</NotesContext.Provider>;

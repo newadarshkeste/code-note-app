@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNotes } from '@/context/NotesContext';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,13 +8,13 @@ import * as z from 'zod';
 import { getHighlightedCode } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Save, Loader2, Code, FileText } from 'lucide-react';
+import { Save, Loader2, Code, FileText, PanelLeft } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 const noteSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -23,27 +23,35 @@ const noteSchema = z.object({
 
 export type NoteFormData = z.infer<typeof noteSchema>;
 
+interface NoteDisplayProps {
+  isSidebarOpen: boolean;
+  toggleSidebar: () => void;
+}
+
 function WelcomeScreen() {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-8">
       <Code className="w-24 h-24 text-muted-foreground/50 mb-4" />
       <h2 className="text-2xl font-headline font-semibold text-foreground">Welcome to CodeNote</h2>
       <p className="mt-2 text-muted-foreground">
-        Select a note from the sidebar to start editing, or create a new topic and note.
+        Select a note from the list to start editing, or create a new topic and note.
       </p>
     </div>
   );
 }
 
-export function NoteDisplay() {
+export function NoteDisplay({ isSidebarOpen, toggleSidebar }: NoteDisplayProps) {
   const { activeNote, updateNote } = useNotes();
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('edit');
   const { toast } = useToast();
 
-  const { control, handleSubmit, reset } = useForm<NoteFormData>({
+  const { control, handleSubmit, reset, watch } = useForm<NoteFormData>({
     resolver: zodResolver(noteSchema),
     defaultValues: { title: '', content: '' },
   });
+  
+  const watchedContent = watch('content');
 
   useEffect(() => {
     if (activeNote) {
@@ -51,6 +59,7 @@ export function NoteDisplay() {
         title: activeNote.title,
         content: activeNote.content,
       });
+      setActiveTab('edit');
     } else {
       reset({ title: '', content: '' });
     }
@@ -77,73 +86,107 @@ export function NoteDisplay() {
     }
   };
 
+  const handlePreview = async () => {
+    if (!activeNote) return;
+    try {
+      const { highlightedCode, language } = await getHighlightedCode(watchedContent);
+      updateNote(activeNote.id, activeNote.title, activeNote.content, highlightedCode, language);
+    } catch (error) {
+      console.error("Failed to update highlight on preview", error);
+    }
+  }
+
   if (!activeNote) {
     return (
-      <main className="h-full w-full p-4">
-        <Card className="h-full w-full flex items-center justify-center">
-            <WelcomeScreen />
-        </Card>
-      </main>
+      <div className="h-full w-full flex flex-col items-center justify-center bg-background">
+         <Button 
+          variant="ghost" 
+          size="icon" 
+          className={cn(
+            "absolute top-4 left-4 z-20 h-8 w-8 transition-opacity",
+            isSidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"
+          )}
+          onClick={toggleSidebar}
+        >
+          <PanelLeft />
+        </Button>
+        <WelcomeScreen />
+      </div>
     );
   }
 
   return (
-    <main className="h-screen flex flex-col p-2 md:p-4">
-      <form onSubmit={handleSubmit(onSave)} className="flex flex-col flex-grow h-full">
-        <Tabs defaultValue="edit" className="flex-grow flex flex-col h-full">
-          <Card className="flex-grow flex flex-col">
-            <CardHeader className="flex-row items-center justify-between space-y-0">
-                <Controller
-                  name="title"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      placeholder="Note Title"
-                      className="text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-2xl h-auto p-0"
-                    />
-                  )}
+    <div className="h-full w-full flex flex-col bg-background">
+      <form onSubmit={handleSubmit(onSave)} className="flex flex-col flex-grow min-h-0">
+        <header className="flex-shrink-0 flex items-center justify-between p-4 pl-0 border-b h-[65px]">
+          <div className="flex items-center flex-grow min-w-0">
+             <Button 
+              variant="ghost" 
+              size="icon" 
+              className={cn(
+                "h-8 w-8 mx-2 transition-opacity",
+                isSidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"
+              )}
+              onClick={toggleSidebar}
+            >
+              <PanelLeft />
+            </Button>
+            <Controller
+                name="title"
+                control={control}
+                render={({ field }) => (
+                <Input
+                    {...field}
+                    placeholder="Note Title"
+                    className="text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-2xl h-auto p-0 bg-transparent truncate"
                 />
-              <div className="flex items-center gap-2">
-                <TabsList>
-                  <TabsTrigger value="edit"><FileText className="w-4 h-4 mr-2"/>Edit</TabsTrigger>
-                  <TabsTrigger value="preview"><Code className="w-4 h-4 mr-2"/>Preview</TabsTrigger>
-                </TabsList>
-                <Button type="submit" disabled={isSaving} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                  {isSaving ? <Loader2 className="animate-spin" /> : <Save />}
-                  <span className="ml-2 hidden md:inline">Save</span>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-grow flex flex-col p-0">
-                <TabsContent value="edit" className="flex-grow mt-0">
-                    <Controller
+                )}
+            />
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+            <Tabs value={activeTab} onValueChange={(value) => {
+                if (value === 'preview') handlePreview();
+                setActiveTab(value);
+            }} className="w-auto">
+              <TabsList>
+                <TabsTrigger value="edit"><FileText className="w-4 h-4 mr-2"/>Edit</TabsTrigger>
+                <TabsTrigger value="preview"><Code className="w-4 h-4 mr-2"/>Preview</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? <Loader2 className="animate-spin" /> : <Save className="h-4 w-4" />}
+              <span className="ml-2 hidden md:inline">Save</span>
+            </Button>
+          </div>
+        </header>
+
+        <div className="flex-grow relative min-h-0">
+            <TabsContent value="edit" className="h-full w-full absolute inset-0 mt-0 focus-visible:ring-0">
+                <Controller
                     name="content"
                     control={control}
                     render={({ field }) => (
                         <Textarea
-                        {...field}
-                        spellCheck="false"
-                        placeholder="Write your code or notes here..."
-                        className="h-full w-full resize-none border-0 rounded-none font-code text-base focus-visible:ring-0 p-6"
+                            {...field}
+                            spellCheck="false"
+                            placeholder="Write your code or notes here..."
+                            className="h-full w-full resize-none border-0 rounded-none font-code text-base focus-visible:ring-0 p-6 bg-transparent"
                         />
                     )}
-                    />
-                </TabsContent>
-                <TabsContent value="preview" className="flex-grow mt-0">
-                    <ScrollArea className="h-full w-full">
+                />
+            </TabsContent>
+            <TabsContent value="preview" className="h-full w-full absolute inset-0 mt-0 focus-visible:ring-0">
+                <ScrollArea className="h-full w-full">
                     <div
                         className="prose dark:prose-invert max-w-none p-6 font-code [&>pre]:bg-muted [&>pre]:p-4 [&>pre]:rounded-md"
                         dangerouslySetInnerHTML={{
                         __html: activeNote.highlightedContent || `<pre><code>${activeNote.content}</code></pre>`,
                         }}
                     />
-                    </ScrollArea>
-                </TabsContent>
-            </CardContent>
-          </Card>
-        </Tabs>
+                </ScrollArea>
+            </TabsContent>
+        </div>
       </form>
-    </main>
+    </div>
   );
 }
