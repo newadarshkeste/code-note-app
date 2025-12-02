@@ -123,6 +123,7 @@ export function NoteDisplay() {
                     render={({ field }) => (
                         <Textarea
                         {...field}
+                        spellCheck="false"
                         placeholder="Write your code or notes here..."
                         className="h-full w-full resize-none border-0 rounded-none font-code text-base focus-visible:ring-0 p-6"
                         />
