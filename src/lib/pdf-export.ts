@@ -56,7 +56,7 @@ const createStyledContainer = () => {
           page-break-inside: avoid;
       }
       .note-title { 
-          font-size: 20px; 
+          font-size: 16px; 
           margin-top: 0;
           margin-bottom: 8px; 
           font-weight: 700;
@@ -64,15 +64,15 @@ const createStyledContainer = () => {
           color: #111827;
       }
       .metadata { 
-          font-size: 9px; 
+          font-size: 8px; 
           color: #4b5563; 
-          margin-bottom: 20px; 
+          margin-bottom: 16px; 
       }
       .metadata span {
-          margin-right: 15px;
+          margin-right: 12px;
       }
       .content-body { 
-          font-size: 10px; 
+          font-size: 9px; 
           line-height: 1.6;
           color: #374151;
       }
@@ -80,26 +80,26 @@ const createStyledContainer = () => {
       .content-body > * + * { margin-top: 0.75em; }
       .content-body ul, .content-body ol { padding-left: 1.5rem; }
       .content-body hr { margin: 1rem 0; border-color: #e5e7eb; }
-      .content-body blockquote { padding-left: 1rem; border-left: 3px solid #d1d5db; font-style: italic; }
+      .content-body blockquote { padding-left: 1rem; border-left: 3px solid #d1d5db; font-style: italic; color: #4b5563; }
       .content-body a { color: #2563eb; text-decoration: underline; }
       .content-body h1, .content-body h2, .content-body h3 { font-family: "Space Grotesk", sans-serif; margin-bottom: 0.5em; font-weight: 600; }
-      .content-body h1 { font-size: 1.5em; }
-      .content-body h2 { font-size: 1.25em; }
-      .content-body h3 { font-size: 1.1em; }
+      .content-body h1 { font-size: 1.25em; }
+      .content-body h2 { font-size: 1.15em; }
+      .content-body h3 { font-size: 1.05em; }
 
       /* Code block specific styling for syntax highlighting */
       .content-body pre {
           background-color: #f3f4f6;
           color: #111827;
           font-family: "Source Code Pro", "Courier New", Courier, monospace;
-          font-size: 9px;
+          font-size: 8px;
           border: 1px solid #e5e7eb;
           border-radius: 6px;
-          padding: 12px;
+          padding: 10px;
           white-space: pre-wrap;
           word-break: break-all;
           overflow-x: auto;
-          margin: 16px 0;
+          margin: 12px 0;
       }
       .content-body code { font-family: "Source Code Pro", "Courier New", Courier, monospace; }
       .content-body pre code {
@@ -129,6 +129,7 @@ const renderNoteToCanvas = async (note: NoteForPdf, container: HTMLDivElement): 
 
     let contentHtml = note.highlightedContent || note.content;
 
+    // This ensures code content is always wrapped in pre/code tags for consistent styling
     if (note.type === 'code' && !contentHtml.startsWith('<pre')) {
        contentHtml = `<pre><code>${contentHtml}</code></pre>`;
     }
@@ -164,11 +165,17 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
   doc.deletePage(1); // Start with a clean slate
 
   const renderContainer = createStyledContainer();
+  let currentTopicName = '';
 
   for (const note of notes) {
-    // Start each note on a new page
+    // When the topic changes, update the current topic name.
+    if (note.topicName !== currentTopicName) {
+        currentTopicName = note.topicName;
+    }
+
+    // Start each note on a new page.
     doc.addPage();
-    addHeader(doc, note.topicName);
+    addHeader(doc, currentTopicName);
     addFooter(doc);
 
     const canvas = await renderNoteToCanvas(note, renderContainer);
@@ -186,6 +193,19 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
 
     while (heightLeft > 0) {
       const spaceOnPage = (PAGE_HEIGHT - yPos) - (PAGE_MARGIN + 10); // Space between current y and footer
+      
+      // If the remaining image is zero, break out.
+      if(spaceOnPage <= 0) {
+          if (heightLeft > 0) {
+              doc.addPage();
+              addHeader(doc, currentTopicName);
+              addFooter(doc);
+              yPos = PAGE_MARGIN + 10;
+              continue;
+          }
+          break;
+      }
+      
       const heightToDraw = Math.min(heightLeft, spaceOnPage);
 
       doc.addImage(
@@ -206,7 +226,7 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
 
       if (heightLeft > 0) {
         doc.addPage();
-        addHeader(doc, note.topicName);
+        addHeader(doc, currentTopicName);
         addFooter(doc);
         yPos = PAGE_MARGIN + 10;
       }
