@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!auth) {
+    if (!auth || !firestore) {
         setLoading(false);
         return;
     }
@@ -47,7 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch(error => {
-        console.error("Error getting redirect result:", error);
+        // This can happen if the user closes the popup or on other errors.
+        // It's generally safe to ignore this during initialization.
+        console.warn("getRedirectResult error:", error.message);
       });
 
 
@@ -57,7 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userRef = doc(firestore, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         if (!userSnap.exists()) {
-          // New user, create a document for them
+          // New user, create a document for them.
+          // This acts as a fallback for getRedirectResult.
           await setDoc(userRef, {
             id: user.uid,
             displayName: user.displayName,
@@ -82,10 +85,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
-      // We use signInWithRedirect now
       await signInWithRedirect(auth, provider);
     } catch (error) {
-      console.error("Error during Google sign-in redirect:", error);
+      if ((error as AuthError).code !== 'auth/popup-closed-by-user') {
+        console.error("Error during Google sign-in redirect:", error);
+      }
     }
   };
 
