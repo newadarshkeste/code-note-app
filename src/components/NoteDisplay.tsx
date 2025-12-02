@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNotes } from '@/context/NotesContext';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -56,16 +56,22 @@ export function NoteDisplay() {
     }
   }, [activeNote, reset]);
 
+  const memoizedSetValue = useCallback(setValue, [setValue]);
+  const memoizedGetValues = useCallback(getValues, [getValues]);
+  const memoizedUpdateNote = useCallback(updateNote, [updateNote]);
+
+
   // Expose setValue to the context for the AI assistant
   useEffect(() => {
     if (activeNote) {
-      updateNoteContent(activeNote.id, (newContent: string) => {
-        setValue('content', newContent, { shouldDirty: true });
+      const updater = (newContent: string) => {
+        memoizedSetValue('content', newContent, { shouldDirty: true });
         // Also update the underlying note context immediately for a responsive feel
-        updateNote(activeNote.id, getValues('title'), newContent);
-      });
+        memoizedUpdateNote(activeNote.id, memoizedGetValues('title'), newContent);
+      };
+      updateNoteContent(activeNote.id, updater);
     }
-  }, [activeNote, updateNoteContent, setValue, updateNote, getValues]);
+  }, [activeNote, updateNoteContent, memoizedSetValue, memoizedUpdateNote, memoizedGetValues]);
 
   const onSave = async (data: NoteFormData) => {
     if (!activeNote) return;
