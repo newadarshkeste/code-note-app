@@ -14,7 +14,7 @@
           "type": "string",
           "description": "Reference to User. (Relationship: User 1:N Topic)"
         },
-        "title": {
+        "name": {
           "type": "string",
           "description": "The title of the topic."
         },
@@ -32,9 +32,8 @@
       "required": [
         "id",
         "userId",
-        "title",
-        "createdAt",
-        "updatedAt"
+        "name",
+        "createdAt"
       ]
     },
     "Note": {
@@ -59,9 +58,20 @@
           "type": "string",
           "description": "The content of the note, which could be code or text."
         },
+        "type": {
+          "type": "string",
+          "enum": [
+            "code",
+            "text"
+          ]
+        },
+        "highlightedContent": {
+            "type": "string",
+            "description": "The HTML representation of the code with syntax highlighting."
+        },
         "language": {
           "type": "string",
-          "description": "The programming language of the note (e.g., JavaScript, Python)."
+          "description": "The programming language of the code snippet."
         },
         "createdAt": {
           "type": "string",
@@ -79,7 +89,7 @@
         "topicId",
         "title",
         "content",
-        "language",
+        "type",
         "createdAt",
         "updatedAt"
       ]
@@ -111,15 +121,13 @@
       },
       "required": [
         "id",
-        "email",
-        "displayName"
+        "email"
       ]
     }
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "google.com"
     ]
   },
   "firestore": {
@@ -131,7 +139,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Collection to store user profiles.  Each document represents a user identified by their Firebase UID.",
+          "description": "Collection to store user profiles. Each document represents a user identified by their Firebase UID.",
           "params": [
             {
               "name": "userId",
@@ -185,6 +193,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to provide a secure, scalable, and debuggable solution for the CodeNote application, adhering to the core design principles and strategy mandates.  The primary goal is to ensure that each user can only access their own data, avoiding any possibility of cross-user data leakage.\n\n**Authorization Independence (CRITICAL):** The structure enforces Authorization Independence by embedding the `userId` within both the `topics` and `notes` documents. This eliminates the need for `get()` calls in security rules to verify ownership based on parent document data, simplifying rules and ensuring atomic operations.\n\n**Structural Segregation (Homogeneous Security Posture):** The design segregates user-specific data under the `/users/{userId}` path. This approach ensures that all documents within a given user's subcollections (`topics` and `notes`) share the same security requirements, thereby avoiding the complexity of mixed-access data within a single collection.\n\n**Access Modeling:** The structure leverages path-based ownership to control access. The `/users/{userId}/topics/{topicId}/notes/{noteId}` hierarchy clearly defines the ownership relationship: a user owns topics, and topics own notes. This model simplifies security rules based on the current user's `uid`.\n\n**QAPs (Rules are not Filters):** The chosen structure ensures secure `list` operations by restricting access to only the topics and notes belonging to the authenticated user. Since each user's data is stored under their unique `userId`, listing operations are inherently scoped to that user's data, preventing cross-user data access.\n\n**Data Clarity and Predictability:** The schema for `Topic` and `Note` includes explicit timestamps (`createdAt`, `updatedAt`) and a clear ownership structure, enhancing data clarity and predictability. The use of standard naming conventions (`userId`, `topicId`, `noteId`) further improves debuggability and maintainability."
+    "reasoning": "The Firestore structure is designed to provide a secure, scalable, and debuggable solution for the CodeNote application, adhering to the core design principles and strategy mandates. The primary goal is to ensure that each user can only access their own data, avoiding any possibility of cross-user data leakage.\n\n**Authorization Independence (CRITICAL):** The structure enforces Authorization Independence by embedding the `userId` within both the `topics` and `notes` documents. This eliminates the need for `get()` calls in security rules to verify ownership based on parent document data, simplifying rules and ensuring atomic operations.\n\n**Structural Segregation (Homogeneous Security Posture):** The design segregates user-specific data under the `/users/{userId}` path. This approach ensures that all documents within a given user's subcollections (`topics` and `notes`) share the same security requirements, thereby avoiding the complexity of mixed-access data within a single collection.\n\n**Access Modeling:** The structure leverages path-based ownership to control access. The `/users/{userId}/topics/{topicId}/notes/{noteId}` hierarchy clearly defines the ownership relationship: a user owns topics, and topics own notes. This model simplifies security rules based on the current user's `uid`.\n\n**QAPs (Rules are not Filters):** The chosen structure ensures secure `list` operations by restricting access to only the topics and notes belonging to the authenticated user. Since each user's data is stored under their unique `userId`, listing operations are inherently scoped to that user's data, preventing cross-user data access.\n\n**Data Clarity and Predictability:** The schema for `Topic` and `Note` includes explicit timestamps (`createdAt`, `updatedAt`) and a clear ownership structure, enhancing data clarity and predictability. The use of standard naming conventions (`userId`, `topicId`, `noteId`) further improves debuggability and maintainability."
   }
 }

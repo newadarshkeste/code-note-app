@@ -75,14 +75,19 @@ service cloud.firestore {
      * the document's ID (which is the user's UID).
      */
     function hasValidUserFieldsOnCreate(userId) {
-      return request.resource.data.id == userId;
+      let data = request.resource.data;
+      return data.id == userId
+          && data.email == request.auth.token.email;
+          // photoURL and displayName are optional but validated if present
     }
 
     /**
-     * On update, ensures the user document's internal `id` field is immutable.
+     * On update, ensures the user document's internal `id` and email are immutable.
      */
     function hasImmutableUserFields() {
-      return request.resource.data.id == resource.data.id;
+      let data = request.resource.data;
+      return data.id == resource.data.id
+          && data.email == resource.data.email;
     }
 
     /**
@@ -97,7 +102,7 @@ service cloud.firestore {
      * On update, ensures the topic document's internal `userId` is immutable.
      */
     function hasImmutableTopicFields() {
-      return request.resource.data.userId == resource.data.id;
+      return request.resource.data.userId == resource.data.userId;
     }
 
     /**
@@ -105,14 +110,21 @@ service cloud.firestore {
      * matches the `topicId` from the path.
      */
     function hasValidNoteFieldsOnCreate(topicId) {
-      return request.resource.data.topicId == topicId;
+      let data = request.resource.data;
+      return data.topicId == topicId
+          && data.title is string
+          && data.content is string
+          && data.type is string && (data.type == 'text' || data.type == 'code');
     }
 
     /**
      * On update, ensures the note document's internal `topicId` is immutable.
      */
     function hasImmutableNoteFields() {
-      return request.resource.data.topicId == resource.data.id;
+       let data = request.resource.data;
+       return data.topicId == resource.data.topicId
+          && data.type == resource.data.type
+          && data.createdAt == resource.data.createdAt;
     }
 
 
