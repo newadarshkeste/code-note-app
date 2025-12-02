@@ -21,7 +21,7 @@ const noteSchema = z.object({
   content: z.string(),
 });
 
-type NoteFormData = z.infer<typeof noteSchema>;
+export type NoteFormData = z.infer<typeof noteSchema>;
 
 function WelcomeScreen() {
   return (
@@ -36,11 +36,11 @@ function WelcomeScreen() {
 }
 
 export function NoteDisplay() {
-  const { activeNote, updateNote } = useNotes();
+  const { activeNote, updateNote, updateNoteContent } = useNotes();
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
-  const { control, handleSubmit, reset, getValues } = useForm<NoteFormData>({
+  const { control, handleSubmit, reset, getValues, setValue } = useForm<NoteFormData>({
     resolver: zodResolver(noteSchema),
     defaultValues: { title: '', content: '' },
   });
@@ -55,6 +55,17 @@ export function NoteDisplay() {
       reset({ title: '', content: '' });
     }
   }, [activeNote, reset]);
+
+  // Expose setValue to the context for the AI assistant
+  useEffect(() => {
+    if (activeNote) {
+      updateNoteContent(activeNote.id, (newContent: string) => {
+        setValue('content', newContent, { shouldDirty: true });
+        // Also update the underlying note context immediately for a responsive feel
+        updateNote(activeNote.id, getValues('title'), newContent);
+      });
+    }
+  }, [activeNote, updateNoteContent, setValue, updateNote, getValues]);
 
   const onSave = async (data: NoteFormData) => {
     if (!activeNote) return;

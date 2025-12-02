@@ -5,6 +5,8 @@ import type { Topic, Note } from '@/lib/types';
 import { initialTopics, initialNotes } from '@/lib/placeholder-data';
 import { useToast } from '@/hooks/use-toast';
 
+type NoteContentUpdater = (newContent: string) => void;
+
 interface NotesContextType {
   topics: Topic[];
   notes: Note[];
@@ -20,6 +22,8 @@ interface NotesContextType {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   filteredTopics: Topic[];
+  updateNoteContent: (noteId: string, updater: NoteContentUpdater) => void;
+  getNoteContentUpdater: (noteId: string) => NoteContentUpdater | undefined;
 }
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
@@ -29,7 +33,16 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   const [notes, setNotes] = useState<Note[]>(initialNotes);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [noteUpdaters, setNoteUpdaters] = useState<Record<string, NoteContentUpdater>>({});
   const { toast } = useToast();
+  
+  const updateNoteContent = useCallback((noteId: string, updater: NoteContentUpdater) => {
+    setNoteUpdaters(prev => ({...prev, [noteId]: updater}));
+  }, []);
+
+  const getNoteContentUpdater = useCallback((noteId: string) => {
+    return noteUpdaters[noteId];
+  }, [noteUpdaters]);
 
   const getNotesByTopic = useCallback((topicId: string) => {
     return notes
@@ -138,6 +151,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     searchTerm,
     setSearchTerm,
     filteredTopics,
+    updateNoteContent,
+    getNoteContentUpdater,
   };
 
   return <NotesContext.Provider value={value}>{children}</NotesContext.Provider>;

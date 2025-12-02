@@ -4,7 +4,7 @@ import { NotesProvider } from '@/context/NotesContext';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { TopicSidebar } from '@/components/TopicSidebar';
 import { NoteDisplay } from '@/components/NoteDisplay';
-import { WebviewPanel } from '@/components/WebviewPanel';
+import { AiAssistantPanel } from '@/components/AiAssistantPanel';
 import { Sidebar, SidebarInset } from '@/components/ui/sidebar';
 
 export function AppShell() {
@@ -19,7 +19,7 @@ export function AppShell() {
             <SidebarInset className="flex-1">
               <NoteDisplay />
             </SidebarInset>
-            <WebviewPanel />
+            <AiAssistantPanel />
           </div>
         </div>
       </SidebarProvider>
