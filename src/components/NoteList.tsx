@@ -25,8 +25,10 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
-import { File, FilePlus2, Search, Trash2, Pencil } from 'lucide-react';
+import { File, FilePlus2, Search, Trash2, Pencil, Type, Code } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
+import { Note } from '@/lib/types';
 
 export function NoteList() {
     const {
@@ -41,14 +43,16 @@ export function NoteList() {
 
     const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
     const [newNoteTitle, setNewNoteTitle] = useState('');
+    const [newNoteType, setNewNoteType] = useState<'code' | 'text'>('code');
     const [noteSearch, setNoteSearch] = useState('');
-    const [renameNote, setRenameNote] = useState<typeof notes[number] | null>(null);
+    const [renameNote, setRenameNote] = useState<Note | null>(null);
     const [renamingTitle, setRenamingTitle] = useState('');
 
     const handleAddNote = () => {
         if (newNoteTitle.trim() && activeTopic) {
-            addNote(activeTopic.id, newNoteTitle.trim());
+            addNote(activeTopic.id, newNoteTitle.trim(), newNoteType);
             setNewNoteTitle('');
+            setNewNoteType('code');
             setIsNoteDialogOpen(false);
         }
     };
@@ -115,7 +119,11 @@ export function NoteList() {
                                             activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent'
                                         )}
                                     >
-                                        <File className="h-4 w-4 flex-shrink-0" />
+                                        {note.type === 'code' ? (
+                                            <Code className="h-4 w-4 flex-shrink-0" />
+                                        ) : (
+                                            <Type className="h-4 w-4 flex-shrink-0" />
+                                        )}
                                         <span className="truncate flex-grow text-left">{note.title}</span>
                                     </Button>
                                     <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -157,16 +165,34 @@ export function NoteList() {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="note-title" className="text-right">
-                        Title
-                    </Label>
-                    <Input
-                        id="note-title"
-                        value={newNoteTitle}
-                        onChange={(e) => setNewNoteTitle(e.target.value)}
-                        className="col-span-3 font-body"
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
-                    />
+                        <Label htmlFor="note-title" className="text-right">
+                            Title
+                        </Label>
+                        <Input
+                            id="note-title"
+                            value={newNoteTitle}
+                            onChange={(e) => setNewNoteTitle(e.target.value)}
+                            className="col-span-3 font-body"
+                            onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
+                        />
+                    </div>
+                     <div className="grid grid-cols-4 items-start gap-4">
+                        <Label className="text-right pt-2">Type</Label>
+                        <RadioGroup
+                            defaultValue="code"
+                            className="col-span-3 flex flex-col space-y-2 pt-1"
+                            value={newNoteType}
+                            onValueChange={(value: 'code' | 'text') => setNewNoteType(value)}
+                        >
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="code" id="r1" />
+                                <Label htmlFor="r1" className="font-normal flex items-center gap-2"><Code className="h-4 w-4"/> Code Snippet</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="text" id="r2" />
+                                <Label htmlFor="r2" className="font-normal flex items-center gap-2"><Type className="h-4 w-4"/> Text Note</Label>
+                            </div>
+                        </RadioGroup>
                     </div>
                 </div>
                 <DialogFooter>

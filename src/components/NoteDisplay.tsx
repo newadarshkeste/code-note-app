@@ -6,15 +6,15 @@ import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Save, Loader2, Code, FileText } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Save, Loader2, Code, Type, FileText } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { CodeEditor } from '@/components/CodeEditor';
+import { RichTextEditor } from '@/components/RichTextEditor';
 
 function WelcomeScreen() {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-8">
-      <Code className="w-24 h-24 text-muted-foreground/50 mb-4" />
+      <FileText className="w-24 h-24 text-muted-foreground/50 mb-4" />
       <h2 className="text-2xl font-headline font-semibold text-foreground">Welcome to CodeNote</h2>
       <p className="mt-2 text-muted-foreground">
         Select a note from the list to start editing, or create a new topic and note.
@@ -26,7 +26,6 @@ function WelcomeScreen() {
 export function NoteDisplay() {
   const { activeNote, updateNote, isDirty, setIsDirty } = useNotes();
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('edit');
   const { toast } = useToast();
   
   const [title, setTitle] = useState(activeNote?.title || '');
@@ -36,13 +35,12 @@ export function NoteDisplay() {
     if (activeNote) {
       setTitle(activeNote.title);
       setContent(activeNote.content);
-      setActiveTab('edit');
       setIsDirty(false);
     } else {
       setTitle('');
       setContent('');
     }
-  }, [activeNote]);
+  }, [activeNote, setIsDirty]);
 
   const handleContentChange = (newContent: string | undefined) => {
     setContent(newContent || '');
@@ -58,7 +56,7 @@ export function NoteDisplay() {
     if (!activeNote || !isDirty) return;
     setIsSaving(true);
     try {
-      updateNote(activeNote.id, title, content);
+      await updateNote(activeNote.id, title, content);
       setIsDirty(false);
       toast({
         title: 'Note Saved',
@@ -85,48 +83,45 @@ export function NoteDisplay() {
 
   return (
     <div className="h-full w-full flex flex-col bg-background">
-       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow min-h-0">
-        <header className="flex-shrink-0 flex items-center justify-between p-4 border-b h-[65px] bg-background">
-          <div className="flex items-center flex-grow min-w-0">
-              <Input
-                  value={title}
-                  onChange={handleTitleChange}
-                  placeholder="Note Title"
-                  className="text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-xl h-auto p-0 bg-transparent truncate"
-              />
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-              <TabsList>
-              <TabsTrigger value="edit"><FileText className="w-4 h-4 mr-2"/>Edit</TabsTrigger>
-              <TabsTrigger value="preview"><Code className="w-4 h-4 mr-2"/>Preview</TabsTrigger>
-              </TabsList>
-              <Button onClick={handleSave} disabled={isSaving || !isDirty}>
-                {isSaving ? <Loader2 className="animate-spin" /> : <Save className="h-4 w-4" />}
-                <span className="ml-2 hidden md:inline">Save</span>
-              </Button>
-          </div>
-        </header>
-
-        <div className="flex-grow relative min-h-0">
-          <TabsContent value="edit" className="h-full w-full absolute inset-0 mt-0 focus-visible:ring-0">
-              <CodeEditor
-                value={content}
-                onChange={handleContentChange}
-                language={activeNote?.language || 'plaintext'}
-              />
-          </TabsContent>
-          <TabsContent value="preview" className="h-full w-full absolute inset-0 mt-0 focus-visible:ring-0">
-              <ScrollArea className="h-full w-full">
-                  <div
-                      className="prose dark:prose-invert max-w-none p-6 font-code [&>pre]:bg-muted [&>pre]:p-4 [&>pre]:rounded-md"
-                      dangerouslySetInnerHTML={{
-                      __html: activeNote.highlightedContent || `<pre><code>${content}</code></pre>`,
-                      }}
-                  />
-              </ScrollArea>
-          </TabsContent>
+      <header className="flex-shrink-0 flex items-center justify-between p-4 border-b h-[65px] bg-background">
+        <div className="flex items-center gap-3 flex-grow min-w-0">
+            <Input
+                value={title}
+                onChange={handleTitleChange}
+                placeholder="Note Title"
+                className="text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-xl h-auto p-0 bg-transparent truncate"
+            />
+            <Badge variant="outline" className="flex-shrink-0">
+              {activeNote.type === 'code' ? (
+                  <Code className="h-3 w-3 mr-1.5" />
+              ) : (
+                  <Type className="h-3 w-3 mr-1.5" />
+              )}
+              {activeNote.type === 'code' ? 'Code' : 'Text'}
+            </Badge>
         </div>
-       </Tabs>
+        <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+            <Button onClick={handleSave} disabled={isSaving || !isDirty}>
+              {isSaving ? <Loader2 className="animate-spin" /> : <Save className="h-4 w-4" />}
+              <span className="ml-2 hidden md:inline">Save</span>
+            </Button>
+        </div>
+      </header>
+
+      <div className="flex-grow relative min-h-0">
+        {activeNote.type === 'code' ? (
+           <CodeEditor
+              value={content}
+              onChange={handleContentChange}
+              language={activeNote?.language || 'plaintext'}
+            />
+        ) : (
+          <RichTextEditor
+            value={content}
+            onChange={handleContentChange}
+          />
+        )}
+      </div>
     </div>
   );
 }

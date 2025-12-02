@@ -18,9 +18,9 @@ interface NotesContextType {
   addTopic: (name: string) => void;
   updateTopic: (topicId: string, name: string) => void;
   deleteTopic: (topicId: string) => void;
-  addNote: (topicId: string, title: string) => void;
+  addNote: (topicId: string, title: string, type: 'code' | 'text') => void;
   deleteNote: (noteId: string) => void;
-  updateNote: (noteId: string, title: string, content: string) => void;
+  updateNote: (noteId: string, title: string, content: string) => Promise<void>;
   activeNote: Note | null;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
@@ -80,12 +80,13 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const addNote = (topicId: string, title: string) => {
+  const addNote = (topicId: string, title: string, type: 'code' | 'text') => {
     const newNote: Note = {
       id: Date.now().toString(),
       topicId,
       title,
-      content: `// Start writing your ${title} note here...`,
+      type,
+      content: type === 'code' ? `// Start writing your ${title} note here...` : `<p>Start writing your ${title} note here...</p>`,
       createdAt: new Date().toISOString(),
     };
     setNotes(prev => [...prev, newNote]);
@@ -109,7 +110,18 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateNote = async (noteId: string, title: string, content: string) => {
-    const { highlightedCode, language } = await getHighlightedCode(content);
+    const noteToUpdate = notes.find(n => n.id === noteId);
+    if (!noteToUpdate) return;
+    
+    let highlightedCode = noteToUpdate.highlightedContent;
+    let language = noteToUpdate.language;
+
+    if (noteToUpdate.type === 'code') {
+      const result = await getHighlightedCode(content);
+      highlightedCode = result.highlightedCode;
+      language = result.language;
+    }
+
     setNotes(prev =>
       prev.map(note =>
         note.id === noteId ? { ...note, title, content, highlightedContent: highlightedCode, language } : note
