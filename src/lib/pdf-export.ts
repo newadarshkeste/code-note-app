@@ -56,7 +56,7 @@ const createStyledContainer = () => {
           page-break-inside: avoid;
       }
       .note-title { 
-          font-size: 24px; 
+          font-size: 20px; 
           margin-top: 0;
           margin-bottom: 8px; 
           font-weight: 700;
@@ -64,7 +64,7 @@ const createStyledContainer = () => {
           color: #111827;
       }
       .metadata { 
-          font-size: 11px; 
+          font-size: 9px; 
           color: #4b5563; 
           margin-bottom: 20px; 
       }
@@ -72,7 +72,7 @@ const createStyledContainer = () => {
           margin-right: 15px;
       }
       .content-body { 
-          font-size: 12px; 
+          font-size: 10px; 
           line-height: 1.6;
           color: #374151;
       }
@@ -92,7 +92,7 @@ const createStyledContainer = () => {
           background-color: #f3f4f6;
           color: #111827;
           font-family: "Source Code Pro", "Courier New", Courier, monospace;
-          font-size: 11px;
+          font-size: 9px;
           border: 1px solid #e5e7eb;
           border-radius: 6px;
           padding: 12px;
@@ -147,7 +147,6 @@ const renderNoteToCanvas = async (note: NoteForPdf, container: HTMLDivElement): 
     container.innerHTML = noteHtml;
 
     const canvas = await html2canvas(container, {
-        scale: 2, // Higher scale for better quality
         useCORS: true,
         logging: false,
     });
