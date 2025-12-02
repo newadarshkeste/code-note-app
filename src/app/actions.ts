@@ -31,7 +31,7 @@ export async function getAiAssistantResponse(code: string, prompt: string) {
     try {
         const validatedInput = assistantInputSchema.parse({ code, prompt });
         const result = await aiAssistant(validatedInput);
-        return { success: true, newCode: result.newCode };
+        return { success: true, answer: result.answer };
     } catch (error) {
         console.error('Error getting AI assistant response:', error);
         const errorMessage = error instanceof z.ZodError 

@@ -36,11 +36,11 @@ function WelcomeScreen() {
 }
 
 export function NoteDisplay() {
-  const { activeNote, updateNote, updateNoteContent } = useNotes();
+  const { activeNote, updateNote } = useNotes();
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
-  const { control, handleSubmit, reset, getValues, setValue } = useForm<NoteFormData>({
+  const { control, handleSubmit, reset } = useForm<NoteFormData>({
     resolver: zodResolver(noteSchema),
     defaultValues: { title: '', content: '' },
   });
@@ -55,23 +55,6 @@ export function NoteDisplay() {
       reset({ title: '', content: '' });
     }
   }, [activeNote, reset]);
-
-  const memoizedSetValue = useCallback(setValue, [setValue]);
-  const memoizedGetValues = useCallback(getValues, [getValues]);
-  const memoizedUpdateNote = useCallback(updateNote, [updateNote]);
-
-
-  // Expose setValue to the context for the AI assistant
-  useEffect(() => {
-    if (activeNote) {
-      const updater = (newContent: string) => {
-        memoizedSetValue('content', newContent, { shouldDirty: true });
-        // Also update the underlying note context immediately for a responsive feel
-        memoizedUpdateNote(activeNote.id, memoizedGetValues('title'), newContent);
-      };
-      updateNoteContent(activeNote.id, updater);
-    }
-  }, [activeNote, updateNoteContent, memoizedSetValue, memoizedUpdateNote, memoizedGetValues]);
 
   const onSave = async (data: NoteFormData) => {
     if (!activeNote) return;
