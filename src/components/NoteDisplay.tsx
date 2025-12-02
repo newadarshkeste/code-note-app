@@ -14,7 +14,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Save, Loader2, Code, FileText, PanelLeft } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
 
 const noteSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -22,11 +21,6 @@ const noteSchema = z.object({
 });
 
 export type NoteFormData = z.infer<typeof noteSchema>;
-
-interface NoteDisplayProps {
-  isSidebarOpen: boolean;
-  toggleSidebar: () => void;
-}
 
 function WelcomeScreen() {
   return (
@@ -40,7 +34,7 @@ function WelcomeScreen() {
   );
 }
 
-export function NoteDisplay({ isSidebarOpen, toggleSidebar }: NoteDisplayProps) {
+export function NoteDisplay() {
   const { activeNote, updateNote } = useNotes();
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('edit');
@@ -52,6 +46,7 @@ export function NoteDisplay({ isSidebarOpen, toggleSidebar }: NoteDisplayProps) 
   });
   
   const watchedContent = watch('content');
+  const watchedTitle = watch('title');
 
   useEffect(() => {
     if (activeNote) {
@@ -90,7 +85,7 @@ export function NoteDisplay({ isSidebarOpen, toggleSidebar }: NoteDisplayProps) 
     if (!activeNote) return;
     try {
       const { highlightedCode, language } = await getHighlightedCode(watchedContent);
-      updateNote(activeNote.id, activeNote.title, activeNote.content, highlightedCode, language);
+      updateNote(activeNote.id, watchedTitle, watchedContent, highlightedCode, language);
     } catch (error) {
       console.error("Failed to update highlight on preview", error);
     }
@@ -98,93 +93,73 @@ export function NoteDisplay({ isSidebarOpen, toggleSidebar }: NoteDisplayProps) 
 
   if (!activeNote) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-background">
-         <Button 
-          variant="ghost" 
-          size="icon" 
-          className={cn(
-            "absolute top-4 left-4 z-20 h-8 w-8 transition-opacity",
-            isSidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"
-          )}
-          onClick={toggleSidebar}
-        >
-          <PanelLeft />
-        </Button>
+      <div className="h-full w-full flex flex-col items-center justify-center bg-background/80">
         <WelcomeScreen />
       </div>
     );
   }
 
   return (
-    <Tabs value={activeTab} onValueChange={(value) => {
-        if (value === 'preview') handlePreview();
-        setActiveTab(value);
-    }} className="h-full w-full flex flex-col bg-background">
-      <form onSubmit={handleSubmit(onSave)} className="flex flex-col flex-grow min-h-0">
-        <header className="flex-shrink-0 flex items-center justify-between p-4 pl-0 border-b h-[65px]">
-          <div className="flex items-center flex-grow min-w-0">
-             <Button 
-              variant="ghost" 
-              size="icon" 
-              className={cn(
-                "h-8 w-8 mx-2 transition-opacity",
-                isSidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"
-              )}
-              onClick={toggleSidebar}
-            >
-              <PanelLeft />
-            </Button>
-            <Controller
-                name="title"
-                control={control}
-                render={({ field }) => (
-                <Input
-                    {...field}
-                    placeholder="Note Title"
-                    className="text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-2xl h-auto p-0 bg-transparent truncate"
-                />
-                )}
-            />
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-            <TabsList>
-              <TabsTrigger value="edit"><FileText className="w-4 h-4 mr-2"/>Edit</TabsTrigger>
-              <TabsTrigger value="preview"><Code className="w-4 h-4 mr-2"/>Preview</TabsTrigger>
-            </TabsList>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? <Loader2 className="animate-spin" /> : <Save className="h-4 w-4" />}
-              <span className="ml-2 hidden md:inline">Save</span>
-            </Button>
-          </div>
-        </header>
-
-        <div className="flex-grow relative min-h-0">
-            <TabsContent value="edit" className="h-full w-full absolute inset-0 mt-0 focus-visible:ring-0">
+    <div className="h-full w-full flex flex-col bg-background">
+       <Tabs value={activeTab} onValueChange={(value) => {
+          if (value === 'preview') handlePreview();
+          setActiveTab(value);
+        }} className="flex flex-col flex-grow min-h-0">
+        <form onSubmit={handleSubmit(onSave)} className="flex flex-col flex-grow min-h-0">
+            <header className="flex-shrink-0 flex items-center justify-between p-4 border-b h-[65px] bg-background">
+            <div className="flex items-center flex-grow min-w-0">
                 <Controller
-                    name="content"
+                    name="title"
                     control={control}
                     render={({ field }) => (
-                        <Textarea
-                            {...field}
-                            spellCheck="false"
-                            placeholder="Write your code or notes here..."
-                            className="h-full w-full resize-none border-0 rounded-none font-code text-base focus-visible:ring-0 p-6 bg-transparent"
-                        />
+                    <Input
+                        {...field}
+                        placeholder="Note Title"
+                        className="text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-xl h-auto p-0 bg-transparent truncate"
+                    />
                     )}
                 />
-            </TabsContent>
-            <TabsContent value="preview" className="h-full w-full absolute inset-0 mt-0 focus-visible:ring-0">
-                <ScrollArea className="h-full w-full">
-                    <div
-                        className="prose dark:prose-invert max-w-none p-6 font-code [&>pre]:bg-muted [&>pre]:p-4 [&>pre]:rounded-md"
-                        dangerouslySetInnerHTML={{
-                        __html: activeNote.highlightedContent || `<pre><code>${activeNote.content}</code></pre>`,
-                        }}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                <TabsList>
+                <TabsTrigger value="edit"><FileText className="w-4 h-4 mr-2"/>Edit</TabsTrigger>
+                <TabsTrigger value="preview"><Code className="w-4 h-4 mr-2"/>Preview</TabsTrigger>
+                </TabsList>
+                <Button type="submit" disabled={isSaving}>
+                {isSaving ? <Loader2 className="animate-spin" /> : <Save className="h-4 w-4" />}
+                <span className="ml-2 hidden md:inline">Save</span>
+                </Button>
+            </div>
+            </header>
+
+            <div className="flex-grow relative min-h-0">
+                <TabsContent value="edit" className="h-full w-full absolute inset-0 mt-0 focus-visible:ring-0">
+                    <Controller
+                        name="content"
+                        control={control}
+                        render={({ field }) => (
+                            <Textarea
+                                {...field}
+                                spellCheck="false"
+                                placeholder="Write your code or notes here..."
+                                className="h-full w-full resize-none border-0 rounded-none font-code text-base focus-visible:ring-0 p-6 bg-transparent"
+                            />
+                        )}
                     />
-                </ScrollArea>
-            </TabsContent>
-        </div>
-      </form>
-    </Tabs>
+                </TabsContent>
+                <TabsContent value="preview" className="h-full w-full absolute inset-0 mt-0 focus-visible:ring-0">
+                    <ScrollArea className="h-full w-full">
+                        <div
+                            className="prose dark:prose-invert max-w-none p-6 font-code [&>pre]:bg-muted [&>pre]:p-4 [&>pre]:rounded-md"
+                            dangerouslySetInnerHTML={{
+                            __html: activeNote.highlightedContent || `<pre><code>${activeNote.content}</code></pre>`,
+                            }}
+                        />
+                    </ScrollArea>
+                </TabsContent>
+            </div>
+        </form>
+       </Tabs>
+    </div>
   );
 }

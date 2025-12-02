@@ -15,6 +15,7 @@ interface NotesContextType {
   setActiveNoteId: (id: string | null) => void;
   getNotesByTopic: (topicId: string) => Note[];
   addTopic: (name: string) => void;
+  updateTopic: (topicId: string, name: string) => void;
   deleteTopic: (topicId: string) => void;
   addNote: (topicId: string, title: string) => void;
   deleteNote: (noteId: string) => void;
@@ -27,9 +28,9 @@ interface NotesContextType {
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
 
 export function NotesProvider({ children }: { children: React.ReactNode }) {
-  const [topics, setTopics] = useState<Topic[]>(initialTopics);
+  const [topics, setTopics] = useState<Topic[]>(initialTopics.sort((a,b) => a.name.localeCompare(b.name)));
   const [notes, setNotes] = useState<Note[]>(initialNotes);
-  const [activeTopicId, setActiveTopicId] = useState<string | null>(initialTopics[0]?.id || null);
+  const [activeTopicId, setActiveTopicId] = useState<string | null>(topics[0]?.id || null);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -50,13 +51,22 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const updateTopic = (topicId: string, name: string) => {
+    setTopics(prev => prev.map(t => t.id === topicId ? { ...t, name } : t).sort((a,b) => a.name.localeCompare(b.name)));
+    toast({
+      title: 'Topic Renamed',
+      description: `Topic has been renamed to: ${name}`,
+    });
+  };
+
   const deleteTopic = (topicId: string) => {
     const topic = topics.find(t => t.id === topicId);
     setTopics(prev => prev.filter(t => t.id !== topicId));
     setNotes(prev => prev.filter(n => n.topicId !== topicId));
     
     if(activeTopicId === topicId) {
-        setActiveTopicId(null);
+        const remainingTopics = topics.filter(t => t.id !== topicId);
+        setActiveTopicId(remainingTopics[0]?.id || null);
         setActiveNoteId(null);
     }
     
@@ -100,6 +110,12 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         note.id === noteId ? { ...note, title, content, highlightedContent, language } : note
       )
     );
+     if (highlightedContent === undefined && language === undefined) {
+        toast({
+            title: 'Note Renamed',
+            description: `Note has been renamed to: ${title}`,
+        });
+    }
   };
   
   const activeNote = useMemo(() => {
@@ -120,6 +136,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     setActiveNoteId,
     getNotesByTopic,
     addTopic,
+    updateTopic,
     deleteTopic,
     addNote,
     deleteNote,
