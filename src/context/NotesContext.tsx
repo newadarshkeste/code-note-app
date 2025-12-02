@@ -112,7 +112,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const { highlightedCode, language } = await getHighlightedCode(content);
     setNotes(prev =>
       prev.map(note =>
-        note.id === noteId ? { ...note, title, content, highlightedContent, language } : note
+        note.id === noteId ? { ...note, title, content, highlightedContent: highlightedCode, language } : note
       )
     );
   };
