@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { useEditor, EditorContent, BubbleMenu, FloatingMenu } from '@tiptap/react';
+import React, { useEffect } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
@@ -19,8 +19,6 @@ import {
   Code as CodeIcon,
   Link as LinkIcon,
 } from 'lucide-react';
-import { Button } from './ui/button';
-import { cn } from '@/lib/utils';
 import { Toggle } from './ui/toggle';
 
 interface RichTextEditorProps {
@@ -137,7 +135,10 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
 export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
-      StarterKit.configure(),
+      StarterKit.configure({
+        // Disable history extension to manage history manually if needed
+        history: false,
+      }),
       Underline,
       Link.configure({
         openOnClick: false,
@@ -147,7 +148,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     content: value,
     editorProps: {
       attributes: {
-        class: 'prose dark:prose-invert max-w-none prose-base m-5 focus:outline-none',
+        class: 'prose-sm sm:prose-base dark:prose-invert max-w-none m-5 focus:outline-none',
       },
     },
     onUpdate: ({ editor }) => {
@@ -155,9 +156,18 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     },
   });
 
-  React.useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value, false);
+  // Synchronize the editor content with the `value` prop from outside.
+  useEffect(() => {
+    if (editor) {
+      // Check if the content is actually different before setting it.
+      // This prevents the cursor from jumping.
+      const isSame = editor.getHTML() === value;
+      if (!isSame) {
+        // `setContent` will trigger `onUpdate`, so we don't need to call `onChange` here.
+        // The `false` second argument prevents `onUpdate` from firing, which we want here to avoid loops.
+        // We let the user's typing trigger the onChange.
+        editor.commands.setContent(value, false);
+      }
     }
   }, [value, editor]);
 

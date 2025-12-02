@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useNotes } from '@/context/NotesContext';
 import { useToast } from '@/hooks/use-toast';
@@ -36,63 +36,71 @@ function WelcomeScreen() {
 
 type ExportType = 'note' | 'topic' | 'all';
 
+// Debounce utility
+const debounce = <F extends (...args: any[]) => any>(func: F, waitFor: number) => {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  const debounced = (...args: Parameters<F>) => {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(() => func(...args), waitFor);
+  };
+
+  return debounced as (...args: Parameters<F>) => void;
+};
+
+
 export function NoteDisplay() {
   const { activeNote, updateNote, isDirty, setIsDirty, isSaving, notes, activeTopic, topics, getAllNotes } = useNotes();
   const { toast } = useToast();
   
-  const [title, setTitle] = useState(activeNote?.title || '');
-  const [content, setContent] = useState(activeNote?.content || '');
+  const [title, setTitle] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportType, setExportType] = useState<ExportType>('note');
-
+  
+  // Set initial state when activeNote changes
   useEffect(() => {
-    // Only update local state from activeNote if there are no unsaved changes.
-    // This prevents overwriting the user's input during autosave.
-    if (activeNote && !isDirty) {
+    if (activeNote) {
       setTitle(activeNote.title);
-      setContent(activeNote.content);
+      setIsDirty(false); // Reset dirty state on note change
+    } else {
+      setTitle('');
     }
-    // If activeNote is null (e.g., topic deleted), clear the fields.
-    if (!activeNote) {
-        setTitle('');
-        setContent('');
-        setIsDirty(false);
-    }
-  }, [activeNote, isDirty, setIsDirty]);
-
-
-  // Debounce saving
-  useEffect(() => {
-    if (!isDirty || !activeNote) return;
-
-    const handler = setTimeout(() => {
-      handleSave();
-    }, 1500); // Auto-save after 1.5 seconds of inactivity
-
-    return () => {
-      clearTimeout(handler);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, content, isDirty]);
+  }, [activeNote, setIsDirty]);
+  
+  
+  const debouncedUpdateNote = useCallback(debounce((noteId: string, updatedData: { title?: string, content?: string }) => {
+    updateNote(noteId, updatedData);
+  }, 1500), [updateNote]);
 
 
   const handleContentChange = (newContent: string | undefined) => {
-    setContent(newContent || '');
-    if (!isDirty) setIsDirty(true);
+    if (activeNote && newContent !== activeNote.content) {
+      if (!isDirty) setIsDirty(true);
+      debouncedUpdateNote(activeNote.id, { content: newContent });
+    }
   };
   
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(e.target.value);
-    if (!isDirty) setIsDirty(true);
+    const newTitle = e.target.value;
+    setTitle(newTitle);
+    if (activeNote && newTitle !== activeNote.title) {
+        if (!isDirty) setIsDirty(true);
+        debouncedUpdateNote(activeNote.id, { title: newTitle });
+    }
   }
 
-  const handleSave = async () => {
+  const handleManualSave = async () => {
     if (!activeNote || !isDirty) return;
     try {
-      await updateNote(activeNote.id, { title, content });
-      setIsDirty(false);
-      // Optional: Add a subtle save indicator instead of a toast for autosave
+      // The debounced update will handle the save, we can just show a toast.
+      // Or trigger it immediately if needed. For now, let's just rely on debounce.
+      toast({
+        title: 'Saving...',
+        description: 'Your changes are being saved automatically.',
+      });
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -176,9 +184,9 @@ export function NoteDisplay() {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 ml-4">
             {isSaving && <Loader2 className="animate-spin h-4 w-4 text-muted-foreground" />}
-            <Button onClick={handleSave} disabled={isSaving || !isDirty} size="sm" variant="ghost">
+            <Button onClick={handleManualSave} disabled={isSaving || !isDirty} size="sm" variant="ghost">
               <Save className="h-4 w-4" />
-              <span className="ml-2 hidden md:inline">{isSaving ? 'Saving...' : 'Save'}</span>
+              <span className="ml-2 hidden md:inline">{isSaving ? 'Saving...' : (isDirty ? 'Unsaved' : 'Saved')}</span>
             </Button>
             <Button onClick={() => setIsExportDialogOpen(true)} disabled={isExporting} size="sm">
               {isExporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Download className="h-4 w-4" />}
@@ -190,13 +198,15 @@ export function NoteDisplay() {
       <div className="flex-grow relative min-h-0">
         {activeNote.type === 'code' ? (
            <CodeEditor
-              value={content}
+              key={activeNote.id} // Add key to force re-mount on note change
+              value={activeNote.content}
               onChange={handleContentChange}
               language={activeNote?.language || 'plaintext'}
             />
         ) : (
           <RichTextEditor
-            value={content}
+            key={activeNote.id} // Add key to force re-mount on note change
+            value={activeNote.content}
             onChange={handleContentChange}
           />
         )}
