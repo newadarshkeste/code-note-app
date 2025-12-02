@@ -74,42 +74,63 @@
     background: hsl(var(--muted-foreground));
   }
 
-  /* React Quill Dark Theme */
-  .dark .ql-snow {
-    --ql-color: hsl(var(--foreground));
-    --ql-background: hsl(var(--background));
-    --ql-stroke: hsl(var(--border));
-    --ql-placeholder: hsl(var(--muted-foreground));
-  }
-  .dark .ql-toolbar {
-    border-color: hsl(var(--border));
-  }
-  .dark .ql-container {
-    border-color: hsl(var(--border));
-  }
-  .dark .ql-editor.ql-blank::before {
-    color: var(--ql-placeholder);
-  }
-  .dark .ql-snow .ql-stroke {
-    stroke: var(--ql-stroke);
-  }
-  .dark .ql-snow .ql-picker-label {
-    color: var(--ql-color);
-  }
-  .dark .ql-snow .ql-picker-options {
-    background-color: hsl(var(--card));
-    border-color: hsl(var(--border));
+  /* Tiptap editor styles */
+  .ProseMirror {
+    @apply h-full w-full p-4 text-base text-foreground bg-transparent focus:outline-none;
   }
 
-  /* Quill editor height */
-  .ql-container {
-    height: calc(100% - 42px);
-    font-family: inherit;
-    font-size: 1rem;
+  .ProseMirror p {
+    @apply mb-4;
   }
-  .ql-editor {
-    height: 100%;
+
+  .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4 {
+    @apply mb-4 font-headline font-bold;
   }
+
+  .ProseMirror h1 { @apply text-4xl; }
+  .ProseMirror h2 { @apply text-3xl; }
+  .ProseMirror h3 { @apply text-2xl; }
+  .ProseMirror h4 { @apply text-xl; }
+
+  .ProseMirror ul, .ProseMirror ol {
+    @apply pl-6 mb-4;
+  }
+
+  .ProseMirror ul { @apply list-disc; }
+  .ProseMirror ol { @apply list-decimal; }
+
+  .ProseMirror a {
+    @apply text-primary underline;
+  }
+
+  .ProseMirror pre {
+    @apply bg-muted text-foreground rounded-md p-4 my-4 font-code text-sm;
+  }
+
+  .ProseMirror code {
+    @apply bg-muted text-foreground rounded px-1 py-0.5 font-code text-sm;
+  }
+  
+  .ProseMirror blockquote {
+    @apply border-l-4 border-primary pl-4 italic my-4;
+  }
+  
+  .ProseMirror hr {
+    @apply border-t border-border my-4;
+  }
+  
+  .ProseMirror:focus {
+    @apply outline-none;
+  }
+  
+  .ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+    height: 0;
+  }
+
 }
 
 html, body, #__next {
