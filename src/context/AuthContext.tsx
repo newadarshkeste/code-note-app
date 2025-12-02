@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut, AuthError } from 'firebase/auth';
+import { onAuthStateChanged, User, GoogleAuthProvider, signInWithRedirect, signOut, AuthError, getRedirectResult } from 'firebase/auth';
 import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
@@ -25,6 +25,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return;
     }
+
+    // This handles the result of the redirect after the user signs in with Google
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result && result.user) {
+          const user = result.user;
+          // User signed in via redirect, now create their document if it doesn't exist
+          const userRef = doc(firestore, 'users', user.uid);
+          const userSnap = await getDoc(userRef);
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              id: user.uid,
+              displayName: user.displayName,
+              email: user.email,
+              photoURL: user.photoURL,
+              createdAt: serverTimestamp(),
+              lastLogin: serverTimestamp(),
+            });
+          }
+        }
+      })
+      .catch(error => {
+        console.error("Error getting redirect result:", error);
+      });
+
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // User is signed in, see if we need to create a user document
@@ -56,12 +82,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      // We use signInWithRedirect now
+      await signInWithRedirect(auth, provider);
     } catch (error) {
-      // Don't log an error if the user closes the popup
-      if ((error as AuthError).code !== 'auth/popup-closed-by-user') {
-        console.error("Error during Google sign-in:", error);
-      }
+      console.error("Error during Google sign-in redirect:", error);
     }
   };
 
