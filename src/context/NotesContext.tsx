@@ -36,7 +36,7 @@ interface NotesContextType {
   addTopic: (name: string) => Promise<void>;
   updateTopic: (topicId: string, name: string) => Promise<void>;
   deleteTopic: (topicId: string) => Promise<void>;
-  addNote: (note: NoteCreate) => Promise<void>;
+  addNote: (note: Omit<NoteCreate, 'topicId'>) => Promise<void>;
   deleteNote: (noteId: string) => Promise<void>;
   updateNote: (noteId: string, data: NoteUpdate) => Promise<void>;
   activeNote: Note | null;
@@ -66,7 +66,15 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   const topicsRef = useMemo(() => user ? collection(firestore, 'users', user.uid, 'topics') : null, [user, firestore]);
-  const notesCollectionRef = useMemo(() => user ? collection(firestore, 'users', user.uid, 'notes') : null, [user, firestore]);
+  
+  // Memoize the reference to the notes subcollection for the active topic.
+  const notesCollectionRef = useMemo(() => {
+    if (user && activeTopicId) {
+      return collection(firestore, 'users', user.uid, 'topics', activeTopicId, 'notes');
+    }
+    return null;
+  }, [user, firestore, activeTopicId]);
+
 
   // Fetch topics
   useEffect(() => {
@@ -100,13 +108,13 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch notes for the active topic
   useEffect(() => {
-    if (!notesCollectionRef || !activeTopicId) {
+    if (!notesCollectionRef) {
         setNotes([]);
         setNotesLoading(false);
         return;
     }
     setNotesLoading(true);
-    const q = query(notesCollectionRef, where('topicId', '==', activeTopicId), orderBy('title', 'asc'));
+    const q = query(notesCollectionRef, orderBy('title', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedNotes = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Note));
       setNotes(fetchedNotes);
@@ -121,7 +129,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
     return () => unsubscribe();
 
-  }, [notesCollectionRef, activeTopicId]);
+  }, [notesCollectionRef]);
 
   // Reset active note if topic changes
   useEffect(() => {
@@ -163,24 +171,30 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteTopic = async (topicId: string) => {
-    if (!user || !notesCollectionRef) return;
+    if (!user) return;
     
     const topicDocRef = doc(firestore, 'users', user.uid, 'topics', topicId);
-    const notesQuery = query(notesCollectionRef, where('topicId', '==', topicId));
+    const notesInTopicRef = collection(firestore, 'users', user.uid, 'topics', topicId, 'notes');
 
-    getDocs(notesQuery).then(notesSnapshot => {
+    // Get all notes in the topic to delete them in a batch
+    getDocs(notesInTopicRef).then(notesSnapshot => {
         const batch = writeBatch(firestore);
+        
+        // Delete the topic itself
         batch.delete(topicDocRef);
+
+        // Delete all notes within the topic
         notesSnapshot.forEach(noteDoc => {
             batch.delete(noteDoc.ref);
         });
+
         return batch.commit();
     })
     .then(() => {
         toast({ title: 'Topic Deleted', description: `Successfully deleted topic and its notes.` });
     })
     .catch((error) => {
-        // This could fail on the getDocs or the commit. We'll report the most likely one.
+        // This could fail on the getDocs or the commit.
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: topicDocRef.path,
             operation: 'delete',
@@ -188,11 +202,12 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const addNote = async (note: NoteCreate) => {
-    if (!notesCollectionRef || !user) return;
+  const addNote = async (note: Omit<NoteCreate, 'topicId'>) => {
+    if (!notesCollectionRef || !user || !activeTopicId) return;
     const content = note.type === 'code' ? `// Start writing your ${note.title} note here...` : `<p>Start writing your ${note.title} note here...</p>`;
     const newNoteData = { 
         ...note, 
+        topicId: activeTopicId, // Add the active topicId
         content,
         userId: user.uid,
         createdAt: serverTimestamp(),
@@ -213,8 +228,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteNote = async (noteId: string) => {
-    if (!user) return;
-    const noteDocRef = doc(firestore, 'users', user.uid, 'notes', noteId);
+    if (!notesCollectionRef) return;
+    const noteDocRef = doc(notesCollectionRef, noteId);
     deleteDoc(noteDocRef)
         .then(() => {
             toast({ title: 'Note Deleted' });
@@ -228,9 +243,9 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateNote = async (noteId: string, data: NoteUpdate) => {
-    if (!user) return;
+    if (!notesCollectionRef) return;
     setIsSaving(true);
-    const noteDocRef = doc(firestore, 'users', user.uid, 'notes', noteId);
+    const noteDocRef = doc(notesCollectionRef, noteId);
     
     let finalData: NoteUpdate & { updatedAt: any; highlightedContent?: string; language?: string } = {
       ...data,

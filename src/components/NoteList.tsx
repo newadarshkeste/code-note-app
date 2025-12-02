@@ -52,7 +52,7 @@ export function NoteList() {
 
     const handleAddNote = async () => {
         if (newNoteTitle.trim() && activeTopic) {
-            await addNote({ topicId: activeTopic.id, title: newNoteTitle.trim(), type: newNoteType });
+            await addNote({ title: newNoteTitle.trim(), type: newNoteType });
             setNewNoteTitle('');
             setNewNoteType('code');
             setIsNoteDialogOpen(false);
