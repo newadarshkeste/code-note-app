@@ -116,7 +116,10 @@ export function NoteDisplay({ isSidebarOpen, toggleSidebar }: NoteDisplayProps) 
   }
 
   return (
-    <div className="h-full w-full flex flex-col bg-background">
+    <Tabs value={activeTab} onValueChange={(value) => {
+        if (value === 'preview') handlePreview();
+        setActiveTab(value);
+    }} className="h-full w-full flex flex-col bg-background">
       <form onSubmit={handleSubmit(onSave)} className="flex flex-col flex-grow min-h-0">
         <header className="flex-shrink-0 flex items-center justify-between p-4 pl-0 border-b h-[65px]">
           <div className="flex items-center flex-grow min-w-0">
@@ -144,15 +147,10 @@ export function NoteDisplay({ isSidebarOpen, toggleSidebar }: NoteDisplayProps) 
             />
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-            <Tabs value={activeTab} onValueChange={(value) => {
-                if (value === 'preview') handlePreview();
-                setActiveTab(value);
-            }} className="w-auto">
-              <TabsList>
-                <TabsTrigger value="edit"><FileText className="w-4 h-4 mr-2"/>Edit</TabsTrigger>
-                <TabsTrigger value="preview"><Code className="w-4 h-4 mr-2"/>Preview</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <TabsList>
+              <TabsTrigger value="edit"><FileText className="w-4 h-4 mr-2"/>Edit</TabsTrigger>
+              <TabsTrigger value="preview"><Code className="w-4 h-4 mr-2"/>Preview</TabsTrigger>
+            </TabsList>
             <Button type="submit" disabled={isSaving}>
               {isSaving ? <Loader2 className="animate-spin" /> : <Save className="h-4 w-4" />}
               <span className="ml-2 hidden md:inline">Save</span>
@@ -187,6 +185,6 @@ export function NoteDisplay({ isSidebarOpen, toggleSidebar }: NoteDisplayProps) 
             </TabsContent>
         </div>
       </form>
-    </div>
+    </Tabs>
   );
 }
