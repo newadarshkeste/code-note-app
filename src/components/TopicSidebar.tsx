@@ -14,6 +14,7 @@ import {
   SidebarInput,
   SidebarTrigger,
   SidebarFooter,
+  SidebarMenuAction,
 } from '@/components/ui/sidebar';
 import {
   Folder,
@@ -23,6 +24,7 @@ import {
   Search,
   FilePlus2,
   ChevronDown,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,6 +34,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,6 +44,17 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export function TopicSidebar() {
   const {
@@ -52,6 +66,8 @@ export function TopicSidebar() {
     addNote,
     searchTerm,
     setSearchTerm,
+    deleteTopic,
+    deleteNote,
   } = useNotes();
   const [isTopicDialogOpen, setIsTopicDialogOpen] = useState(false);
   const [newTopicName, setNewTopicName] = useState('');
@@ -125,6 +141,25 @@ export function TopicSidebar() {
                         <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 opacity-50 hover:opacity-100">
+                          <Trash2 className="h-4 w-4 text-destructive"/>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete the topic "{topic.name}" and all its notes. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteTopic(topic.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                     <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => openNewNoteDialog(topic.id)}>
                       <FilePlus2 className="h-4 w-4"/>
                     </Button>
@@ -145,6 +180,25 @@ export function TopicSidebar() {
                             <File className="h-4 w-4" />
                             <span className="truncate">{note.title}</span>
                           </SidebarMenuSubButton>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                               <SidebarMenuAction showOnHover>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                               </SidebarMenuAction>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete the note "{note.title}". This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteNote(note.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </SidebarMenuItem>
                       ))}
                     </SidebarMenuSub>

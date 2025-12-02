@@ -12,7 +12,9 @@ interface NotesContextType {
   setActiveNoteId: (id: string | null) => void;
   getNotesByTopic: (topicId: string) => Note[];
   addTopic: (name: string) => void;
+  deleteTopic: (topicId: string) => void;
   addNote: (topicId: string, title: string) => void;
+  deleteNote: (noteId: string) => void;
   updateNote: (noteId: string, title: string, content: string, highlightedContent?: string, language?: string) => void;
   activeNote: Note | null;
   searchTerm: string;
@@ -44,6 +46,19 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const deleteTopic = (topicId: string) => {
+    const topic = topics.find(t => t.id === topicId);
+    setTopics(prev => prev.filter(t => t.id !== topicId));
+    setNotes(prev => prev.filter(n => n.topicId !== topicId));
+    if (activeNote && notes.some(n => n.topicId === topicId && n.id === activeNote.id)) {
+      setActiveNoteId(null);
+    }
+    toast({
+      title: 'Topic Deleted',
+      description: `Successfully deleted topic: ${topic?.name}`,
+    });
+  };
+
   const addNote = (topicId: string, title: string) => {
     const newNote: Note = {
       id: Date.now().toString(),
@@ -57,6 +72,18 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     toast({
       title: 'Note Created',
       description: `Successfully created note: ${title}`,
+    });
+  };
+
+  const deleteNote = (noteId: string) => {
+    const note = notes.find(n => n.id === noteId);
+    setNotes(prev => prev.filter(n => n.id !== noteId));
+    if (activeNoteId === noteId) {
+      setActiveNoteId(null);
+    }
+    toast({
+      title: 'Note Deleted',
+      description: `Successfully deleted note: ${note?.title}`,
     });
   };
 
@@ -103,7 +130,9 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     setActiveNoteId,
     getNotesByTopic,
     addTopic,
+    deleteTopic,
     addNote,
+    deleteNote,
     updateNote,
     activeNote,
     searchTerm,
