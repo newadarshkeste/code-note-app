@@ -54,39 +54,39 @@ const createStyledContainer = () => {
           box-sizing: border-box;
           width: 100%;
           page-break-inside: avoid;
-          font-size: 10pt;
+          font-size: 9pt;
       }
       .note-title { 
-          font-size: 13pt !important; 
+          font-size: 12pt !important; 
           margin-top: 0;
-          margin-bottom: 6px; 
+          margin-bottom: 5px; 
           font-weight: bold;
           font-family: "Helvetica", sans-serif;
           color: #111827;
       }
       .metadata { 
-          font-size: 8pt !important; 
+          font-size: 7pt !important; 
           color: #4b5563; 
-          margin-bottom: 12px; 
+          margin-bottom: 10px; 
       }
       .metadata span {
           margin-right: 12px;
       }
       .content-body { 
-          font-size: 10pt !important; 
-          line-height: 1.5;
+          font-size: 9pt !important; 
+          line-height: 1.4;
           color: #374151;
       }
       /* General content styling from tiptap */
-      .content-body p, .content-body ul, .content-body ol { margin-top: 0; margin-bottom: 0.5em; }
+      .content-body p, .content-body ul, .content-body ol { margin-top: 0; margin-bottom: 0.4em; }
       .content-body ul, .content-body ol { padding-left: 1rem; }
-      .content-body li { margin-bottom: 0.2em; }
-      .content-body hr { margin: 1rem 0; border-color: #e5e7eb; }
-      .content-body blockquote { padding-left: 1rem; border-left: 3px solid #d1d5db; font-style: italic; color: #4b5563; margin: 0.5em 0; }
+      .content-body li { margin-bottom: 0.1em; }
+      .content-body hr { margin: 0.8rem 0; border-color: #e5e7eb; }
+      .content-body blockquote { padding-left: 1rem; border-left: 3px solid #d1d5db; font-style: italic; color: #4b5563; margin: 0.4em 0; }
       .content-body a { color: #2563eb; text-decoration: underline; }
-      .content-body h1, .content-body h2, .content-body h3, .content-body h4 { font-family: "Helvetica", sans-serif; margin-bottom: 0.5em; font-weight: 600; line-height: 1.2; }
-      .content-body h1 { font-size: 1.5em !important; }
-      .content-body h2 { font-size: 1.25em !important; }
+      .content-body h1, .content-body h2, .content-body h3, .content-body h4 { font-family: "Helvetica", sans-serif; margin-bottom: 0.4em; font-weight: 600; line-height: 1.2; }
+      .content-body h1 { font-size: 1.4em !important; }
+      .content-body h2 { font-size: 1.2em !important; }
       .content-body h3 { font-size: 1.1em !important; }
       .content-body h4 { font-size: 1.0em !important; }
 
@@ -95,7 +95,7 @@ const createStyledContainer = () => {
           background-color: #f3f4f6 !important;
           color: #111827 !important;
           font-family: "Source Code Pro", "Courier New", Courier, monospace !important;
-          font-size: 9pt !important;
+          font-size: 8pt !important;
           line-height: 1.2 !important;
           border: 1px solid #e5e7eb;
           border-radius: 6px;
@@ -103,14 +103,14 @@ const createStyledContainer = () => {
           white-space: pre-wrap !important;
           word-break: break-all;
           overflow-x: auto;
-          margin: 10px 0;
+          margin: 8px 0;
       }
       .content-body code { 
           font-family: "Source Code Pro", "Courier New", Courier, monospace !important;
-          font-size: 9pt !important;
+          font-size: 8pt !important;
           background-color: #f3f4f6 !important;
           color: #111827 !important;
-          padding: 2px 4px;
+          padding: 1px 3px;
           border-radius: 4px;
       }
       .content-body pre > code {
@@ -142,15 +142,15 @@ const renderNoteToCanvas = async (note: NoteForPdf, container: HTMLDivElement): 
 
     let contentHtml = note.highlightedContent || note.content || '';
 
-    // CRITICAL FIX: If content appears to be escaped, un-escape it.
-    // This is a safety net. The real fix is in the AI flow.
-    if (contentHtml.includes('&lt;') || contentHtml.includes('&gt;')) {
+    // CRITICAL FIX: Ensure HTML is not double-escaped.
+    if (contentHtml.includes('&lt;') && contentHtml.includes('&gt;')) {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = contentHtml;
         contentHtml = tempDiv.textContent || tempDiv.innerText || '';
     }
 
-    // For code notes, ensure it's wrapped in <pre> if not already.
+    // For code notes, ensure it's wrapped in <pre> if not already. This is a fallback.
+    // The AI flow should already do this.
     if (note.type === 'code' && !contentHtml.trim().startsWith('<pre')) {
        contentHtml = `<pre><code>${contentHtml}</code></pre>`;
     }
@@ -166,13 +166,12 @@ const renderNoteToCanvas = async (note: NoteForPdf, container: HTMLDivElement): 
         </div>
     `;
     
-    // Use innerHTML to render the raw HTML string
     container.innerHTML = noteHtml;
 
     const canvas = await html2canvas(container, {
         useCORS: true,
         logging: false,
-        scale: 1.5, // Keep a slight scale for resolution, but control size with CSS.
+        scale: 1.5,
     });
 
     return canvas;
@@ -187,9 +186,20 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
 
   const renderContainer = createStyledContainer();
   let currentTopicName = '';
+  
+  // Sort notes by topic first, then by creation date.
+  const sortedNotes = [...notes].sort((a, b) => {
+    if (a.topicName < b.topicName) return -1;
+    if (a.topicName > b.topicName) return 1;
+    // Assuming createdAt can be converted to a comparable value
+    const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+    const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+    return dateA - dateB;
+  });
 
-  for (let i = 0; i < notes.length; i++) {
-    const note = notes[i];
+
+  for (let i = 0; i < sortedNotes.length; i++) {
+    const note = sortedNotes[i];
 
     // Start each new note on a fresh page
     doc.addPage();
@@ -197,6 +207,7 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
       doc.deletePage(1); // Remove the initial blank page
     }
     
+    // Update topic name header when it changes
     if (note.topicName !== currentTopicName) {
         currentTopicName = note.topicName;
     }
@@ -230,7 +241,8 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
       
       const heightToDraw = Math.min(heightLeft, spaceOnPage);
 
-      doc.addImage(imgData, 'PNG', PAGE_MARGIN, yPos, pdfImgWidth, pdfImgHeight, undefined, 'FAST', 0, imgPartY, canvas.width, (heightToDraw / pdfImgHeight) * canvas.height);
+      // This is a simplifiedaddImage call. The full version is needed for slicing.
+      (doc.addImage as any)(imgData, 'PNG', PAGE_MARGIN, yPos, pdfImgWidth, pdfImgHeight, undefined, 'FAST', 0, imgPartY, canvas.width, (heightToDraw / pdfImgHeight) * canvas.height);
       
       heightLeft -= heightToDraw;
       imgPartY += (heightToDraw / pdfImgHeight) * canvas.height;
