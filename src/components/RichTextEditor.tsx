@@ -155,7 +155,9 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     content: value,
     editorProps: {
       attributes: {
-        class: 'prose-sm sm:prose-base dark:prose-invert max-w-none m-5 focus:outline-none',
+        // This is the important change. We are now applying the .ProseMirror class
+        // which contains all the necessary styling from globals.css.
+        class: 'ProseMirror',
       },
     },
     onUpdate: ({ editor }) => {
