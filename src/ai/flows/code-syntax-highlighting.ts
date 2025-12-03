@@ -18,7 +18,7 @@ const CodeSyntaxHighlightingInputSchema = z.object({
 export type CodeSyntaxHighlightingInput = z.infer<typeof CodeSyntaxHighlightingInputSchema>;
 
 const CodeSyntaxHighlightingOutputSchema = z.object({
-  highlightedCode: z.string().describe('The code snippet with syntax highlighting applied.'),
+  highlightedCode: z.string().describe('The code snippet with syntax highlighting, formatted as a raw, unescaped HTML string within a <pre><code> block. Do not use markdown backticks.'),
   language: z.string().describe('The detected programming language of the code snippet.'),
 });
 
@@ -32,13 +32,18 @@ const prompt = ai.definePrompt({
   name: 'codeSyntaxHighlightingPrompt',
   input: {schema: CodeSyntaxHighlightingInputSchema},
   output: {schema: CodeSyntaxHighlightingOutputSchema},
-  prompt: `You are a code syntax highlighter. You will be given a code snippet, and you will return the code snippet with syntax highlighting applied. You will also detect the programming language of the code snippet.
+  prompt: `You are a code syntax highlighter. You will be given a code snippet. Your task is to:
+1. Detect the programming language.
+2. Return the code with syntax highlighting applied.
+3. The output for 'highlightedCode' MUST be a raw HTML string. It should start with <pre> and contain nested <span> tags for syntax colors.
+4. Do NOT escape the HTML tags. For example, use '<span>' not '&lt;span&gt;'.
+5. Do NOT wrap the HTML output in markdown code fences.
 
-  Code Snippet:
-  \`\`\`
-  ${'{{{code}}}'}
-  \`\`\`
-  `,
+Code Snippet:
+\`\`\`
+${'{{{code}}}'}
+\`\`\`
+`,
 });
 
 const codeSyntaxHighlightingFlow = ai.defineFlow(

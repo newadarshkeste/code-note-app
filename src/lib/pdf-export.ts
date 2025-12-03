@@ -7,7 +7,7 @@ interface NoteForPdf extends Note {
   topicName: string;
 }
 
-const PAGE_MARGIN = 30;
+const PAGE_MARGIN = 30; // approx 10.5mm
 const CONTENT_WIDTH = 595.28 - (PAGE_MARGIN * 2); // A4 width in pt minus margins
 const PAGE_HEIGHT = 841.89; // A4 height in pt
 
@@ -43,7 +43,7 @@ const createStyledContainer = () => {
         margin: '0',
         backgroundColor: '#ffffff',
         color: '#000000',
-        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        fontFamily: 'Helvetica, Arial, sans-serif',
         boxSizing: 'border-box',
     });
 
@@ -54,13 +54,14 @@ const createStyledContainer = () => {
           box-sizing: border-box;
           width: 100%;
           page-break-inside: avoid;
+          font-size: 10pt;
       }
       .note-title { 
           font-size: 13pt !important; 
           margin-top: 0;
           margin-bottom: 6px; 
           font-weight: bold;
-          font-family: "Space Grotesk", sans-serif;
+          font-family: "Helvetica", sans-serif;
           color: #111827;
       }
       .metadata { 
@@ -83,7 +84,7 @@ const createStyledContainer = () => {
       .content-body hr { margin: 1rem 0; border-color: #e5e7eb; }
       .content-body blockquote { padding-left: 1rem; border-left: 3px solid #d1d5db; font-style: italic; color: #4b5563; margin: 0.5em 0; }
       .content-body a { color: #2563eb; text-decoration: underline; }
-      .content-body h1, .content-body h2, .content-body h3, .content-body h4 { font-family: "Space Grotesk", sans-serif; margin-bottom: 0.5em; font-weight: 600; line-height: 1.2; }
+      .content-body h1, .content-body h2, .content-body h3, .content-body h4 { font-family: "Helvetica", sans-serif; margin-bottom: 0.5em; font-weight: 600; line-height: 1.2; }
       .content-body h1 { font-size: 1.5em !important; }
       .content-body h2 { font-size: 1.25em !important; }
       .content-body h3 { font-size: 1.1em !important; }
@@ -119,12 +120,12 @@ const createStyledContainer = () => {
           font-size: inherit !important;
           line-height: inherit !important;
       }
-      /* Syntax highlighting colors (light theme) */
+       /* Common syntax highlighting colors - subtle for print */
       .token.comment, .token.prolog, .token.doctype, .token.cdata { color: #6a737d !important; }
-      .token.punctuation { color: #6a737d !important; }
-      .token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #d73a49 !important; }
-      .token.selector, .token.attr-name, .token.string, .token.char, .token-inserted { color: #032f62 !important; }
-      .token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string { color: #d73a49 !important; }
+      .token.punctuation { color: #393a34 !important; }
+      .token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #9a6e3a !important; }
+      .token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token-inserted { color: #032f62 !important; }
+      .token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string { color: #9a6e3a !important; }
       .token.atrule, .token.attr-value, .token.keyword { color: #d73a49 !important; }
       .token.function, .token.class-name { color: #6f42c1 !important; }
       .token.regex, .token.important, .token.variable { color: #e36209 !important; }
@@ -139,11 +140,19 @@ const renderNoteToCanvas = async (note: NoteForPdf, container: HTMLDivElement): 
     const createdAt = note.createdAt?.toDate ? format(note.createdAt.toDate(), 'PPP') : 'N/A';
     const updatedAt = note.updatedAt?.toDate ? format(note.updatedAt.toDate(), 'PPP') : 'N/A';
 
-    let contentHtml = note.highlightedContent || note.content;
+    let contentHtml = note.highlightedContent || note.content || '';
 
-    // This ensures code content is always wrapped in pre/code tags for consistent styling
-    if (note.type === 'code' && !contentHtml.startsWith('<pre')) {
-       contentHtml = `<pre><code>${contentHtml.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`;
+    // CRITICAL FIX: If content appears to be escaped, un-escape it.
+    // This is a safety net. The real fix is in the AI flow.
+    if (contentHtml.includes('&lt;') || contentHtml.includes('&gt;')) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = contentHtml;
+        contentHtml = tempDiv.textContent || tempDiv.innerText || '';
+    }
+
+    // For code notes, ensure it's wrapped in <pre> if not already.
+    if (note.type === 'code' && !contentHtml.trim().startsWith('<pre')) {
+       contentHtml = `<pre><code>${contentHtml}</code></pre>`;
     }
 
     const noteHtml = `
@@ -157,12 +166,13 @@ const renderNoteToCanvas = async (note: NoteForPdf, container: HTMLDivElement): 
         </div>
     `;
     
+    // Use innerHTML to render the raw HTML string
     container.innerHTML = noteHtml;
 
     const canvas = await html2canvas(container, {
         useCORS: true,
         logging: false,
-        scale: 1.5, // Increase scale slightly for better resolution, but control font size with CSS
+        scale: 1.5, // Keep a slight scale for resolution, but control size with CSS.
     });
 
     return canvas;
@@ -175,68 +185,55 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
     format: 'a4',
   });
 
-  doc.deletePage(1);
-
   const renderContainer = createStyledContainer();
   let currentTopicName = '';
 
-  for (const note of notes) {
+  for (let i = 0; i < notes.length; i++) {
+    const note = notes[i];
+
+    // Start each new note on a fresh page
+    doc.addPage();
+    if (i === 0) {
+      doc.deletePage(1); // Remove the initial blank page
+    }
+    
     if (note.topicName !== currentTopicName) {
         currentTopicName = note.topicName;
     }
 
-    doc.addPage();
     addHeader(doc, currentTopicName);
     addFooter(doc);
 
     const canvas = await renderNoteToCanvas(note, renderContainer);
     
-    const imgData = canvas.toDataURL('image/png', 0.95); // Use PNG for quality
+    const imgData = canvas.toDataURL('image/png', 0.95);
     const imgProps = doc.getImageProperties(imgData);
     
     const pdfImgWidth = CONTENT_WIDTH;
     const pdfImgHeight = (imgProps.height * pdfImgWidth) / imgProps.width;
 
-    let yPos = PAGE_MARGIN + 20;
+    let yPos = PAGE_MARGIN + 20; // Start content below header
     let heightLeft = pdfImgHeight;
-    let imgPos = 0;
+    let imgPartY = 0; // The Y position of the slice from the source canvas
 
     while (heightLeft > 0) {
-      const pageHeightForContent = PAGE_HEIGHT - (PAGE_MARGIN + 20) - (PAGE_MARGIN + 10);
-      let spaceOnPage = pageHeightForContent - (yPos - (PAGE_MARGIN + 20));
+      const pageHeightForContent = PAGE_HEIGHT - (PAGE_MARGIN + 20) - (PAGE_MARGIN + 10); // Top header + bottom footer
+      const spaceOnPage = pageHeightForContent - (yPos - (PAGE_MARGIN + 20));
 
       if (spaceOnPage <= 0) {
         doc.addPage();
         addHeader(doc, currentTopicName);
         addFooter(doc);
         yPos = PAGE_MARGIN + 20;
-        spaceOnPage = pageHeightForContent;
+        continue;
       }
       
       const heightToDraw = Math.min(heightLeft, spaceOnPage);
 
-      const sourceCanvas = document.createElement('canvas');
-      sourceCanvas.width = canvas.width;
-      sourceCanvas.height = (heightToDraw / pdfImgHeight) * canvas.height;
-      const ctx = sourceCanvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(
-          canvas,
-          0,
-          (imgPos / pdfImgHeight) * canvas.height,
-          canvas.width,
-          sourceCanvas.height,
-          0,
-          0,
-          sourceCanvas.width,
-          sourceCanvas.height
-        );
-        const slicedImgData = sourceCanvas.toDataURL('image/png', 0.95);
-        doc.addImage(slicedImgData, 'PNG', PAGE_MARGIN, yPos, pdfImgWidth, heightToDraw);
-      }
+      doc.addImage(imgData, 'PNG', PAGE_MARGIN, yPos, pdfImgWidth, pdfImgHeight, undefined, 'FAST', 0, imgPartY, canvas.width, (heightToDraw / pdfImgHeight) * canvas.height);
       
       heightLeft -= heightToDraw;
-      imgPos += heightToDraw;
+      imgPartY += (heightToDraw / pdfImgHeight) * canvas.height;
       yPos += heightToDraw;
 
       if (heightLeft > 0) {
