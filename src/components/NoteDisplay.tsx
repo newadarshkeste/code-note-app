@@ -122,7 +122,10 @@ export function NoteDisplay() {
         }
         
         const cleanCode = stripHtml(dirtyNoteContent.content);
+        console.log('CLEAN CODE SENT TO JUDGE0:', cleanCode);
+
         const result = await runCode(languageId, cleanCode);
+        console.log('RAW RESULT FROM JUDGE0:', result);
         
         let outputText = "";
         if (result.stdout && result.stdout.trim() !== "") {
