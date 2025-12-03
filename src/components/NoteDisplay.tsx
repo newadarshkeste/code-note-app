@@ -41,50 +41,56 @@ function WelcomeScreen() {
 type ExportType = 'note' | 'topic' | 'all';
 
 function safeClean(code: string): string {
-    if (!code) return "";
-  
-    // First, convert entities that could be part of code
-    let clean = code
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&amp;/g, "&");
-  
-    // Then remove any remaining HTML tags and non-breaking spaces
-    clean = clean
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/&nbsp;/g, " ")
-      .replace(/<\/p>/gi, "\n") // Replace closing p tags with a newline
-      .replace(/<[^>]+>/g, ''); // Strip all other tags
-      
-    return clean.trim();
+  if (!code) return "";
+
+  // Convert HTML entities to actual characters FIRST
+  code = code
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+
+  // Replace <p> ... </p> with proper lines
+  code = code.replace(/<\/p>/gi, "\n");
+  code = code.replace(/<p[^>]*>/gi, "");
+
+  // Remove ONLY visual container tags — not generic <>
+  code = code
+    .replace(/<\/?(div|span|strong|em|h\d|section|article|ul|ol|li|pre|code)[^>]*>/gi, "");
+
+  return code.trim();
 }
 
+
 export function NoteDisplay() {
-  const { 
-    activeNote, 
-    isDirty, 
-    setIsDirty, 
-    isSaving, 
-    notes, 
-    activeTopic, 
+  const {
+    activeNote,
+    isDirty,
+    setIsDirty,
+    isSaving,
+    notes,
+    activeTopic,
     getAllNotes,
     dirtyNoteContent,
     setDirtyNoteContent,
     saveActiveNote,
   } = useNotes();
   const { toast } = useToast();
-  
+
   const [isExporting, setIsExporting] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportType, setExportType] = useState<ExportType>('note');
 
   const [isRunning, setIsRunning] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
-  
+
   useEffect(() => {
     if (activeNote) {
-      setDirtyNoteContent({ 
-        title: activeNote.title, 
+      setDirtyNoteContent({
+        title: activeNote.title,
         content: activeNote.content,
         language: activeNote.language || 'plaintext'
       });
@@ -93,28 +99,28 @@ export function NoteDisplay() {
     } else {
       setDirtyNoteContent(null);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeNote?.id]);
-  
-  
+
+
   const handleContentChange = (newContent: string | undefined) => {
     if (newContent !== undefined && dirtyNoteContent) {
-      setDirtyNoteContent(prev => ({...prev!, content: newContent!}));
+      setDirtyNoteContent(prev => ({ ...prev!, content: newContent! }));
       if (!isDirty) setIsDirty(true);
     }
   };
-  
+
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (dirtyNoteContent) {
-      setDirtyNoteContent(prev => ({...prev!, title: e.target.value}));
+      setDirtyNoteContent(prev => ({ ...prev!, title: e.target.value }));
       if (!isDirty) setIsDirty(true);
     }
   }
 
   const handleLanguageChange = (lang: string) => {
     if (dirtyNoteContent) {
-        setDirtyNoteContent(prev => ({ ...prev!, language: lang }));
-        if (!isDirty) setIsDirty(true);
+      setDirtyNoteContent(prev => ({ ...prev!, language: lang }));
+      if (!isDirty) setIsDirty(true);
     }
   };
 
@@ -127,43 +133,46 @@ export function NoteDisplay() {
 
     setIsRunning(true);
     setOutput('Executing code...');
-    
+
     try {
-        console.log("ACTIVE NOTE LANGUAGE =", dirtyNoteContent.language);
-        const normalizedLang = dirtyNoteContent.language?.toLowerCase().trim();
-        console.log("Normalized lang:", normalizedLang);
-        
-        const languageId = getLanguageId(normalizedLang || 'plaintext');
-        console.log("LANG ID:", languageId);
+      console.log("ACTIVE NOTE LANGUAGE =", dirtyNoteContent.language);
+      const normalizedLang = dirtyNoteContent.language?.toLowerCase().trim();
+      console.log("Normalized lang:", normalizedLang);
 
-        if (!languageId) {
-            setOutput('Execution failed: Language not supported for execution.');
-            setIsRunning(false);
-            return;
-        }
-        
-        const cleanCode = safeClean(dirtyNoteContent.content);
-        console.log('CLEAN CODE SENT TO JUDGE0:', cleanCode);
+      const languageId = getLanguageId(normalizedLang || 'plaintext');
+      console.log("LANG ID:", languageId);
 
-        const result = await runCode(languageId, cleanCode);
-        console.log('RAW RESULT FROM JUDGE0:', result);
-        
-        let outputText = "";
-        if (result.stdout && result.stdout.trim() !== "") {
-            outputText = result.stdout;
-        } else if (result.stderr && result.stderr.trim() !== "") {
-            outputText = result.stderr;
-        } else {
-            outputText = result.status.description;
-        }
-        setOutput(outputText);
+      if (!languageId) {
+        setOutput('Execution failed: Language not supported for execution.');
+        setIsRunning(false);
+        return;
+      }
+
+      const cleanCode = safeClean(dirtyNoteContent.content);
+      console.log('CLEAN CODE SENT TO JUDGE0:', cleanCode);
+
+      const result = await runCode(languageId, cleanCode);
+      console.log('RAW RESULT FROM JUDGE0:', result);
+
+      let outputText = "";
+      if (result.stdout && result.stdout.trim() !== "") {
+        outputText = result.stdout;
+      } else if (result.stderr && result.stderr.trim() !== "") {
+        outputText = result.stderr;
+      } else {
+        outputText = result.status.description;
+      }
+      setOutput(outputText);
 
     } catch (error) {
-        console.error("Code Execution Error:", error);
-        const errorMessage = error instanceof Error ? error.message : 'Execution failed, try again.';
-        setOutput(errorMessage);
+      console.error("Code Execution Error:", error);
+      let errorMessage = error instanceof Error ? error.message : 'Execution failed, try again.';
+      if (errorMessage.includes("429") && errorMessage.includes("quota")) {
+        errorMessage = "You have exceeded the daily limit for code execution. Please try again tomorrow.";
+      }
+      setOutput(errorMessage);
     } finally {
-        setIsRunning(false);
+      setIsRunning(false);
     }
   };
 
@@ -182,8 +191,8 @@ export function NoteDisplay() {
         notesToExport = notes.map(note => ({ ...note, topicName: activeTopic.name }));
         exportFilename = `${activeTopic.name}-Notes.pdf`;
       } else if (exportType === 'all') {
-         notesToExport = await getAllNotes();
-         exportFilename = `Full-Notebook.pdf`;
+        notesToExport = await getAllNotes();
+        exportFilename = `Full-Notebook.pdf`;
       }
 
       if (notesToExport.length > 0) {
@@ -194,9 +203,9 @@ export function NoteDisplay() {
         });
       } else {
         toast({
-            variant: "destructive",
-            title: "Export Failed",
-            description: "No notes available to export for the selected option.",
+          variant: "destructive",
+          title: "Export Failed",
+          description: "No notes available to export for the selected option.",
         });
       }
     } catch (error) {
@@ -222,126 +231,124 @@ export function NoteDisplay() {
 
   return (
     <>
-    <div className="h-full w-full flex flex-col bg-background">
-      <header className="flex-shrink-0 flex items-center justify-between p-4 border-b h-[65px] bg-background">
-        <div className="flex items-center gap-3 flex-grow min-w-0">
+      <div className="h-full w-full flex flex-col bg-background">
+        <header className="flex-shrink-0 flex items-center justify-between p-4 border-b h-[65px] bg-background">
+          <div className="flex items-center gap-3 flex-grow min-w-0">
             <Input
-                value={dirtyNoteContent.title}
-                onChange={handleTitleChange}
-                placeholder="Note Title"
-                className="text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-xl h-auto p-0 bg-transparent truncate"
+              value={dirtyNoteContent.title}
+              onChange={handleTitleChange}
+              placeholder="Note Title"
+              className="text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-xl h-auto p-0 bg-transparent truncate"
             />
             {activeNote.type !== 'code' && (
-                <Badge variant="outline" className="flex-shrink-0">
-                    <Type className="h-3 w-3 mr-1.5" />
-                    Text
-                </Badge>
+              <Badge variant="outline" className="flex-shrink-0">
+                <Type className="h-3 w-3 mr-1.5" />
+                Text
+              </Badge>
             )}
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-4">
             {isSaving && <Loader2 className="animate-spin h-4 w-4 text-muted-foreground" />}
             <Button onClick={handleManualSave} disabled={isSaving || !isDirty} size="sm" variant="ghost">
               <Save className="h-4 w-4" />
               <span className="ml-2 hidden md:inline">{isSaving ? 'Saving...' : (isDirty ? 'Unsaved' : 'Saved')}</span>
             </Button>
-            
+
             {activeNote.type === 'code' && (
-                <>
+              <>
                 <Select value={dirtyNoteContent.language || 'plaintext'} onValueChange={handleLanguageChange}>
-                    <SelectTrigger className="w-[120px] h-9 text-sm">
-                        <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="javascript">JavaScript</SelectItem>
-                        <SelectItem value="python">Python</SelectItem>
-                        <SelectItem value="java">Java</SelectItem>
-                        <SelectItem value="csharp">C#</SelectItem>
-                        <SelectItem value="cpp">C++</SelectItem>
-                        <SelectItem value="c">C</SelectItem>
-                        <SelectItem value="typescript">TypeScript</SelectItem>
-                        <SelectItem value="php">PHP</SelectItem>
-                        <SelectItem value="ruby">Ruby</SelectItem>
-                        <SelectItem value="go">Go</SelectItem>
-                        <SelectItem value="swift">Swift</SelectItem>
-                        <SelectItem value="kotlin">Kotlin</SelectItem>
-                        <SelectItem value="rust">Rust</SelectItem>
-                        <SelectItem value="sql">SQL</SelectItem>
-                        <SelectItem value="plaintext">Plain Text</SelectItem>
-                    </SelectContent>
+                  <SelectTrigger className="w-[120px] h-9 text-sm">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="javascript">JavaScript</SelectItem>
+                    <SelectItem value="python">Python</SelectItem>
+                    <SelectItem value="java">Java</SelectItem>
+                    <SelectItem value="csharp">C#</SelectItem>
+                    <SelectItem value="cpp">C++</SelectItem>
+                    <SelectItem value="c">C</SelectItem>
+                    <SelectItem value="typescript">TypeScript</SelectItem>
+                    <SelectItem value="php">PHP</SelectItem>
+                    <SelectItem value="ruby">Ruby</SelectItem>
+                    <SelectItem value="go">Go</SelectItem>
+                    <SelectItem value="swift">Swift</SelectItem>
+                    <SelectItem value="kotlin">Kotlin</SelectItem>
+                    <SelectItem value="rust">Rust</SelectItem>
+                    <SelectItem value="sql">SQL</SelectItem>
+                    <SelectItem value="plaintext">Plain Text</SelectItem>
+                  </SelectContent>
                 </Select>
                 <Button onClick={handleRunCode} disabled={isRunning} size="sm">
-                    {isRunning ? <Loader2 className="animate-spin h-4 w-4" /> : <Play className="h-4 w-4" />}
-                    <span className="ml-2 hidden md:inline">{isRunning ? 'Running...' : 'Run Code'}</span>
+                  {isRunning ? <Loader2 className="animate-spin h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  <span className="ml-2 hidden md:inline">{isRunning ? 'Running...' : 'Run Code'}</span>
                 </Button>
               </>
             )}
 
             <Button onClick={() => setIsExportDialogOpen(true)} disabled={isExporting} size="sm">
               {isExporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Download className="h-4 w-4" />}
-              <span className="ml-2 hidden md-inline">{isExporting ? 'Exporting...' : 'Download PDF'}</span>
+              <span className="ml-2 hidden md:inline">{isExporting ? 'Exporting...' : 'Download PDF'}</span>
             </Button>
-        </div>
-      </header>
+          </div>
+        </header>
 
-      <div className="flex-grow relative min-h-0">
-        {activeNote.type === 'code' ? (
-          <div className='h-full flex flex-col'>
-            <div className='flex-grow min-h-0'>
+        <div className="flex-grow relative min-h-0">
+          {activeNote.type === 'code' ? (
+            <div className='h-full flex flex-col'>
+              <div className='flex-grow min-h-0'>
                 <CodeEditor
-                    key={activeNote.id}
-                    value={dirtyNoteContent.content}
-                    onChange={handleContentChange}
-                    language={dirtyNoteContent.language || 'plaintext'}
-                    />
-            </div>
-            <div className="code-output-box flex-shrink-0">
+                  key={activeNote.id}
+                  value={dirtyNoteContent.content}
+                  onChange={handleContentChange}
+                  language={dirtyNoteContent.language || 'plaintext'}
+                />
+              </div>
+              <div className="code-output-box flex-shrink-0">
                 <pre><code>{output || '(no output)'}</code></pre>
+              </div>
             </div>
-           </div>
-        ) : (
-          <RichTextEditor
-            key={activeNote.id}
-            value={dirtyNoteContent.content}
-            onChange={handleContentChange}
-          />
-        )}
-      </div>
-    </div>
-    <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Export Notes as PDF</DialogTitle>
-          <DialogDescription>
-            Choose what you would like to export. The PDF will be generated in a clean, light-mode format for readability.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="py-4">
-          <RadioGroup value={exportType} onValueChange={(value: ExportType) => setExportType(value)}>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="note" id="export-note" />
-              <Label htmlFor="export-note" className="font-normal">Export This Note ({activeNote.title})</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="topic" id="export-topic" />
-              <Label htmlFor="export-topic" className="font-normal">Export This Topic ({activeTopic?.name})</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="all" id="export-all" />
-              <Label htmlFor="export-all" className="font-normal">Export Full Notebook (All Topics & Notes)</Label>
-            </div>
-          </RadioGroup>
+          ) : (
+            <RichTextEditor
+              key={activeNote.id}
+              value={dirtyNoteContent.content}
+              onChange={handleContentChange}
+            />
+          )}
         </div>
-        <div className="flex justify-end gap-2">
-           <Button variant="ghost" onClick={() => setIsExportDialogOpen(false)}>Cancel</Button>
-           <Button onClick={handleExport} disabled={isExporting}>
+      </div>
+      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Export Notes as PDF</DialogTitle>
+            <DialogDescription>
+              Choose what you would like to export. The PDF will be generated in a clean, light-mode format for readability.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <RadioGroup value={exportType} onValueChange={(value: ExportType) => setExportType(value)}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="note" id="export-note" />
+                <Label htmlFor="export-note" className="font-normal">Export This Note ({activeNote.title})</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="topic" id="export-topic" />
+                <Label htmlFor="export-topic" className="font-normal">Export This Topic ({activeTopic?.name})</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="all" id="export-all" />
+                <Label htmlFor="export-all" className="font-normal">Export Full Notebook (All Topics & Notes)</Label>
+              </div>
+            </RadioGroup>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setIsExportDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleExport} disabled={isExporting}>
               {isExporting ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
               Export
             </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
-
-    
