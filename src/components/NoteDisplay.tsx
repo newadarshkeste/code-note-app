@@ -113,7 +113,11 @@ export function NoteDisplay() {
     setOutput('Executing code...');
     
     try {
-        const languageId = getLanguageId(activeNote.language || 'plaintext');
+        console.log("ACTIVE NOTE LANGUAGE =", activeNote.language);
+        const normalizedLang = activeNote.language?.toLowerCase().replace(/[^a-z]/g, "");
+        console.log("Normalized lang:", normalizedLang);
+        
+        const languageId = getLanguageId(normalizedLang || 'plaintext');
         console.log("LANG ID:", languageId);
 
         if (!languageId) {
