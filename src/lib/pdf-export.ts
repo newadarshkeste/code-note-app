@@ -54,7 +54,7 @@ const createStyledContainer = () => {
           box-sizing: border-box;
           width: 100%;
           page-break-inside: avoid;
-          font-size: 9pt;
+          font-size: 7pt;
       }
       .note-title { 
           font-size: 12pt !important; 
@@ -73,7 +73,7 @@ const createStyledContainer = () => {
           margin-right: 12px;
       }
       .content-body { 
-          font-size: 9pt !important; 
+          font-size: 8pt !important; 
           line-height: 1.4;
           color: #374151;
       }
@@ -95,7 +95,7 @@ const createStyledContainer = () => {
           background-color: #f3f4f6 !important;
           color: #111827 !important;
           font-family: "Source Code Pro", "Courier New", Courier, monospace !important;
-          font-size: 8pt !important;
+          font-size: 7pt !important;
           line-height: 1.2 !important;
           border: 1px solid #e5e7eb;
           border-radius: 6px;
@@ -107,7 +107,7 @@ const createStyledContainer = () => {
       }
       .content-body code { 
           font-family: "Source Code Pro", "Courier New", Courier, monospace !important;
-          font-size: 8pt !important;
+          font-size: 7pt !important;
           background-color: #f3f4f6 !important;
           color: #111827 !important;
           padding: 1px 3px;
@@ -140,38 +140,28 @@ const renderNoteToCanvas = async (note: NoteForPdf, container: HTMLDivElement): 
     const createdAt = note.createdAt?.toDate ? format(note.createdAt.toDate(), 'PPP') : 'N/A';
     const updatedAt = note.updatedAt?.toDate ? format(note.updatedAt.toDate(), 'PPP') : 'N/A';
 
+    // The AI flow is now responsible for providing raw, unescaped HTML
     let contentHtml = note.highlightedContent || note.content || '';
+    
+    const noteElement = document.createElement('div');
+    noteElement.className = 'pdf-note-container';
 
-    // CRITICAL FIX: Ensure HTML is not double-escaped.
-    if (contentHtml.includes('&lt;') && contentHtml.includes('&gt;')) {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = contentHtml;
-        contentHtml = tempDiv.textContent || tempDiv.innerText || '';
-    }
-
-    // For code notes, ensure it's wrapped in <pre> if not already. This is a fallback.
-    // The AI flow should already do this.
-    if (note.type === 'code' && !contentHtml.trim().startsWith('<pre')) {
-       contentHtml = `<pre><code>${contentHtml}</code></pre>`;
-    }
-
-    const noteHtml = `
-        <div class="pdf-note-container">
-            <h1 class="note-title">${note.title}</h1>
-            <div class="metadata">
-                <span>Created: ${createdAt}</span>
-                <span>Last Updated: ${updatedAt}</span>
-            </div>
-            <div class="content-body">${contentHtml}</div>
+    noteElement.innerHTML = `
+        <h1 class="note-title">${note.title}</h1>
+        <div class="metadata">
+            <span>Created: ${createdAt}</span>
+            <span>Last Updated: ${updatedAt}</span>
         </div>
+        <div class="content-body">${contentHtml}</div>
     `;
     
-    container.innerHTML = noteHtml;
+    container.innerHTML = ''; // Clear previous content
+    container.appendChild(noteElement);
 
     const canvas = await html2canvas(container, {
         useCORS: true,
         logging: false,
-        scale: 1.5,
+        scale: 2, // Increase scale for better resolution
     });
 
     return canvas;
@@ -191,69 +181,61 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
   const sortedNotes = [...notes].sort((a, b) => {
     if (a.topicName < b.topicName) return -1;
     if (a.topicName > b.topicName) return 1;
-    // Assuming createdAt can be converted to a comparable value
     const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
     const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
     return dateA - dateB;
   });
 
+  let yPos = PAGE_MARGIN + 20; // Initial Y position for the first page
 
   for (let i = 0; i < sortedNotes.length; i++) {
     const note = sortedNotes[i];
 
-    // Start each new note on a fresh page
-    doc.addPage();
-    if (i === 0) {
-      doc.deletePage(1); // Remove the initial blank page
-    }
-    
-    // Update topic name header when it changes
-    if (note.topicName !== currentTopicName) {
-        currentTopicName = note.topicName;
+    // If topic changes or it's the first note, start a new page
+    if (i === 0 || note.topicName !== currentTopicName) {
+      if (i > 0) {
+        doc.addPage();
+      }
+      currentTopicName = note.topicName;
+      yPos = PAGE_MARGIN + 20; // Reset Y position for new topic/page
     }
 
+    // Add header and footer for the current page
     addHeader(doc, currentTopicName);
     addFooter(doc);
 
     const canvas = await renderNoteToCanvas(note, renderContainer);
     
-    const imgData = canvas.toDataURL('image/png', 0.95);
+    const imgData = canvas.toDataURL('image/png', 1.0);
     const imgProps = doc.getImageProperties(imgData);
     
     const pdfImgWidth = CONTENT_WIDTH;
     const pdfImgHeight = (imgProps.height * pdfImgWidth) / imgProps.width;
 
-    let yPos = PAGE_MARGIN + 20; // Start content below header
-    let heightLeft = pdfImgHeight;
-    let imgPartY = 0; // The Y position of the slice from the source canvas
+    // Check if the note fits on the current page
+    if (yPos + pdfImgHeight > PAGE_HEIGHT - PAGE_MARGIN) {
+      doc.addPage();
+      yPos = PAGE_MARGIN + 20; // Reset Y for new page
+      addHeader(doc, currentTopicName);
+      addFooter(doc);
+    }
 
-    while (heightLeft > 0) {
-      const pageHeightForContent = PAGE_HEIGHT - (PAGE_MARGIN + 20) - (PAGE_MARGIN + 10); // Top header + bottom footer
-      const spaceOnPage = pageHeightForContent - (yPos - (PAGE_MARGIN + 20));
-
-      if (spaceOnPage <= 0) {
-        doc.addPage();
-        addHeader(doc, currentTopicName);
-        addFooter(doc);
-        yPos = PAGE_MARGIN + 20;
-        continue;
-      }
-      
-      const heightToDraw = Math.min(heightLeft, spaceOnPage);
-
-      // This is a simplifiedaddImage call. The full version is needed for slicing.
-      (doc.addImage as any)(imgData, 'PNG', PAGE_MARGIN, yPos, pdfImgWidth, pdfImgHeight, undefined, 'FAST', 0, imgPartY, canvas.width, (heightToDraw / pdfImgHeight) * canvas.height);
-      
-      heightLeft -= heightToDraw;
-      imgPartY += (heightToDraw / pdfImgHeight) * canvas.height;
-      yPos += heightToDraw;
-
-      if (heightLeft > 0) {
-        doc.addPage();
-        addHeader(doc, currentTopicName);
-        addFooter(doc);
-        yPos = PAGE_MARGIN + 20;
-      }
+    doc.addImage(imgData, 'PNG', PAGE_MARGIN, yPos, pdfImgWidth, pdfImgHeight);
+    yPos += pdfImgHeight + 20; // Update yPos and add some spacing
+    
+    // Add new page for the next note if it's not the last one
+    if (i < sortedNotes.length - 1) {
+       // Only add a page if the topic is changing.
+       if(sortedNotes[i+1].topicName !== currentTopicName) {
+         // This space will be handled by the new topic logic at loop start
+       } else {
+         // If next note is in the same topic, check for space.
+         // A simple heuristic: if we are more than halfway down, new page.
+         if (yPos > PAGE_HEIGHT / 2) {
+           doc.addPage();
+           yPos = PAGE_MARGIN + 20;
+         }
+       }
     }
   }
 
