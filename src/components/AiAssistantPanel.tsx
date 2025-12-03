@@ -160,7 +160,7 @@ export function AiAssistantPanel() {
                     {message.role === 'assistant' && <Bot className="h-5 w-5 text-primary flex-shrink-0 mt-1.5" />}
                     <div className={cn(
                       'rounded-lg p-3 text-sm max-w-[90%] w-auto', 
-                      message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                      message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
                     )}>
                       <div className="ai-output">
                         <MessageContent content={message.content} />
