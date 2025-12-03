@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
-import type { Topic, Note, NoteUpdate } from '@/lib/types';
+import type { Topic, Note, NoteUpdate, NoteCreate } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 import { 
@@ -16,6 +16,7 @@ import {
   serverTimestamp,
   writeBatch,
   getDocs,
+  where,
 } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -34,7 +35,7 @@ interface NotesContextType {
   addTopic: (name: string) => Promise<void>;
   updateTopic: (topicId: string, name: string) => Promise<void>;
   deleteTopic: (topicId: string) => Promise<void>;
-  addNote: (note: { title: string; type: 'code' | 'text' }) => Promise<void>;
+  addNote: (note: NoteCreate) => Promise<void>;
   deleteNote: (noteId: string) => Promise<void>;
   updateNote: (noteId: string, data: NoteUpdate) => Promise<void>;
   activeNote: Note | null;
@@ -44,6 +45,7 @@ interface NotesContextType {
   setIsDirty: (dirty: boolean) => void;
   isSaving: boolean;
   getAllNotes: () => Promise<Note[]>;
+  getSubNotes: (parentId: string) => Note[];
 }
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
@@ -186,7 +188,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const addNote = async (note: { title: string; type: 'code' | 'text' }) => {
+  const addNote = async (note: NoteCreate) => {
     if (!notesCollectionRef || !user || !activeTopicId) return;
     const content = note.type === 'code' ? `// Start writing your ${note.title} note here...` : `<p>Start writing your ${note.title} note here...</p>`;
     
@@ -198,6 +200,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         language: note.type === 'code' ? 'plaintext' : 'text',
+        parentId: note.parentId || null,
     };
 
     addDoc(notesCollectionRef, newNoteData)
@@ -215,15 +218,36 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
   const deleteNote = async (noteId: string) => {
     if (!notesCollectionRef) return;
+
+    const batch = writeBatch(firestore);
+
+    // Reference to the note being deleted
     const noteDocRef = doc(notesCollectionRef, noteId);
-    deleteDoc(noteDocRef)
-        .catch(() => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: noteDocRef.path,
-                operation: 'delete',
-            }));
+    batch.delete(noteDocRef);
+
+    // Query for sub-notes
+    const subNotesQuery = query(notesCollectionRef, where('parentId', '==', noteId));
+    
+    try {
+        const subNotesSnapshot = await getDocs(subNotesQuery);
+        subNotesSnapshot.forEach(subNoteDoc => {
+            batch.delete(subNoteDoc.ref);
         });
+
+        await batch.commit();
+
+        if (activeNoteId === noteId) {
+          setActiveNoteId(null);
+        }
+
+    } catch (error) {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: noteDocRef.path,
+            operation: 'delete',
+        }));
+    }
   };
+
 
   const updateNote = async (noteId: string, data: NoteUpdate) => {
     if (!notesCollectionRef) return;
@@ -261,6 +285,10 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   const activeTopic = useMemo(() => {
     return topics.find(topic => topic.id === activeTopicId) || null;
   }, [activeTopicId, topics]);
+  
+  const getSubNotes = useCallback((parentId: string) => {
+    return notes.filter(note => note.parentId === parentId).sort((a,b) => a.createdAt > b.createdAt ? 1 : -1);
+  }, [notes]);
 
   const getAllNotes = async (): Promise<Note[]> => {
     if (!user) return [];
@@ -300,6 +328,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     setIsDirty,
     isSaving,
     getAllNotes,
+    getSubNotes,
   };
 
   return <NotesContext.Provider value={value}>{children}</NotesContext.Provider>;

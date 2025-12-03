@@ -114,7 +114,8 @@ service cloud.firestore {
       return data.topicId == topicId
           && data.title is string
           && data.content is string
-          && data.type is string && (data.type == 'text' || data.type == 'code');
+          && data.type is string && (data.type == 'text' || data.type == 'code')
+          && ('parentId' in data); // parentId can be null or a string
     }
 
     /**
@@ -124,7 +125,8 @@ service cloud.firestore {
        let data = request.resource.data;
        return data.topicId == resource.data.topicId
           && data.type == resource.data.type
-          && data.createdAt == resource.data.createdAt;
+          && data.createdAt == resource.data.createdAt
+          && data.parentId == resource.data.parentId;
     }
 
 

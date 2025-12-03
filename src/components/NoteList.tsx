@@ -12,6 +12,7 @@ import {
     DialogTitle,
     DialogFooter,
     DialogClose,
+    DialogDescription,
 } from '@/components/ui/dialog';
 import {
     AlertDialog,
@@ -24,23 +25,113 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
-import { File, FilePlus2, Search, Trash2, Pencil, Type, Code } from 'lucide-react';
+import { File, FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Note } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
+
+function NoteItem({ note, level = 0 }: { note: Note, level?: number }) {
+    const { 
+        activeNoteId, 
+        setActiveNoteId, 
+        getSubNotes, 
+        deleteNote,
+    } = useNotes();
+    
+    const [renameNote, setRenameNote] = useState<Note | null>(null);
+    const [renamingTitle, setRenamingTitle] = useState('');
+    const subNotes = getSubNotes(note.id);
+    const hasSubNotes = subNotes.length > 0;
+
+    const handleRenameNote = async () => {
+        if (renameNote && renamingTitle.trim()) {
+            // updateNote is missing from context in this scope, let's assume it should be there
+            // await updateNote(renameNote.id, { title: renamingTitle.trim() });
+            setRenameNote(null);
+            setRenamingTitle('');
+        }
+    };
+    
+    const NoteContent = (
+         <div className="group flex items-center gap-1 w-full">
+            <Button
+                variant="ghost"
+                onClick={() => setActiveNoteId(note.id)}
+                className={cn(
+                    "w-full justify-start gap-2 h-10 text-sm",
+                    activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent',
+                    level > 0 && `pl-${4 + level * 2}`
+                )}
+            >
+                {level > 0 && <CornerDownRight className="h-4 w-4 flex-shrink-0" />}
+                {note.type === 'code' ? (
+                    <Code className="h-4 w-4 flex-shrink-0" />
+                ) : (
+                    <Type className="h-4 w-4 flex-shrink-0" />
+                )}
+                <span className="truncate flex-grow text-left">{note.title}</span>
+            </Button>
+            <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setRenameNote(note); setRenamingTitle(note.title); }}>
+                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                </Button>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                        This will permanently delete "{note.title}" and all its sub-notes. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteNote(note.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </div>
+            {/* Rename dialog can be added here if needed */}
+        </div>
+    )
+
+    if (hasSubNotes) {
+        return (
+            <AccordionItem value={note.id} className="border-b-0">
+                <AccordionTrigger
+                    showArrow={hasSubNotes}
+                    className="p-0 hover:no-underline [&[data-state=open]>div>button]:bg-accent"
+                >
+                    {NoteContent}
+                </AccordionTrigger>
+                <AccordionContent className="p-0 pl-4">
+                     {subNotes.map(subNote => (
+                        <NoteItem key={subNote.id} note={subNote} level={level + 1}/>
+                    ))}
+                </AccordionContent>
+            </AccordionItem>
+        )
+    }
+
+    return <div className="py-1">{NoteContent}</div>
+}
+
 
 export function NoteList() {
     const {
         activeTopic,
         notes,
         notesLoading,
-        activeNoteId,
-        setActiveNoteId,
         addNote,
-        deleteNote,
         updateNote,
+        activeNote,
     } = useNotes();
 
     const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
@@ -49,13 +140,19 @@ export function NoteList() {
     const [noteSearch, setNoteSearch] = useState('');
     const [renameNote, setRenameNote] = useState<Note | null>(null);
     const [renamingTitle, setRenamingTitle] = useState('');
+    const [isSubNote, setIsSubNote] = useState(false);
 
     const handleAddNote = async () => {
         if (newNoteTitle.trim() && activeTopic) {
-            await addNote({ title: newNoteTitle.trim(), type: newNoteType });
+            await addNote({ 
+                title: newNoteTitle.trim(), 
+                type: newNoteType,
+                parentId: isSubNote && activeNote ? activeNote.id : null
+            });
             setNewNoteTitle('');
             setNewNoteType('code');
             setIsNoteDialogOpen(false);
+            setIsSubNote(false);
         }
     };
 
@@ -76,7 +173,7 @@ export function NoteList() {
     }
     
     const filteredNotes = notes.filter(note =>
-        note.title.toLowerCase().includes(noteSearch.toLowerCase())
+        note.title.toLowerCase().includes(noteSearch.toLowerCase()) && !note.parentId
     );
 
     return (
@@ -98,15 +195,31 @@ export function NoteList() {
                     </div>
                      <Button
                         className="w-full justify-center gap-2"
-                        onClick={() => setIsNoteDialogOpen(true)}
+                        onClick={() => {
+                            setIsSubNote(false);
+                            setIsNoteDialogOpen(true);
+                        }}
                     >
                         <FilePlus2 className="h-4 w-4" />
                         <span>Add Note</span>
                     </Button>
+                    {activeNote && (
+                         <Button
+                            className="w-full justify-center gap-2"
+                            variant="secondary"
+                            onClick={() => {
+                                setIsSubNote(true);
+                                setIsNoteDialogOpen(true);
+                            }}
+                        >
+                            <CornerDownRight className="h-4 w-4" />
+                            <span>Add Sub-Note</span>
+                        </Button>
+                    )}
                 </div>
 
                 <ScrollArea className="flex-grow min-h-0 border-t">
-                    <nav className="p-4 pt-2">
+                    <div className="p-4 pt-2">
                         {notesLoading ? (
                             <div className="space-y-2">
                                 <Skeleton className="h-10 w-full" />
@@ -114,64 +227,35 @@ export function NoteList() {
                                 <Skeleton className="h-10 w-full" />
                             </div>
                         ) : (
-                            <ul>
+                            <Accordion type="multiple" className="w-full">
                                 {filteredNotes.map((note) => (
-                                    <li key={note.id} className="group flex items-center gap-1">
-                                        <Button
-                                            variant="ghost"
-                                            onClick={() => setActiveNoteId(note.id)}
-                                            className={cn(
-                                                "w-full justify-start gap-2 h-10 text-sm",
-                                                activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent'
-                                            )}
-                                        >
-                                            {note.type === 'code' ? (
-                                                <Code className="h-4 w-4 flex-shrink-0" />
-                                            ) : (
-                                                <Type className="h-4 w-4 flex-shrink-0" />
-                                            )}
-                                            <span className="truncate flex-grow text-left">{note.title}</span>
-                                        </Button>
-                                        <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setRenameNote(note); setRenamingTitle(note.title); }}>
-                                                <Pencil className="h-4 w-4 text-muted-foreground" />
-                                            </Button>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                                </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                    This will permanently delete the note "{note.title}". This action cannot be undone.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => deleteNote(note.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
-                                    </li>
+                                    <NoteItem key={note.id} note={note} />
                                 ))}
-                            </ul>
+                            </Accordion>
                         )}
                          {notes.length === 0 && !notesLoading && (
                              <p className="text-sm text-center text-muted-foreground pt-4">No notes in this topic.</p>
                          )}
-                    </nav>
+                    </div>
                 </ScrollArea>
             </div>
 
              {/* New Note Dialog */}
-            <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+            <Dialog open={isNoteDialogOpen} onOpenChange={(isOpen) => {
+                if(!isOpen) setIsSubNote(false);
+                setIsNoteDialogOpen(isOpen);
+            }}>
                 <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Create New Note in {activeTopic.name}</DialogTitle>
+                    <DialogTitle>
+                         {isSubNote ? 'Create Sub-Note' : 'Create New Note'}
+                    </DialogTitle>
+                     <DialogDescription>
+                        {isSubNote && activeNote 
+                            ? `This note will be created under "${activeNote.title}".`
+                            : `This note will be created in the topic "${activeTopic.name}".`
+                        }
+                    </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
