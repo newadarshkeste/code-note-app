@@ -5,11 +5,11 @@ import { useNotes } from '@/context/NotesContext';
 import { getAiAssistantResponse } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Sparkles, Loader2, User, Bot, Paperclip, XCircle, File as FileIcon, Image as ImageIcon } from 'lucide-react';
+import { Sparkles, Loader2, User, Bot, Paperclip, XCircle, File as FileIcon, ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader } from './ui/card';
+import { CodeEditor } from './CodeEditor';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -18,7 +18,7 @@ interface ChatMessage {
 
 interface Attachment {
   name: string;
-  type: string; // e.g., 'image/png', 'application/pdf'
+  type: string;
   dataUri: string;
 }
 
@@ -33,6 +33,38 @@ function AiAssistantWelcome() {
     </div>
   );
 }
+
+const MessageContent = React.memo(({ content }: { content: string }) => {
+    const parts = content.split(/(\`\`\`[\w\s-]*\n[\s\S]*?\n\`\`\`)/g);
+
+    return (
+        <div className="ai-assistant-output">
+            {parts.map((part, index) => {
+                const codeBlockMatch = part.match(/\`\`\`(\w*)\n([\s\S]*?)\n\`\`\`/);
+                if (codeBlockMatch) {
+                    const language = codeBlockMatch[1] || 'plaintext';
+                    const code = codeBlockMatch[2];
+                    return (
+                        <div key={index} className="my-3 rounded-md border bg-background overflow-hidden">
+                            <div className="h-48">
+                                <CodeEditor
+                                    value={code}
+                                    language={language}
+                                    options={{ readOnly: true, domReadOnly: true, minimap: { enabled: false } }}
+                                />
+                            </div>
+                        </div>
+                    );
+                }
+                
+                const paragraphs = part.split('\n').filter(p => p.trim() !== '').map((p, i) => `<p>${p.replace(/`([^`]+)`/g, '<code>$1</code>')}</p>`).join('');
+                return <div key={index} dangerouslySetInnerHTML={{ __html: paragraphs }} />;
+            })}
+        </div>
+    );
+});
+MessageContent.displayName = 'MessageContent';
+
 
 export function AiAssistantPanel() {
   const { activeNote } = useNotes();
@@ -88,7 +120,7 @@ export function AiAssistantPanel() {
 
     const response = await getAiAssistantResponse(activeNote.content, prompt, attachment?.dataUri);
 
-    setAttachment(null); // Clear attachment after sending
+    setAttachment(null);
 
     if (response.success && response.answer) {
       const assistantMessage: ChatMessage = { role: 'assistant', content: response.answer };
@@ -131,10 +163,7 @@ export function AiAssistantPanel() {
                       'rounded-lg p-3 text-sm max-w-[90%] w-auto', 
                       message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                     )}>
-                      <div 
-                        className="ai-assistant-output" 
-                        dangerouslySetInnerHTML={{ __html: message.content.replace(/\n/g, '<br />') }} 
-                      />
+                      <MessageContent content={message.content} />
                     </div>
                      {message.role === 'user' && <User className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1.5" />}
                   </div>

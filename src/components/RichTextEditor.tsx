@@ -138,7 +138,11 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
       StarterKit.configure({
         // Disable history extension to manage history manually if needed
         history: false,
+        // Disable codeBlock from starter kit, we will add our own without highlighting
+        codeBlock: false,
       }),
+      // Add codeBlock without lowlight
+      StarterKit.extensions.find(ext => ext.name === 'codeBlock'),
       Underline,
       Link.configure({
         openOnClick: false,

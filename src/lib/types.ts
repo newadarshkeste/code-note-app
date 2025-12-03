@@ -4,7 +4,6 @@ export interface Note {
   title: string;
   type: 'code' | 'text';
   content: string;
-  highlightedContent?: string;
   language?: string;
   createdAt: any; // Firestore Timestamp
   updatedAt: any; // Firestore Timestamp
@@ -13,7 +12,7 @@ export interface Note {
 }
 
 export type NoteCreate = { title: string, type: 'code' | 'text' };
-export type NoteUpdate = Partial<Pick<Note, 'title' | 'content'>>;
+export type NoteUpdate = Partial<Pick<Note, 'title' | 'content' | 'language'>>;
 
 export interface Topic {
   id: string;

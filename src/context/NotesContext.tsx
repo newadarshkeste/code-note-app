@@ -18,7 +18,6 @@ import {
   getDocs,
 } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
-import { getHighlightedCode } from '@/app/actions';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 
@@ -67,7 +66,6 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
   const topicsRef = useMemo(() => user ? collection(firestore, 'users', user.uid, 'topics') : null, [user, firestore]);
   
-  // Memoize the reference to the notes subcollection for the active topic.
   const notesCollectionRef = useMemo(() => {
     if (user && activeTopicId) {
       return collection(firestore, 'users', user.uid, 'topics', activeTopicId, 'notes');
@@ -76,7 +74,6 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   }, [user, firestore, activeTopicId]);
 
 
-  // Fetch topics
   useEffect(() => {
     if (!topicsRef) {
       setTopics([]);
@@ -106,7 +103,6 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [topicsRef]);
 
-  // Fetch notes for the active topic
   useEffect(() => {
     if (!notesCollectionRef) {
         setNotes([]);
@@ -131,7 +127,6 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
   }, [notesCollectionRef]);
 
-  // Reset active note if topic changes
   useEffect(() => {
     setActiveNoteId(null);
   }, [activeTopicId]);
@@ -202,16 +197,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         userId: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        language: note.type === 'code' ? 'plaintext' : 'text',
     };
-
-    if (note.type === 'code') {
-        const result = await getHighlightedCode(content);
-        newNoteData.highlightedContent = result.highlightedCode;
-        newNoteData.language = result.language;
-    } else {
-        newNoteData.highlightedContent = content;
-        newNoteData.language = 'text'; // Explicitly set for text notes
-    }
 
     addDoc(notesCollectionRef, newNoteData)
         .then(docRef => {
@@ -243,26 +230,14 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     setIsSaving(true);
     const noteDocRef = doc(notesCollectionRef, noteId);
     
-    let finalData: NoteUpdate & { updatedAt: any; highlightedContent?: string; language?: string } = {
+    let finalData: NoteUpdate & { updatedAt: any; language?: string } = {
       ...data,
       updatedAt: serverTimestamp(),
     };
 
-    const noteToUpdate = notes.find(n => n.id === noteId);
-    if (noteToUpdate?.type === 'code' && data.content) {
-      try {
-        const { highlightedCode, language } = await getHighlightedCode(data.content);
-        finalData.highlightedContent = highlightedCode;
-        finalData.language = language;
-      } catch (e) {
-        console.error("Syntax highlighting failed, saving raw content.", e);
-        finalData.highlightedContent = `<pre><code>${data.content.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`;
-        finalData.language = 'plaintext';
-      }
-    } else if (noteToUpdate?.type === 'text' && data.content) {
-      finalData.highlightedContent = data.content;
+    if (data.content && data.language) {
+      finalData.language = data.language;
     }
-
 
     try {
         await updateDoc(noteDocRef, finalData);
@@ -273,7 +248,6 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             operation: 'update',
             requestResourceData: finalData
         }));
-        // Re-throw to inform the caller the save failed
         throw new Error("Update failed due to permissions");
     } finally {
         setIsSaving(false);
@@ -338,5 +312,3 @@ export function useNotes() {
   }
   return context;
 }
-
-    
