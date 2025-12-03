@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Note } from './types';
@@ -78,11 +77,11 @@ const createStyledContainer = () => {
           color: #374151;
       }
       /* General content styling from tiptap */
-      .content-body p, .content-body ul, .content-body ol { margin-top: 0.5em; margin-bottom: 0.5em; }
+      .content-body p, .content-body ul, .content-body ol { margin-top: 0; margin-bottom: 0.5em; }
       .content-body ul, .content-body ol { padding-left: 1rem; }
-      .content-body li { margin-bottom: 0.25em; }
+      .content-body li { margin-bottom: 0.2em; }
       .content-body hr { margin: 1rem 0; border-color: #e5e7eb; }
-      .content-body blockquote { padding-left: 1rem; border-left: 3px solid #d1d5db; font-style: italic; color: #4b5563; }
+      .content-body blockquote { padding-left: 1rem; border-left: 3px solid #d1d5db; font-style: italic; color: #4b5563; margin: 0.5em 0; }
       .content-body a { color: #2563eb; text-decoration: underline; }
       .content-body h1, .content-body h2, .content-body h3, .content-body h4 { font-family: "Space Grotesk", sans-serif; margin-bottom: 0.5em; font-weight: 600; line-height: 1.2; }
       .content-body h1 { font-size: 1.5em !important; }
@@ -120,6 +119,7 @@ const createStyledContainer = () => {
           font-size: inherit !important;
           line-height: inherit !important;
       }
+      /* Syntax highlighting colors (light theme) */
       .token.comment, .token.prolog, .token.doctype, .token.cdata { color: #6a737d !important; }
       .token.punctuation { color: #6a737d !important; }
       .token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #d73a49 !important; }
@@ -143,7 +143,7 @@ const renderNoteToCanvas = async (note: NoteForPdf, container: HTMLDivElement): 
 
     // This ensures code content is always wrapped in pre/code tags for consistent styling
     if (note.type === 'code' && !contentHtml.startsWith('<pre')) {
-       contentHtml = `<pre><code>${contentHtml}</code></pre>`;
+       contentHtml = `<pre><code>${contentHtml.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`;
     }
 
     const noteHtml = `
@@ -162,7 +162,7 @@ const renderNoteToCanvas = async (note: NoteForPdf, container: HTMLDivElement): 
     const canvas = await html2canvas(container, {
         useCORS: true,
         logging: false,
-        scale: 1, // Use scale 1 and control quality via CSS and sizing
+        scale: 1.5, // Increase scale slightly for better resolution, but control font size with CSS
     });
 
     return canvas;
@@ -171,11 +171,11 @@ const renderNoteToCanvas = async (note: NoteForPdf, container: HTMLDivElement): 
 export const generatePdf = async (notes: NoteForPdf[]) => {
   const doc = new jsPDF({
     orientation: 'p',
-    unit: 'pt', // Use points for more intuitive sizing
+    unit: 'pt',
     format: 'a4',
   });
 
-  doc.deletePage(1); // Start with a clean slate
+  doc.deletePage(1);
 
   const renderContainer = createStyledContainer();
   let currentTopicName = '';
@@ -191,63 +191,59 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
 
     const canvas = await renderNoteToCanvas(note, renderContainer);
     
-    const imgData = canvas.toDataURL('image/png');
+    const imgData = canvas.toDataURL('image/png', 0.95); // Use PNG for quality
     const imgProps = doc.getImageProperties(imgData);
     
     const pdfImgWidth = CONTENT_WIDTH;
     const pdfImgHeight = (imgProps.height * pdfImgWidth) / imgProps.width;
 
-    let yPos = PAGE_MARGIN + 20; // Start content lower to not overlap header
+    let yPos = PAGE_MARGIN + 20;
     let heightLeft = pdfImgHeight;
-    let imgPos = 0; // The y-position on the source canvas to start cropping from
+    let imgPos = 0;
 
     while (heightLeft > 0) {
       const pageHeightForContent = PAGE_HEIGHT - (PAGE_MARGIN + 20) - (PAGE_MARGIN + 10);
       let spaceOnPage = pageHeightForContent - (yPos - (PAGE_MARGIN + 20));
-      
-      if(spaceOnPage <= 0) {
-          if (heightLeft > 0) {
-              doc.addPage();
-              addHeader(doc, currentTopicName);
-              addFooter(doc);
-              yPos = PAGE_MARGIN + 20;
-              spaceOnPage = pageHeightForContent;
-          } else {
-             break;
-          }
+
+      if (spaceOnPage <= 0) {
+        doc.addPage();
+        addHeader(doc, currentTopicName);
+        addFooter(doc);
+        yPos = PAGE_MARGIN + 20;
+        spaceOnPage = pageHeightForContent;
       }
       
       const heightToDraw = Math.min(heightLeft, spaceOnPage);
-      const sourceCanvasHeight = (heightToDraw / pdfImgHeight) * canvas.height;
 
-      // addImage(imageData, format, x, y, width, height, alias, compression, rotation)
-      doc.addImage(
-        imgData,
-        'PNG',
-        PAGE_MARGIN,
-        yPos,
-        pdfImgWidth,
-        heightToDraw,
-        undefined,
-        'FAST'
-      );
-      
-      // We manually crop the canvas image by adjusting the source y-position in the next iteration
-      // This is a workaround because jsPDF's source cropping is not reliable in all contexts
-      // The approach here is to render the *full* canvas and just draw sections of it.
-      // A more optimized way would be to re-render canvas for each page, but this is more complex.
-      // For now, this is a conceptual placeholder for multi-page logic.
-      // The actual slicing logic is more complex than what is shown here.
-      // Let's simulate slicing by re-positioning on a new page.
+      const sourceCanvas = document.createElement('canvas');
+      sourceCanvas.width = canvas.width;
+      sourceCanvas.height = (heightToDraw / pdfImgHeight) * canvas.height;
+      const ctx = sourceCanvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(
+          canvas,
+          0,
+          (imgPos / pdfImgHeight) * canvas.height,
+          canvas.width,
+          sourceCanvas.height,
+          0,
+          0,
+          sourceCanvas.width,
+          sourceCanvas.height
+        );
+        const slicedImgData = sourceCanvas.toDataURL('image/png', 0.95);
+        doc.addImage(slicedImgData, 'PNG', PAGE_MARGIN, yPos, pdfImgWidth, heightToDraw);
+      }
       
       heightLeft -= heightToDraw;
-      imgPos += sourceCanvasHeight; // This doesn't actually crop, it's for tracking
+      imgPos += heightToDraw;
+      yPos += heightToDraw;
 
       if (heightLeft > 0) {
         doc.addPage();
         addHeader(doc, currentTopicName);
         addFooter(doc);
-        yPos = PAGE_MARGIN + 20; // Reset y-position for the new page
+        yPos = PAGE_MARGIN + 20;
       }
     }
   }
@@ -259,4 +255,3 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
     : 'codenote-export';
   doc.save(`${safeFilename}.pdf`);
 };
-
