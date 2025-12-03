@@ -5,7 +5,7 @@ import { useLocalStorage } from './useLocalStorage';
 import { useNotes } from '@/context/NotesContext';
 import { isToday, isYesterday, startOfToday } from 'date-fns';
 
-export type TimerMode = 'focus' | 'break';
+export type TimerMode = 'focus' | 'break' | 'longBreak';
 
 export const useStudyStats = () => {
     // Pomodoro State
@@ -15,10 +15,13 @@ export const useStudyStats = () => {
     // Custom durations with default fallbacks
     const [focusDuration, setFocusDuration] = useLocalStorage('study:focusDuration', 25);
     const [breakDuration, setBreakDuration] = useLocalStorage('study:breakDuration', 5);
-
+    const [longBreakDuration, setLongBreakDuration] = useLocalStorage('study:longBreakDuration', 15);
+    const [pomodorosPerCycle, setPomodorosPerCycle] = useLocalStorage('study:pomodorosPerCycle', 4);
+    
     const [timeLeft, setTimeLeft] = useLocalStorage('study:timeLeft', focusDuration * 60);
 
     const [pomodorosToday, setPomodorosToday] = useLocalStorage('study:pomodorosToday', 0);
+    const [pomodoroCycleCount, setPomodoroCycleCount] = useLocalStorage('study:pomodoroCycleCount', 0);
     const [lastResetDate, setLastResetDate] = useLocalStorage('study:lastResetDate', new Date().toISOString());
 
     // Streak State
@@ -78,10 +81,18 @@ export const useStudyStats = () => {
         } else if (isActive && timeLeft === 0) {
             if (mode === 'focus') {
                 incrementStreak();
+                const newCycleCount = pomodoroCycleCount + 1;
                 setPomodorosToday(p => p + 1);
-                setMode('break');
-                setTimeLeft(breakDuration * 60);
-            } else {
+                setPomodoroCycleCount(newCycleCount);
+
+                if (newCycleCount % pomodorosPerCycle === 0) {
+                    setMode('longBreak');
+                    setTimeLeft(longBreakDuration * 60);
+                } else {
+                    setMode('break');
+                    setTimeLeft(breakDuration * 60);
+                }
+            } else { // break or longBreak
                 setMode('focus');
                 setTimeLeft(focusDuration * 60);
             }
@@ -90,7 +101,8 @@ export const useStudyStats = () => {
         return () => {
             if (interval) clearInterval(interval);
         };
-    }, [isActive, timeLeft, mode, setTimeLeft, setMode, setPomodorosToday, incrementStreak, focusDuration, breakDuration]);
+    }, [isActive, timeLeft, mode, pomodoroCycleCount, focusDuration, breakDuration, longBreakDuration, pomodorosPerCycle, incrementStreak, setMode, setTimeLeft, setPomodorosToday, setPomodoroCycleCount]);
+
 
     const toggleTimer = () => setIsActive(!isActive);
 
@@ -98,18 +110,30 @@ export const useStudyStats = () => {
         setIsActive(false);
         setMode('focus');
         setTimeLeft(focusDuration * 60);
+        setPomodoroCycleCount(0); // Also reset the cycle count on manual reset
     };
 
     // This function will be called from the settings modal
-    const updateDurations = (newFocus: number, newBreak: number) => {
+    const updateDurations = (newFocus: number, newBreak: number, newLongBreak: number, newCycle: number) => {
         setFocusDuration(newFocus);
         setBreakDuration(newBreak);
+        setLongBreakDuration(newLongBreak);
+        setPomodorosPerCycle(newCycle);
         // If timer is not active, reset it to the new focus duration
         if (!isActive) {
             setTimeLeft(newFocus * 60);
             setMode('focus');
         }
     };
+
+    const getTimerDuration = () => {
+        switch(mode) {
+            case 'focus': return focusDuration * 60;
+            case 'break': return breakDuration * 60;
+            case 'longBreak': return longBreakDuration * 60;
+            default: return focusDuration * 60;
+        }
+    }
 
 
     // --- Stats Tracking Logic ---
@@ -159,9 +183,12 @@ export const useStudyStats = () => {
             isActive,
             toggleTimer,
             resetTimer,
-            duration: mode === 'focus' ? focusDuration * 60 : breakDuration * 60,
+            duration: getTimerDuration(),
             focusDuration,
             breakDuration,
+            longBreakDuration,
+            pomodorosPerCycle,
+            pomodoroCycleCount,
             updateDurations
         },
         dailyStats: {
