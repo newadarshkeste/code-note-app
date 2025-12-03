@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -40,7 +41,18 @@ type ExportType = 'note' | 'topic' | 'all';
 
 function stripHtml(raw: string): string {
     if (!raw) return '';
-    return raw.replace(/<[^>]+>/g, '');
+  
+    let clean = raw.replace(/<[^>]+>/g, '');
+    
+    clean = clean
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
+    
+    return clean.trim();
 }
 
 export function NoteDisplay() {
