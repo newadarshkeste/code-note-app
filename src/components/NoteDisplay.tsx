@@ -47,7 +47,8 @@ export function NoteDisplay() {
     activeTopic, 
     getAllNotes,
     setDirtyNoteContent,
-    dirtyNoteContent
+    dirtyNoteContent,
+    saveActiveNote,
   } = useNotes();
   const { toast } = useToast();
   
@@ -61,39 +62,27 @@ export function NoteDisplay() {
       setDirtyNoteContent({ title: activeNote.title, content: activeNote.content });
       setIsDirty(false); // Reset dirty state on note change
     } else {
-      setDirtyNoteContent({ title: '', content: '' });
+      setDirtyNoteContent(null);
     }
   }, [activeNote?.id]);
   
   
   const handleContentChange = (newContent: string | undefined) => {
-    if (newContent !== undefined) {
-      setDirtyNoteContent(prev => ({...prev, content: newContent!}));
+    if (newContent !== undefined && dirtyNoteContent) {
+      setDirtyNoteContent(prev => ({...prev!, content: newContent!}));
       if (!isDirty) setIsDirty(true);
     }
   };
   
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setDirtyNoteContent(prev => ({...prev, title: e.target.value}));
-    if (!isDirty) setIsDirty(true);
+    if (dirtyNoteContent) {
+      setDirtyNoteContent(prev => ({...prev!, title: e.target.value}));
+      if (!isDirty) setIsDirty(true);
+    }
   }
 
   const handleManualSave = async () => {
-    if (!activeNote || !isDirty || !dirtyNoteContent) return;
-    try {
-      await updateNote(activeNote.id, { title: dirtyNoteContent.title, content: dirtyNoteContent.content });
-      toast({
-        title: 'Note Saved!',
-        description: `"${dirtyNoteContent.title}" has been saved successfully.`,
-      });
-    } catch (error) {
-      // The context handles emitting the permission error
-      toast({
-        variant: 'destructive',
-        title: 'Error Saving Note',
-        description: 'Could not save the note. Please check permissions and try again.',
-      });
-    }
+    await saveActiveNote();
   };
 
   const handleExport = async () => {
@@ -234,5 +223,3 @@ export function NoteDisplay() {
     </>
   );
 }
-
-    

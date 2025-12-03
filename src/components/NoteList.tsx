@@ -63,7 +63,7 @@ function NoteItem({ note, level = 0, onNoteSelect }: { note: Note, level?: numbe
                   "w-full justify-start gap-2 h-full text-sm",
                   activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent'
               )}
-              style={{ paddingLeft: `${(level * 1.5) + (hasSubNotes ? 0.25 : 0.5)}rem` }}
+              style={{ paddingLeft: `${(level * 1.5) + (hasSubNotes ? 0.25 : 2)}rem` }}
           >
               {note.type === 'code' ? (
                   <Code className="h-4 w-4 flex-shrink-0" />
@@ -105,8 +105,8 @@ function NoteItem({ note, level = 0, onNoteSelect }: { note: Note, level?: numbe
                 <div className={cn("flex items-center w-full rounded-md", activeNoteId === note.id && 'bg-primary/10')}>
                     <AccordionTrigger
                         className={cn(
-                            "p-1 rounded-sm hover:bg-accent/50 [&[data-state=open]>svg]:rotate-90",
-                            `pl-2`
+                            "p-0 rounded-sm hover:bg-accent/50 [&[data-state=open]>svg]:rotate-90",
+                            "w-8 h-10 flex items-center justify-center"
                         )}
                          style={{ marginLeft: `${level * 1.5}rem` }}
                     >
@@ -127,10 +127,6 @@ function NoteItem({ note, level = 0, onNoteSelect }: { note: Note, level?: numbe
 
     return (
         <div className="py-1 flex items-center w-full">
-            <div
-                className="w-4 flex-shrink-0"
-                style={{ marginLeft: `${level * 1.5}rem` }}
-            />
             {renderNoteContent()}
         </div>
     );
@@ -148,7 +144,7 @@ export function NoteList() {
         isDirty,
         setIsDirty,
         setActiveNoteId,
-        activeNoteId
+        saveActiveNote,
     } = useNotes();
 
     const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
@@ -173,17 +169,7 @@ export function NoteList() {
     };
     
     const handleSaveAndSwitch = async () => {
-        if (activeNote) {
-            // This reuses the logic from NoteDisplay's save, but we need title/content.
-            // A better approach would be to have a single save function in the context
-            // that accesses the current editor state. For now, we assume we can trigger
-            // a save action from the context itself.
-            // Let's call a dummy save for now. A proper implementation would require
-            // the `NoteDisplay` to register its current content with the context.
-            // Since we don't have that, we'll just discard for this example.
-            // A real implementation would be:
-            // await saveActiveNote(); 
-        }
+        await saveActiveNote();
         setIsDirty(false);
         if (pendingNoteId) {
             setActiveNoteId(pendingNoteId);
@@ -411,5 +397,3 @@ export function NoteList() {
         </>
     );
 }
-
-    

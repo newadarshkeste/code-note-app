@@ -139,13 +139,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   }, [notesCollectionRef]);
 
   useEffect(() => {
-    // If we are switching away from a dirty note, this is handled by the dialog now.
-    // This effect should only reset the active note when the topic changes.
-    if (isDirty) {
-      // Logic to show dialog is in NoteList now
-    } else {
-      setActiveNoteId(null);
-    }
+    setActiveNoteId(null);
+    setIsDirty(false); // Reset dirty state when topic changes
   }, [activeTopicId]);
 
   const addTopic = async (name: string) => {
@@ -376,5 +371,3 @@ export function useNotes() {
   }
   return context;
 }
-
-    
