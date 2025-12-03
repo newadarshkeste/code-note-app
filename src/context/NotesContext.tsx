@@ -22,6 +22,11 @@ import { useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 
+interface DirtyNoteContent {
+    title: string;
+    content: string;
+}
+
 interface NotesContextType {
   topics: Topic[];
   topicsLoading: boolean;
@@ -46,6 +51,9 @@ interface NotesContextType {
   isSaving: boolean;
   getAllNotes: () => Promise<Note[]>;
   getSubNotes: (parentId: string) => Note[];
+  dirtyNoteContent: DirtyNoteContent | null;
+  setDirtyNoteContent: React.Dispatch<React.SetStateAction<DirtyNoteContent | null>>;
+  saveActiveNote: () => Promise<void>;
 }
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
@@ -64,6 +72,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [dirtyNoteContent, setDirtyNoteContent] = useState<DirtyNoteContent | null>(null);
   const { toast } = useToast();
 
   const topicsRef = useMemo(() => user ? collection(firestore, 'users', user.uid, 'topics') : null, [user, firestore]);
@@ -130,7 +139,13 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   }, [notesCollectionRef]);
 
   useEffect(() => {
-    setActiveNoteId(null);
+    // If we are switching away from a dirty note, this is handled by the dialog now.
+    // This effect should only reset the active note when the topic changes.
+    if (isDirty) {
+      // Logic to show dialog is in NoteList now
+    } else {
+      setActiveNoteId(null);
+    }
   }, [activeTopicId]);
 
   const addTopic = async (name: string) => {
@@ -305,6 +320,23 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     return allNotes;
   };
 
+  const saveActiveNote = async () => {
+    if (!activeNote || !isDirty || !dirtyNoteContent) return;
+    try {
+      await updateNote(activeNote.id, { title: dirtyNoteContent.title, content: dirtyNoteContent.content });
+      toast({
+        title: 'Note Saved!',
+        description: `"${dirtyNoteContent.title}" has been saved successfully.`,
+      });
+    } catch (error) {
+       toast({
+        variant: 'destructive',
+        title: 'Error Saving Note',
+        description: 'Could not save the note.',
+      });
+    }
+  };
+
   const value = {
     topics,
     topicsLoading,
@@ -329,6 +361,9 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     isSaving,
     getAllNotes,
     getSubNotes,
+    dirtyNoteContent,
+    setDirtyNoteContent,
+    saveActiveNote,
   };
 
   return <NotesContext.Provider value={value}>{children}</NotesContext.Provider>;
@@ -341,3 +376,5 @@ export function useNotes() {
   }
   return context;
 }
+
+    

@@ -37,11 +37,20 @@ function WelcomeScreen() {
 type ExportType = 'note' | 'topic' | 'all';
 
 export function NoteDisplay() {
-  const { activeNote, updateNote, isDirty, setIsDirty, isSaving, notes, activeTopic, getAllNotes } = useNotes();
+  const { 
+    activeNote, 
+    updateNote, 
+    isDirty, 
+    setIsDirty, 
+    isSaving, 
+    notes, 
+    activeTopic, 
+    getAllNotes,
+    setDirtyNoteContent,
+    dirtyNoteContent
+  } = useNotes();
   const { toast } = useToast();
   
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportType, setExportType] = useState<ExportType>('note');
@@ -49,35 +58,33 @@ export function NoteDisplay() {
   // Set initial state only when the active note ID changes
   useEffect(() => {
     if (activeNote) {
-      setTitle(activeNote.title);
-      setContent(activeNote.content);
+      setDirtyNoteContent({ title: activeNote.title, content: activeNote.content });
       setIsDirty(false); // Reset dirty state on note change
     } else {
-      setTitle('');
-      setContent('');
+      setDirtyNoteContent({ title: '', content: '' });
     }
-  }, [activeNote?.id]); // Depend only on the ID to prevent re-renders while typing
+  }, [activeNote?.id]);
   
   
   const handleContentChange = (newContent: string | undefined) => {
     if (newContent !== undefined) {
-      setContent(newContent);
+      setDirtyNoteContent(prev => ({...prev, content: newContent!}));
       if (!isDirty) setIsDirty(true);
     }
   };
   
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(e.target.value);
+    setDirtyNoteContent(prev => ({...prev, title: e.target.value}));
     if (!isDirty) setIsDirty(true);
   }
 
   const handleManualSave = async () => {
-    if (!activeNote || !isDirty) return;
+    if (!activeNote || !isDirty || !dirtyNoteContent) return;
     try {
-      await updateNote(activeNote.id, { title, content });
+      await updateNote(activeNote.id, { title: dirtyNoteContent.title, content: dirtyNoteContent.content });
       toast({
         title: 'Note Saved!',
-        description: `"${title}" has been saved successfully.`,
+        description: `"${dirtyNoteContent.title}" has been saved successfully.`,
       });
     } catch (error) {
       // The context handles emitting the permission error
@@ -133,7 +140,7 @@ export function NoteDisplay() {
   };
 
 
-  if (!activeNote) {
+  if (!activeNote || !dirtyNoteContent) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-background/80">
         <WelcomeScreen />
@@ -147,7 +154,7 @@ export function NoteDisplay() {
       <header className="flex-shrink-0 flex items-center justify-between p-4 border-b h-[65px] bg-background">
         <div className="flex items-center gap-3 flex-grow min-w-0">
             <Input
-                value={title}
+                value={dirtyNoteContent.title}
                 onChange={handleTitleChange}
                 placeholder="Note Title"
                 className="text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-xl h-auto p-0 bg-transparent truncate"
@@ -178,14 +185,14 @@ export function NoteDisplay() {
         {activeNote.type === 'code' ? (
            <CodeEditor
               key={activeNote.id}
-              value={content}
+              value={dirtyNoteContent.content}
               onChange={handleContentChange}
               language={activeNote?.language || 'plaintext'}
             />
         ) : (
           <RichTextEditor
             key={activeNote.id}
-            value={content}
+            value={dirtyNoteContent.content}
             onChange={handleContentChange}
           />
         )}
@@ -227,3 +234,5 @@ export function NoteDisplay() {
     </>
   );
 }
+
+    
