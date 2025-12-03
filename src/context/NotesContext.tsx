@@ -234,15 +234,19 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const content = note.type === 'code' ? `// Start writing your ${note.title} note here...` : `<p>Start writing your ${note.title} note here...</p>`;
     
     const newNoteData: any = { 
-        ...note, 
+        title: note.title,
+        type: note.type,
         topicId: activeTopicId,
         content,
         userId: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        language: note.language || (note.type === 'code' ? 'plaintext' : undefined),
         parentId: note.parentId || null,
     };
+
+    if (note.type === 'code') {
+        newNoteData.language = note.language || 'plaintext';
+    }
 
     addDoc(notesCollectionRef, newNoteData)
         .then(docRef => {
