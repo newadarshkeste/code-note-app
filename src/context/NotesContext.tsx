@@ -89,9 +89,10 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   }, [user, firestore, activeTopicId]);
 
   const updateNote = useCallback(async (noteId: string, data: NoteUpdate) => {
-    if (!notesCollectionRef) return;
+    if (!user || !activeTopicId) return;
+    const noteDocRef = doc(firestore, 'users', user.uid, 'topics', activeTopicId, 'notes', noteId);
+    
     setIsSaving(true);
-    const noteDocRef = doc(notesCollectionRef, noteId);
     
     let finalData: NoteUpdate & { updatedAt: any } = {
       ...data,
@@ -111,7 +112,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     } finally {
         setIsSaving(false);
     }
-  }, [notesCollectionRef]);
+  }, [user, firestore, activeTopicId]);
 
   const studyStats = useStudyStats(updateNote);
 
