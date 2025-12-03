@@ -54,10 +54,10 @@ const createStyledContainer = () => {
           box-sizing: border-box;
           width: 100%;
           page-break-inside: avoid;
-          font-size: 8pt;
+          font-size: 9pt;
       }
       .note-title { 
-          font-size: 10pt !important; 
+          font-size: 11pt !important; 
           margin-top: 0;
           margin-bottom: 5px; 
           font-weight: bold;
@@ -73,7 +73,7 @@ const createStyledContainer = () => {
           margin-right: 12px;
       }
       .content-body { 
-          font-size: 8pt !important; 
+          font-size: 9pt !important; 
           line-height: 1.4;
           color: #374151;
       }
@@ -90,35 +90,9 @@ const createStyledContainer = () => {
       .content-body h3 { font-size: 1.0em !important; }
       .content-body h4 { font-size: 0.9em !important; }
 
-      /* Code block specific styling for syntax highlighting */
+       /* This is now only for rich text */
       .content-body pre {
-          background-color: #f3f4f6 !important;
-          color: #111827 !important;
-          font-family: "Source Code Pro", "Courier New", Courier, monospace !important;
-          font-size: 7pt !important;
-          line-height: 1.2 !important;
-          border: 1px solid #e5e7eb;
-          border-radius: 6px;
-          padding: 8px !important;
-          white-space: pre-wrap !important;
-          word-break: break-all;
-          overflow-x: auto;
-          margin: 8px 0;
-      }
-      .content-body code { 
-          font-family: "Source Code Pro", "Courier New", Courier, monospace !important;
-          font-size: 7pt !important;
-          background-color: #f3f4f6 !important;
-          color: #111827 !important;
-          padding: 1px 3px;
-          border-radius: 4px;
-      }
-      .content-body pre > code {
-          white-space: pre-wrap !important;
-          background: transparent !important;
-          padding: 0 !important;
-          font-size: inherit !important;
-          line-height: inherit !important;
+          display: none;
       }
     `;
     container.appendChild(style);
@@ -127,11 +101,11 @@ const createStyledContainer = () => {
 }
 
 
-const renderNoteToCanvas = async (note: NoteForPdf, container: HTMLDivElement): Promise<HTMLCanvasElement> => {
+const renderRichTextToCanvas = async (note: NoteForPdf, container: HTMLDivElement): Promise<HTMLCanvasElement> => {
     const createdAt = note.createdAt?.toDate ? format(note.createdAt.toDate(), 'PPP') : 'N/A';
     const updatedAt = note.updatedAt?.toDate ? format(note.updatedAt.toDate(), 'PPP') : 'N/A';
 
-    let contentHtml = note.highlightedContent || note.content || '';
+    let contentHtml = note.content || '';
     
     const noteElement = document.createElement('div');
     noteElement.className = 'pdf-note-container';
@@ -165,7 +139,6 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
   });
 
   const renderContainer = createStyledContainer();
-  let currentTopicName = '';
   
   const sortedNotes = [...notes].sort((a, b) => {
     if (a.topicName < b.topicName) return -1;
@@ -176,47 +149,106 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
   });
 
   let yPos = PAGE_MARGIN + 20;
+  let currentTopicName = '';
+
+  // Add first page
+  doc.addPage();
+  doc.deletePage(1);
 
   for (let i = 0; i < sortedNotes.length; i++) {
     const note = sortedNotes[i];
 
-    // Only create a new page if needed
-    if (i === 0) {
-        // First note → add first page
-        doc.addPage();
-        doc.deletePage(1);
-        addHeader(doc, note.topicName);
-        addFooter(doc);
-    } else {
-        // Check available vertical space
-        if (yPos + 150 > PAGE_HEIGHT - PAGE_MARGIN - 40) {
+    if (note.topicName !== currentTopicName) {
+        currentTopicName = note.topicName;
+        // If this isn't the very first note, add a page break for the new topic
+        if (i > 0) {
             doc.addPage();
-            addHeader(doc, note.topicName);
-            addFooter(doc);
             yPos = PAGE_MARGIN + 20;
         }
     }
-    currentTopicName = note.topicName;
-    doc.setPage(doc.getNumberOfPages()); // Make sure we're on the last page
 
-    const canvas = await renderNoteToCanvas(note, renderContainer);
-    
-    const imgData = canvas.toDataURL('image/png', 1.0);
-    const imgProps = doc.getImageProperties(imgData);
-    
-    const pdfImgWidth = CONTENT_WIDTH;
-    const pdfImgHeight = ((imgProps.height * pdfImgWidth) / imgProps.width) * 0.70;
+    // Always add headers and footers to the current (and any new) page
+    doc.setPage(doc.getNumberOfPages());
+    addHeader(doc, currentTopicName);
+    addFooter(doc);
 
-    // Check if the note fits on the current page
-    if (yPos + pdfImgHeight > PAGE_HEIGHT - PAGE_MARGIN) {
-      doc.addPage();
-      yPos = PAGE_MARGIN + 20; // Reset Y for new page
-      addHeader(doc, currentTopicName);
-      addFooter(doc);
+    const createdAt = note.createdAt?.toDate ? format(note.createdAt.toDate(), 'PPP') : 'N/A';
+    const updatedAt = note.updatedAt?.toDate ? format(note.updatedAt.toDate(), 'PPP') : 'N/A';
+    
+    // --- RENDER TITLE AND METADATA (COMMON FOR BOTH NOTE TYPES) ---
+    const titleHeight = 20;
+    const metadataHeight = 15;
+    const initialBlockHeight = titleHeight + metadataHeight;
+    if (yPos + initialBlockHeight > PAGE_HEIGHT - PAGE_MARGIN) {
+        doc.addPage();
+        yPos = PAGE_MARGIN + 20;
+        addHeader(doc, currentTopicName);
+        addFooter(doc);
     }
+    
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text(note.title, PAGE_MARGIN, yPos);
+    yPos += titleHeight;
 
-    doc.addImage(imgData, 'PNG', PAGE_MARGIN, yPos, pdfImgWidth, pdfImgHeight);
-    yPos += pdfImgHeight + 20;
+    doc.setFont('Helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor('#4b5563');
+    doc.text(`Created: ${createdAt}    Last Updated: ${updatedAt}`, PAGE_MARGIN, yPos);
+    yPos += metadataHeight;
+
+
+    // --- RENDER CONTENT BASED ON TYPE ---
+    if (note.type === 'code') {
+        const codeLines = note.content.split('\n');
+        const fontSize = 8;
+        const lineHeight = 1.2;
+        const codePadding = 10;
+        
+        doc.setFont('Courier', 'normal');
+        doc.setFontSize(fontSize);
+        
+        // Calculate total height of the code block
+        const blockHeight = (codeLines.length * fontSize * lineHeight) + (codePadding * 2);
+
+        if (yPos + blockHeight > PAGE_HEIGHT - PAGE_MARGIN) {
+            doc.addPage();
+            yPos = PAGE_MARGIN + 20;
+            addHeader(doc, currentTopicName);
+            addFooter(doc);
+        }
+
+        // Draw background rectangle
+        doc.setFillColor('#f3f4f6');
+        doc.rect(PAGE_MARGIN, yPos, CONTENT_WIDTH, blockHeight, 'F');
+        
+        // Draw text lines
+        doc.setTextColor('#111827');
+        doc.text(codeLines, PAGE_MARGIN + codePadding, yPos + codePadding + fontSize, {
+            lineHeightFactor: lineHeight,
+            maxWidth: CONTENT_WIDTH - (codePadding * 2)
+        });
+
+        yPos += blockHeight + 20; // Move yPos down for next element
+
+    } else { // Rich Text Note
+        const canvas = await renderRichTextToCanvas(note, renderContainer);
+        const imgData = canvas.toDataURL('image/png', 1.0);
+        const imgProps = doc.getImageProperties(imgData);
+        
+        const pdfImgWidth = CONTENT_WIDTH;
+        const pdfImgHeight = (imgProps.height * pdfImgWidth) / imgProps.width;
+
+        if (yPos + pdfImgHeight > PAGE_HEIGHT - PAGE_MARGIN) {
+          doc.addPage();
+          yPos = PAGE_MARGIN + 20; // Reset Y for new page
+          addHeader(doc, currentTopicName);
+          addFooter(doc);
+        }
+
+        doc.addImage(imgData, 'PNG', PAGE_MARGIN, yPos, pdfImgWidth, pdfImgHeight);
+        yPos += pdfImgHeight + 20;
+    }
   }
 
   document.body.removeChild(renderContainer);
