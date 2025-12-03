@@ -32,6 +32,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Note } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 function NoteItem({ note, level = 0, onNoteSelect }: { note: Note, level?: number, onNoteSelect: (noteId: string) => void }) {
     const { 
@@ -150,12 +151,11 @@ export function NoteList() {
     const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
     const [newNoteTitle, setNewNoteTitle] = useState('');
     const [newNoteType, setNewNoteType] = useState<'code' | 'text'>('code');
+    const [newNoteLanguage, setNewNoteLanguage] = useState('javascript');
     const [noteSearch, setNoteSearch] = useState('');
     const [renameNote, setRenameNote] = useState<Note | null>(null);
     const [renamingTitle, setRenamingTitle] = useState('');
     const [isSubNote, setIsSubNote] = useState(false);
-
-    // State for the unsaved changes dialog
     const [pendingNoteId, setPendingNoteId] = useState<string | null>(null);
     const [isUnsavedDialogOpen, setIsUnsavedDialogOpen] = useState(false);
     
@@ -197,7 +197,8 @@ export function NoteList() {
             await addNote({ 
                 title: newNoteTitle.trim(), 
                 type: newNoteType,
-                parentId: isSubNote && activeNote ? activeNote.id : null
+                parentId: isSubNote && activeNote ? activeNote.id : null,
+                language: newNoteType === 'code' ? newNoteLanguage : undefined
             });
             setNewNoteTitle('');
             setNewNoteType('code');
@@ -290,7 +291,6 @@ export function NoteList() {
                 </ScrollArea>
             </div>
             
-            {/* Unsaved Changes Dialog */}
             <AlertDialog open={isUnsavedDialogOpen} onOpenChange={setIsUnsavedDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -307,8 +307,6 @@ export function NoteList() {
                 </AlertDialogContent>
             </AlertDialog>
 
-
-             {/* New Note Dialog */}
             <Dialog open={isNoteDialogOpen} onOpenChange={(isOpen) => {
                 if(!isOpen) setIsSubNote(false);
                 setIsNoteDialogOpen(isOpen);
@@ -341,7 +339,6 @@ export function NoteList() {
                      <div className="grid grid-cols-4 items-start gap-4">
                         <Label className="text-right pt-2">Type</Label>
                         <RadioGroup
-                            defaultValue="code"
                             className="col-span-3 flex flex-col space-y-2 pt-1"
                             value={newNoteType}
                             onValueChange={(value: 'code' | 'text') => setNewNoteType(value)}
@@ -356,6 +353,33 @@ export function NoteList() {
                             </div>
                         </RadioGroup>
                     </div>
+                    {newNoteType === 'code' && (
+                         <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="note-language" className="text-right">Language</Label>
+                             <Select value={newNoteLanguage} onValueChange={setNewNoteLanguage}>
+                                <SelectTrigger className="col-span-3">
+                                    <SelectValue placeholder="Select a language" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="javascript">JavaScript</SelectItem>
+                                    <SelectItem value="python">Python</SelectItem>
+                                    <SelectItem value="java">Java</SelectItem>
+                                    <SelectItem value="csharp">C#</SelectItem>
+                                    <SelectItem value="cpp">C++</SelectItem>
+                                    <SelectItem value="c">C</SelectItem>
+                                    <SelectItem value="typescript">TypeScript</SelectItem>
+                                    <SelectItem value="php">PHP</SelectItem>
+                                    <SelectItem value="ruby">Ruby</SelectItem>
+                                    <SelectItem value="go">Go</SelectItem>
+                                    <SelectItem value="swift">Swift</SelectItem>
+                                    <SelectItem value="kotlin">Kotlin</SelectItem>
+                                    <SelectItem value="rust">Rust</SelectItem>
+                                    <SelectItem value="sql">SQL</SelectItem>
+                                    <SelectItem value="plaintext">Plain Text</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>
@@ -366,7 +390,6 @@ export function NoteList() {
                 </DialogContent>
             </Dialog>
 
-            {/* Rename Note Dialog */}
             <Dialog open={!!renameNote} onOpenChange={(isOpen) => !isOpen && setRenameNote(null)}>
                 <DialogContent>
                 <DialogHeader>

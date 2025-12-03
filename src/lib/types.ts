@@ -15,7 +15,8 @@ export interface Note {
 export type NoteCreate = { 
   title: string, 
   type: 'code' | 'text',
-  parentId?: string | null 
+  parentId?: string | null,
+  language?: string,
 };
 export type NoteUpdate = Partial<Pick<Note, 'title' | 'content' | 'language'>>;
 

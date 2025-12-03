@@ -68,11 +68,9 @@ async function getResult(token: string): Promise<Judge0Result> {
     
     const jsonResult = await response.json();
 
-    // Judge0 sends back base64 encoded strings. We need to decode them.
     const decodedStdout = jsonResult.stdout ? Buffer.from(jsonResult.stdout, 'base64').toString('utf-8') : null;
     const decodedStderr = jsonResult.stderr ? Buffer.from(jsonResult.stderr, 'base64').toString('utf-8') : null;
 
-    // Construct the final, clean result object as per requirements.
     const finalResult = {
       stdout: decodedStdout,
       stderr: decodedStderr,
@@ -93,15 +91,17 @@ export async function runCode(languageId: number, code: string, input?: string):
         source_code: Buffer.from(code).toString('base64'),
         stdin: input ? Buffer.from(input).toString('base64') : undefined,
     };
+    
+    console.log("SUBMITTED languageId:", languageId);
+    console.log("SUBMITTED base64:", submissionBody.source_code);
 
     const token = await createSubmission(submissionBody);
 
     while (true) {
         const result = await getResult(token);
-        // Status ID > 2 means the code has finished processing (e.g., accepted, wrong answer, runtime error)
         if (result.status.id > 2) {
             return result;
         }
-        await wait(1000); // Poll every 1 second
+        await wait(1000);
     }
 }

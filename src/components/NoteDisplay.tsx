@@ -77,12 +77,11 @@ export function NoteDisplay() {
   const [isRunning, setIsRunning] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
   
-  // Set initial state only when the active note ID changes
   useEffect(() => {
     if (activeNote) {
       setDirtyNoteContent({ title: activeNote.title, content: activeNote.content });
-      setIsDirty(false); // Reset dirty state on note change
-      setOutput(null); // Clear output when note changes
+      setIsDirty(false);
+      setOutput(null);
     } else {
       setDirtyNoteContent(null);
     }
@@ -115,13 +114,15 @@ export function NoteDisplay() {
     
     try {
         const languageId = getLanguageId(activeNote.language || 'plaintext');
+        console.log("LANG ID:", languageId);
+
         if (!languageId) {
             setOutput('Execution failed: Language not supported for execution.');
             setIsRunning(false);
             return;
         }
         
-        const cleanCode = stripHtml(dirtyNoteContent.content);
+        const cleanCode = stripHtml(dirtyNoteContent.content).trimStart();
         console.log('CLEAN CODE SENT TO JUDGE0:', cleanCode);
 
         const result = await runCode(languageId, cleanCode);
@@ -216,7 +217,7 @@ export function NoteDisplay() {
               ) : (
                   <Type className="h-3 w-3 mr-1.5" />
               )}
-              {activeNote.type === 'code' ? 'Code' : 'Text'}
+              {activeNote.type === 'code' ? activeNote.language || 'Code' : 'Text'}
             </Badge>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 ml-4">

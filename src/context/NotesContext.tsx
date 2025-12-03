@@ -21,6 +21,7 @@ import {
 import { useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { getLanguageId } from '@/lib/language-mapping';
 
 interface DirtyNoteContent {
     title: string;
@@ -209,7 +210,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         userId: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        language: note.type === 'code' ? 'plaintext' : 'text',
+        language: note.language || (note.type === 'code' ? 'plaintext' : 'text'),
         parentId: note.parentId || null,
     };
 
@@ -231,11 +232,9 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
     const batch = writeBatch(firestore);
 
-    // Reference to the note being deleted
     const noteDocRef = doc(notesCollectionRef, noteId);
     batch.delete(noteDocRef);
 
-    // Query for sub-notes
     const subNotesQuery = query(notesCollectionRef, where('parentId', '==', noteId));
     
     try {
