@@ -173,9 +173,10 @@
   }
 
   .ai-output {
-    overflow-y: auto;
-    min-height: 0;
     flex-grow: 1;
+    min-height: 0;
+    overflow-y: auto;
+    white-space: pre-wrap;
   }
 
   /* Code Output Box */

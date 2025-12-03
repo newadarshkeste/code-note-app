@@ -159,8 +159,8 @@ export function AiAssistantPanel() {
                   <div key={index} className={cn('flex items-start gap-3 w-full', message.role === 'user' ? 'justify-end' : 'justify-start')}>
                     {message.role === 'assistant' && <Bot className="h-5 w-5 text-primary flex-shrink-0 mt-1.5" />}
                     <div className={cn(
-                      'rounded-lg p-3 text-sm max-w-[90%] w-auto', 
-                      message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
+                      'rounded-lg p-3 text-sm max-w-[90%] w-auto text-foreground', 
+                      message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                     )}>
                       <div className="ai-output">
                         <MessageContent content={message.content} />
