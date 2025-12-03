@@ -24,10 +24,10 @@ const ResultSchema = z.object({
 export type Judge0Result = z.infer<typeof ResultSchema>;
 
 const API_HOST = 'judge0-ce.p.rapidapi.com';
-const API_KEY = process.env.NEXT_PUBLIC_JUDGE0_KEY || '';
+const API_KEY = process.env.REACT_APP_JUDGE0_KEY || '';
 
 if (!API_KEY) {
-  console.warn("Judge0 API key not found. Please set NEXT_PUBLIC_JUDGE0_KEY in your .env file.");
+  console.warn("Judge0 API key not found. Please set REACT_APP_JUDGE0_KEY in your .env file.");
 }
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
