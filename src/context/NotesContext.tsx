@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
@@ -21,11 +22,11 @@ import {
 import { useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { getLanguageId } from '@/lib/language-mapping';
 
 interface DirtyNoteContent {
     title: string;
     content: string;
+    language?: string;
 }
 
 interface NotesContextType {
@@ -210,7 +211,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         userId: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        language: note.language || (note.type === 'code' ? 'plaintext' : 'text'),
+        language: note.language || (note.type === 'code' ? 'plaintext' : undefined),
         parentId: note.parentId || null,
     };
 
@@ -263,14 +264,10 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     setIsSaving(true);
     const noteDocRef = doc(notesCollectionRef, noteId);
     
-    let finalData: NoteUpdate & { updatedAt: any; language?: string } = {
+    let finalData: NoteUpdate & { updatedAt: any } = {
       ...data,
       updatedAt: serverTimestamp(),
     };
-
-    if (data.content && data.language) {
-      finalData.language = data.language;
-    }
 
     try {
         await updateDoc(noteDocRef, finalData);
@@ -317,7 +314,11 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   const saveActiveNote = async () => {
     if (!activeNote || !isDirty || !dirtyNoteContent) return;
     try {
-      await updateNote(activeNote.id, { title: dirtyNoteContent.title, content: dirtyNoteContent.content });
+      await updateNote(activeNote.id, { 
+          title: dirtyNoteContent.title, 
+          content: dirtyNoteContent.content,
+          language: dirtyNoteContent.language || 'plaintext' 
+      });
       toast({
         title: 'Note Saved!',
         description: `"${dirtyNoteContent.title}" has been saved successfully.`,

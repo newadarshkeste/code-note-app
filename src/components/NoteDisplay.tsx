@@ -18,6 +18,7 @@ import { Skeleton } from './ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const RichTextEditor = dynamic(() => import('@/components/RichTextEditor').then(mod => mod.RichTextEditor), {
   ssr: false,
@@ -79,7 +80,11 @@ export function NoteDisplay() {
   
   useEffect(() => {
     if (activeNote) {
-      setDirtyNoteContent({ title: activeNote.title, content: activeNote.content });
+      setDirtyNoteContent({ 
+        title: activeNote.title, 
+        content: activeNote.content,
+        language: activeNote.language || 'plaintext'
+      });
       setIsDirty(false);
       setOutput(null);
     } else {
@@ -102,6 +107,13 @@ export function NoteDisplay() {
     }
   }
 
+  const handleLanguageChange = (lang: string) => {
+    if (dirtyNoteContent) {
+        setDirtyNoteContent(prev => ({ ...prev!, language: lang }));
+        if (!isDirty) setIsDirty(true);
+    }
+  };
+
   const handleManualSave = async () => {
     await saveActiveNote();
   };
@@ -113,8 +125,8 @@ export function NoteDisplay() {
     setOutput('Executing code...');
     
     try {
-        console.log("ACTIVE NOTE LANGUAGE =", activeNote.language);
-        const normalizedLang = activeNote.language?.toLowerCase().trim();
+        console.log("ACTIVE NOTE LANGUAGE =", dirtyNoteContent.language);
+        const normalizedLang = dirtyNoteContent.language?.toLowerCase().trim();
         console.log("Normalized lang:", normalizedLang);
         
         const languageId = getLanguageId(normalizedLang || 'plaintext');
@@ -215,14 +227,12 @@ export function NoteDisplay() {
                 placeholder="Note Title"
                 className="text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-xl h-auto p-0 bg-transparent truncate"
             />
-            <Badge variant="outline" className="flex-shrink-0">
-              {activeNote.type === 'code' ? (
-                  <Code className="h-3 w-3 mr-1.5" />
-              ) : (
-                  <Type className="h-3 w-3 mr-1.5" />
-              )}
-              {activeNote.type === 'code' ? activeNote.language || 'Code' : 'Text'}
-            </Badge>
+            {activeNote.type !== 'code' && (
+                <Badge variant="outline" className="flex-shrink-0">
+                    <Type className="h-3 w-3 mr-1.5" />
+                    Text
+                </Badge>
+            )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 ml-4">
             {isSaving && <Loader2 className="animate-spin h-4 w-4 text-muted-foreground" />}
@@ -230,12 +240,38 @@ export function NoteDisplay() {
               <Save className="h-4 w-4" />
               <span className="ml-2 hidden md:inline">{isSaving ? 'Saving...' : (isDirty ? 'Unsaved' : 'Saved')}</span>
             </Button>
+            
             {activeNote.type === 'code' && (
-              <Button onClick={handleRunCode} disabled={isRunning} size="sm">
-                {isRunning ? <Loader2 className="animate-spin h-4 w-4" /> : <Play className="h-4 w-4" />}
-                <span className="ml-2 hidden md:inline">{isRunning ? 'Running...' : 'Run Code'}</span>
-              </Button>
+                <>
+                <Select value={dirtyNoteContent.language || 'plaintext'} onValueChange={handleLanguageChange}>
+                    <SelectTrigger className="w-[120px] h-9 text-sm">
+                        <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="javascript">JavaScript</SelectItem>
+                        <SelectItem value="python">Python</SelectItem>
+                        <SelectItem value="java">Java</SelectItem>
+                        <SelectItem value="csharp">C#</SelectItem>
+                        <SelectItem value="cpp">C++</SelectItem>
+                        <SelectItem value="c">C</SelectItem>
+                        <SelectItem value="typescript">TypeScript</SelectItem>
+                        <SelectItem value="php">PHP</SelectItem>
+                        <SelectItem value="ruby">Ruby</SelectItem>
+                        <SelectItem value="go">Go</SelectItem>
+                        <SelectItem value="swift">Swift</SelectItem>
+                        <SelectItem value="kotlin">Kotlin</SelectItem>
+                        <SelectItem value="rust">Rust</SelectItem>
+                        <SelectItem value="sql">SQL</SelectItem>
+                        <SelectItem value="plaintext">Plain Text</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Button onClick={handleRunCode} disabled={isRunning} size="sm">
+                    {isRunning ? <Loader2 className="animate-spin h-4 w-4" /> : <Play className="h-4 w-4" />}
+                    <span className="ml-2 hidden md:inline">{isRunning ? 'Running...' : 'Run Code'}</span>
+                </Button>
+              </>
             )}
+
             <Button onClick={() => setIsExportDialogOpen(true)} disabled={isExporting} size="sm">
               {isExporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Download className="h-4 w-4" />}
               <span className="ml-2 hidden md-inline">{isExporting ? 'Exporting...' : 'Download PDF'}</span>
@@ -251,7 +287,7 @@ export function NoteDisplay() {
                     key={activeNote.id}
                     value={dirtyNoteContent.content}
                     onChange={handleContentChange}
-                    language={activeNote?.language || 'plaintext'}
+                    language={dirtyNoteContent.language || 'plaintext'}
                     />
             </div>
             <div className="code-output-box flex-shrink-0">
