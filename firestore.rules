@@ -120,6 +120,7 @@ service cloud.firestore {
 
     /**
      * On update, ensures the note document's internal `topicId` is immutable.
+     * Allows content, title, and language to be changed.
      */
     function hasImmutableNoteFields() {
        let data = request.resource.data;
