@@ -56,15 +56,15 @@ const createStyledContainer = () => {
           page-break-inside: avoid;
       }
       .note-title { 
-          font-size: 14px; 
+          font-size: 13pt; 
           margin-top: 0;
           margin-bottom: 6px; 
-          font-weight: 700;
+          font-weight: bold;
           font-family: "Space Grotesk", sans-serif;
           color: #111827;
       }
       .metadata { 
-          font-size: 7px; 
+          font-size: 8pt; 
           color: #4b5563; 
           margin-bottom: 12px; 
       }
@@ -72,13 +72,14 @@ const createStyledContainer = () => {
           margin-right: 12px;
       }
       .content-body { 
-          font-size: 8px; 
+          font-size: 10pt; 
           line-height: 1.5;
           color: #374151;
       }
       /* General content styling from tiptap */
-      .content-body > * + * { margin-top: 0.75em; }
-      .content-body ul, .content-body ol { padding-left: 1.5rem; }
+      .content-body > * + * { margin-top: 0.5em; }
+      .content-body ul, .content-body ol { padding-left: 1rem; margin-top: 0.5em;}
+      .content-body li { margin-bottom: 0.25em; }
       .content-body hr { margin: 1rem 0; border-color: #e5e7eb; }
       .content-body blockquote { padding-left: 1rem; border-left: 3px solid #d1d5db; font-style: italic; color: #4b5563; }
       .content-body a { color: #2563eb; text-decoration: underline; }
@@ -92,7 +93,8 @@ const createStyledContainer = () => {
           background-color: #f3f4f6;
           color: #111827;
           font-family: "Source Code Pro", "Courier New", Courier, monospace;
-          font-size: 7px;
+          font-size: 9pt;
+          line-height: 1.2;
           border: 1px solid #e5e7eb;
           border-radius: 6px;
           padding: 8px;
@@ -101,12 +103,13 @@ const createStyledContainer = () => {
           overflow-x: auto;
           margin: 10px 0;
       }
-      .content-body code { font-family: "Source Code Pro", "Courier New", Courier, monospace; }
+      .content-body code { font-family: "Source Code Pro", "Courier New", Courier, monospace; font-size: 9pt;}
       .content-body pre code {
           white-space: pre-wrap !important;
           background: transparent !important;
           padding: 0 !important;
           font-size: inherit !important;
+          line-height: inherit !important;
       }
       .token.comment, .token.prolog, .token.doctype, .token.cdata { color: #6a737d; }
       .token.punctuation { color: #6a737d; }
