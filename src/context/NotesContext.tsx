@@ -22,7 +22,7 @@ import {
 import { useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { useStudyStats } from '@/hooks/useStudyStats';
+import { useStudyStats, StudySessionData } from '@/hooks/useStudyStats';
 
 interface DirtyNoteContent {
     title: string;
@@ -79,6 +79,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   const [dirtyNoteContent, setDirtyNoteContent] = useState<DirtyNoteContent | null>(null);
   const { toast } = useToast();
 
+  const studyStats = useStudyStats();
+
   const topicsRef = useMemo(() => user ? collection(firestore, 'users', user.uid, 'topics') : null, [user, firestore]);
   
   const notesCollectionRef = useMemo(() => {
@@ -113,9 +115,6 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         setIsSaving(false);
     }
   }, [user, firestore, activeTopicId]);
-
-  const studyStats = useStudyStats(updateNote);
-
 
   useEffect(() => {
     if (!topicsRef) {
@@ -315,14 +314,27 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     return allNotes;
   };
 
-  const saveActiveNote = async () => {
+  const saveActiveNote = useCallback(async () => {
     if (!activeNote || !isDirty || !dirtyNoteContent) return;
+    
+    const originalContent = activeNote.content;
+    const newContent = dirtyNoteContent.content;
+    const charsChanged = Math.abs(newContent.length - originalContent.length);
+
     try {
       await updateNote(activeNote.id, { 
           title: dirtyNoteContent.title, 
           content: dirtyNoteContent.content,
           language: dirtyNoteContent.language || 'plaintext' 
       });
+      
+      const sessionData: StudySessionData = {
+          sessionMinutes: studyStats.pomodoro.sessionMinutes,
+          linesTyped: charsChanged,
+          topicId: activeNote.topicId
+      };
+      studyStats.updateStudyStatsOnNoteSave(sessionData);
+
       toast({
         title: 'Note Saved!',
         description: `"${dirtyNoteContent.title}" has been saved successfully.`,
@@ -334,7 +346,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         description: 'Could not save the note.',
       });
     }
-  };
+  }, [activeNote, isDirty, dirtyNoteContent, updateNote, studyStats]);
 
   const value = {
     topics,
@@ -376,3 +388,5 @@ export function useNotes() {
   }
   return context;
 }
+
+    

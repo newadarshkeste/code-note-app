@@ -130,6 +130,60 @@
         "id",
         "email"
       ]
+    },
+    "StudyStats": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StudyStats",
+      "type": "object",
+      "description": "Stores aggregated study statistics for a single user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The user's UID, acting as the document ID."
+        },
+        "totalMinutesStudied": {
+          "type": "number",
+          "description": "Total minutes spent in focus sessions."
+        },
+        "dailyMinutes": {
+          "type": "object",
+          "description": "Map of study minutes per day. Key: YYYY-MM-DD, Value: minutes.",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "streak": {
+          "type": "number",
+          "description": "Current daily study streak."
+        },
+        "bestStreak": {
+            "type": "number",
+            "description": "All-time best daily study streak."
+        },
+        "lastStudyDate": {
+          "type": "string",
+          "description": "The last date (YYYY-MM-DD) the user studied.",
+          "format": "date"
+        },
+        "totalNotesEdited": {
+          "type": "number",
+          "description": "Total number of notes edited by the user."
+        },
+        "totalLinesTyped": {
+          "type": "number",
+          "description": "Total number of lines/characters typed in code notes."
+        },
+        "topicMinutes": {
+          "type": "object",
+          "description": "Map of study minutes per topic. Key: topicId, Value: minutes.",
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      },
+      "required": [
+        "id"
+      ]
     }
   },
   "auth": {
@@ -199,8 +253,25 @@
             }
           ]
         }
+      },
+      {
+        "path": "/users/{userId}/studyStats/{userId}",
+        "definition": {
+            "entityName": "StudyStats",
+            "schema": {
+                "$ref": "#/backend/entities/StudyStats"
+            },
+            "description": "A singleton document containing all study statistics for a user, identified by their UID.",
+            "params": [
+                {
+                    "name": "userId",
+                    "description": "The Firebase UID of the user whose stats are being stored."
+                }
+            ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to provide a secure, scalable, and debuggable solution for the CodeNote application, adhering to the core design principles and strategy mandates. The primary goal is to ensure that each user can only access their own data, avoiding any possibility of cross-user data leakage.\n\n**Authorization Independence (CRITICAL):** The structure enforces Authorization Independence by embedding the `userId` within both the `topics` and `notes` documents. This eliminates the need for `get()` calls in security rules to verify ownership based on parent document data, simplifying rules and ensuring atomic operations.\n\n**Structural Segregation (Homogeneous Security Posture):** The design segregates user-specific data under the `/users/{userId}` path. This approach ensures that all documents within a given user's subcollections (`topics` and `notes`) share the same security requirements, thereby avoiding the complexity of mixed-access data within a single collection.\n\n**Access Modeling:** The structure leverages path-based ownership to control access. The `/users/{userId}/topics/{topicId}/notes/{noteId}` hierarchy clearly defines the ownership relationship: a user owns topics, and topics own notes. This model simplifies security rules based on the current user's `uid`.\n\n**QAPs (Rules are not Filters):** The chosen structure ensures secure `list` operations by restricting access to only the topics and notes belonging to the authenticated user. Since each user's data is stored under their unique `userId`, listing operations are inherently scoped to that user's data, preventing cross-user data access.\n\n**Data Clarity and Predictability:** The schema for `Topic` and `Note` includes explicit timestamps (`createdAt`, `updatedAt`) and a clear ownership structure, enhancing data clarity and predictability. The use of standard naming conventions (`userId`, `topicId`, `noteId`) further improves debuggability and maintainability. The addition of an optional `parentId` field on the `Note` entity allows for hierarchical organization of notes within a topic."
+    "reasoning": "The Firestore structure is designed to provide a secure, scalable, and debuggable solution for the CodeNote application, adhering to the core design principles and strategy mandates. The primary goal is to ensure that each user can only access their own data, avoiding any possibility of cross-user data leakage.\n\n**Authorization Independence (CRITICAL):** The structure enforces Authorization Independence by embedding the `userId` within both the `topics` and `notes` documents. This eliminates the need for `get()` calls in security rules to verify ownership based on parent document data, simplifying rules and ensuring atomic operations.\n\n**Structural Segregation (Homogeneous Security Posture):** The design segregates user-specific data under the `/users/{userId}` path. This approach ensures that all documents within a given user's subcollections (`topics` and `notes`) share the same security requirements, thereby avoiding the complexity of mixed-access data within a single collection.\n\n**Access Modeling:** The structure leverages path-based ownership to control access. The `/users/{userId}/topics/{topicId}/notes/{noteId}` hierarchy clearly defines the ownership relationship: a user owns topics, and topics own notes. This model simplifies security rules based on the current user's `uid`.\n\n**QAPs (Rules are not Filters):** The chosen structure ensures secure `list` operations by restricting access to only the topics and notes belonging to the authenticated user. Since each user's data is stored under their unique `userId`, listing operations are inherently scoped to that user's data, preventing cross-user data access.\n\n**Data Clarity and Predictability:** The schema for `Topic` and `Note` includes explicit timestamps (`createdAt`, `updatedAt`) and a clear ownership structure, enhancing data clarity and predictability. The use of standard naming conventions (`userId`, `topicId`, `noteId`) further improves debuggability and maintainability. The addition of an optional `parentId` field on the `Note` entity allows for hierarchical organization of notes within a topic. The new `StudyStats` entity is stored in a subcollection under the user, with the document ID matching the user's UID to enforce a one-to-one relationship and simplify security rules."
   }
 }
+    

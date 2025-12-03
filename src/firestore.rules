@@ -13,6 +13,7 @@
  * /users/{userId}
  *   - /topics/{topicId}
  *     - /notes/{noteId}
+ *   - /studyStats/{userId}
  * This hierarchical structure is the primary mechanism for enforcing security,
  * as ownership is determined by the {userId} in the path.
  *
@@ -24,20 +25,6 @@
  *   authenticated user whose UID matches the `userId` in the path.
  * - Default Deny: All access is denied by default. Permissions are only granted
  *   through explicit `allow` statements.
- *
- * Denormalization for Authorization:
- * To ensure fast and secure rule evaluation, key relational identifiers are
- * denormalized onto documents. For instance:
- * - A `Topic` document at `/users/{userId}/topics/{topicId}` contains a
- *   `userId` field, which is validated against the path to ensure integrity.
- * - A `Note` document at `.../notes/{noteId}` contains a `topicId` field,
- *   which is validated against its path segment.
- * This strategy avoids costly and complex `get()` calls in security rules.
- *
- * Structural Segregation:
- * The data model uses structural segregation by placing all of a user's private
- * data inside their own document tree. This creates a homogeneous security
- * posture for all subcollections, simplifying rules and improving query performance.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -78,7 +65,6 @@ service cloud.firestore {
       let data = request.resource.data;
       return data.id == userId
           && data.email == request.auth.token.email;
-          // photoURL and displayName are optional but validated if present
     }
 
     /**
@@ -120,9 +106,6 @@ service cloud.firestore {
 
     /**
      * On update, ensures key note fields are immutable.
-     * The `request.resource.data` for an update only contains the fields being changed.
-     * We must check that the incoming data does NOT contain any of the immutable fields,
-     * unless its value is identical to the existing resource.
      */
     function hasImmutableNoteFields() {
        let incomingData = request.resource.data;
@@ -134,18 +117,10 @@ service cloud.firestore {
           && (!('parentId' in incomingData) || incomingData.parentId == existingData.parentId);
     }
 
-
     //-------------------------------------------------------------------------
     //  Collection Rules
     //-------------------------------------------------------------------------
 
-    /**
-     * @description Controls access to user profile documents.
-     * @path /users/{userId}
-     * @allow (create) An authenticated user can create their own user profile document.
-     * @deny (list) Another user cannot list all user profiles on the platform.
-     * @principle Restricts access to a user's own profile and prevents user enumeration.
-     */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
@@ -153,13 +128,6 @@ service cloud.firestore {
       allow update: if isExistingOwner(userId) && hasImmutableUserFields();
       allow delete: if isExistingOwner(userId);
 
-      /**
-       * @description Controls access to a user's collection of topics.
-       * @path /users/{userId}/topics/{topicId}
-       * @allow (create) The user can create a new topic in their own collection.
-       * @deny (get) Another user cannot read a topic, even if they know the ID.
-       * @principle Enforces strict data isolation for a user's own content subcollections.
-       */
       match /topics/{topicId} {
         allow get: if isOwner(userId);
         allow list: if isOwner(userId);
@@ -167,13 +135,6 @@ service cloud.firestore {
         allow update: if isExistingOwner(userId) && hasImmutableTopicFields();
         allow delete: if isExistingOwner(userId);
 
-        /**
-         * @description Controls access to notes within a user's topic.
-         * @path /users/{userId}/topics/{topicId}/notes/{noteId}
-         * @allow (list) The user can list all notes within one of their topics.
-         * @deny (update) Another user cannot update a note, even with a valid ID.
-         * @principle Enforces ownership at the deepest level of the data hierarchy.
-         */
         match /notes/{noteId} {
           allow get: if isOwner(userId);
           allow list: if isOwner(userId);
@@ -182,6 +143,19 @@ service cloud.firestore {
           allow delete: if isExistingOwner(userId);
         }
       }
+      
+      /**
+       * @description Controls access to the user's single study statistics document.
+       * @path /users/{userId}/studyStats/{userId}
+       * @allow (read, write) The user can read and write their own statistics document.
+       * @deny (list) Listing is implicitly denied and nonsensical for a singleton document.
+       */
+      match /studyStats/{statsId} {
+        // The user can only access their own stats document.
+        allow get, create, update: if isOwner(userId) && statsId == userId;
+        allow delete: if false; // Stats should not be deletable by the user.
+      }
     }
   }
 }
+    

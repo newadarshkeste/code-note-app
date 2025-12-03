@@ -17,7 +17,7 @@ const StatItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label
 
 export function DailyTracker() {
     const { studyStats } = useNotes();
-    const { dailyStats } = studyStats;
+    const { dailyStats, overallStats } = studyStats;
     
     return (
         <Card>
@@ -28,12 +28,16 @@ export function DailyTracker() {
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-                <StatItem icon={Clock} label="Pomodoros" value={dailyStats.pomodorosToday} />
-                <StatItem icon={Clock} label="Focus Time" value={`${dailyStats.focusMinutesToday} min`} />
-                <StatItem icon={Clock} label="Coding Time" value={`${dailyStats.codingMinutesToday} min`} />
-                <StatItem icon={BookOpen} label="Notes Edited" value={dailyStats.notesEditedToday} />
-                <StatItem icon={Code} label="Lines Typed" value={daily_stats.linesTypedToday} />
+                <StatItem icon={Clock} label="Focus Time" value={`${dailyStats.minutesToday} min`} />
+                <CardTitle className="text-base font-semibold flex items-center gap-2 pt-2">
+                    <BarChart2 className="h-5 w-5" />
+                    <span>Lifetime Stats</span>
+                </CardTitle>
+                <StatItem icon={BookOpen} label="Notes Edited" value={overallStats.totalNotesEdited} />
+                <StatItem icon={Code} label="Chars Typed" value={overallStats.totalLinesTyped} />
             </CardContent>
         </Card>
     );
 }
+
+    
