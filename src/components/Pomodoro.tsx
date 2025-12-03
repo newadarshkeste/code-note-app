@@ -1,14 +1,106 @@
 'use client';
 
-import { Play, Pause, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Play, Pause, RefreshCw, Settings } from 'lucide-react';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useStudyStats } from '@/hooks/useStudyStats';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from './ui/dialog';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+
+function TimerSettingsDialog({
+    isOpen,
+    setIsOpen,
+    currentFocus,
+    currentBreak,
+    onSave,
+}: {
+    isOpen: boolean;
+    setIsOpen: (isOpen: boolean) => void;
+    currentFocus: number;
+    currentBreak: number;
+    onSave: (newFocus: number, newBreak: number) => void;
+}) {
+    const [focus, setFocus] = useState(currentFocus);
+    const [breakTime, setBreakTime] = useState(currentBreak);
+
+    const handleSave = () => {
+        onSave(focus, breakTime);
+        setIsOpen(false);
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Timer Settings</DialogTitle>
+                    <DialogDescription>
+                        Set your desired durations for focus and break sessions.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="focus-duration" className="text-right">
+                            Focus (min)
+                        </Label>
+                        <Input
+                            id="focus-duration"
+                            type="number"
+                            value={focus}
+                            onChange={(e) => setFocus(Math.max(1, parseInt(e.target.value, 10)))}
+                            className="col-span-3"
+                        />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="break-duration" className="text-right">
+                            Break (min)
+                        </Label>
+                        <Input
+                            id="break-duration"
+                            type="number"
+                            value={breakTime}
+                            onChange={(e) => setBreakTime(Math.max(1, parseInt(e.target.value, 10)))}
+                            className="col-span-3"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="secondary">Cancel</Button>
+                    </DialogClose>
+                    <Button onClick={handleSave}>Save Changes</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 
 export function Pomodoro() {
     const { pomodoro } = useStudyStats();
-    const { mode, timeLeft, isActive, toggleTimer, resetTimer, duration } = pomodoro;
+    const {
+        mode,
+        timeLeft,
+        isActive,
+        toggleTimer,
+        resetTimer,
+        duration,
+        focusDuration,
+        breakDuration,
+        updateDurations,
+    } = pomodoro;
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -16,14 +108,17 @@ export function Pomodoro() {
         return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     };
 
-    const progress = ((duration - timeLeft) / duration) * 100;
+    const progress = duration > 0 ? ((duration - timeLeft) / duration) * 100 : 0;
     
     return (
         <Card>
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="text-base font-semibold">
                     Pomodoro Timer
                 </CardTitle>
+                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsSettingsOpen(true)}>
+                    <Settings className="h-4 w-4" />
+                </Button>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center space-y-4 pt-2">
                 <div className="relative h-32 w-32">
@@ -53,6 +148,14 @@ export function Pomodoro() {
                     </Button>
                 </div>
             </CardContent>
+
+             <TimerSettingsDialog 
+                isOpen={isSettingsOpen}
+                setIsOpen={setIsSettingsOpen}
+                currentFocus={focusDuration}
+                currentBreak={breakDuration}
+                onSave={updateDurations}
+             />
         </Card>
     );
 }

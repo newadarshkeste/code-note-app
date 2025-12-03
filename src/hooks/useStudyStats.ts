@@ -7,14 +7,17 @@ import { isToday, isYesterday, startOfToday } from 'date-fns';
 
 export type TimerMode = 'focus' | 'break';
 
-const FOCUS_DURATION = 25 * 60;
-const BREAK_DURATION = 5 * 60;
-
 export const useStudyStats = () => {
     // Pomodoro State
     const [mode, setMode] = useLocalStorage<TimerMode>('study:mode', 'focus');
     const [isActive, setIsActive] = useLocalStorage('study:isActive', false);
-    const [timeLeft, setTimeLeft] = useLocalStorage('study:timeLeft', FOCUS_DURATION);
+    
+    // Custom durations with default fallbacks
+    const [focusDuration, setFocusDuration] = useLocalStorage('study:focusDuration', 25);
+    const [breakDuration, setBreakDuration] = useLocalStorage('study:breakDuration', 5);
+
+    const [timeLeft, setTimeLeft] = useLocalStorage('study:timeLeft', focusDuration * 60);
+
     const [pomodorosToday, setPomodorosToday] = useLocalStorage('study:pomodorosToday', 0);
     const [lastResetDate, setLastResetDate] = useLocalStorage('study:lastResetDate', new Date().toISOString());
 
@@ -29,7 +32,6 @@ export const useStudyStats = () => {
     const [codingTimeToday, setCodingTimeToday] = useLocalStorage('study:codingTimeToday', 0); // in seconds
     
     const { isSaving } = useNotes();
-    const beepRef = useRef<HTMLAudioElement | null>(null);
 
     // --- Daily Reset Logic ---
     useEffect(() => {
@@ -42,11 +44,6 @@ export const useStudyStats = () => {
             setCodingTimeToday(0);
             setLastResetDate(new Date().toISOString());
         }
-
-        if (!beepRef.current && typeof Audio !== 'undefined') {
-            beepRef.current = new Audio('/beep.mp3'); 
-        }
-
     }, []);
 
     // --- Streak Logic ---
@@ -79,33 +76,44 @@ export const useStudyStats = () => {
                 setTimeLeft(time => time - 1);
             }, 1000);
         } else if (isActive && timeLeft === 0) {
-            if (beepRef.current) beepRef.current.play();
             if (mode === 'focus') {
                 incrementStreak();
                 setPomodorosToday(p => p + 1);
                 setMode('break');
-                setTimeLeft(BREAK_DURATION);
+                setTimeLeft(breakDuration * 60);
             } else {
                 setMode('focus');
-                setTimeLeft(FOCUS_DURATION);
+                setTimeLeft(focusDuration * 60);
             }
         }
 
         return () => {
             if (interval) clearInterval(interval);
         };
-    }, [isActive, timeLeft, mode, setTimeLeft, setMode, setPomodorosToday, incrementStreak]);
+    }, [isActive, timeLeft, mode, setTimeLeft, setMode, setPomodorosToday, incrementStreak, focusDuration, breakDuration]);
 
     const toggleTimer = () => setIsActive(!isActive);
 
     const resetTimer = () => {
         setIsActive(false);
         setMode('focus');
-        setTimeLeft(FOCUS_DURATION);
+        setTimeLeft(focusDuration * 60);
     };
 
+    // This function will be called from the settings modal
+    const updateDurations = (newFocus: number, newBreak: number) => {
+        setFocusDuration(newFocus);
+        setBreakDuration(newBreak);
+        // If timer is not active, reset it to the new focus duration
+        if (!isActive) {
+            setTimeLeft(newFocus * 60);
+            setMode('focus');
+        }
+    };
+
+
     // --- Stats Tracking Logic ---
-    const focusMinutesToday = Math.floor((pomodorosToday * FOCUS_DURATION) / 60);
+    const focusMinutesToday = Math.floor((pomodorosToday * (focusDuration * 60)) / 60);
 
     // Track notes edited
     useEffect(() => {
@@ -145,7 +153,10 @@ export const useStudyStats = () => {
             isActive,
             toggleTimer,
             resetTimer,
-            duration: mode === 'focus' ? FOCUS_DURATION : BREAK_DURATION,
+            duration: mode === 'focus' ? focusDuration * 60 : breakDuration * 60,
+            focusDuration,
+            breakDuration,
+            updateDurations
         },
         dailyStats: {
             pomodorosToday,
