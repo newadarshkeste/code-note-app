@@ -22,9 +22,9 @@ const SubmissionResultSchema = z.object({
     id: z.number(),
     description: z.string(),
   }),
-  source_code: z.string().optional(),
-  language_id: z.number().optional(),
-  // Add other fields from Judge0 response if needed
+  // The user does not want these fields, so they are omitted from the final type.
+  // source_code: z.string().optional(),
+  // language_id: z.number().optional(),
 });
 export type Judge0Result = z.infer<typeof SubmissionResultSchema>;
 
@@ -73,17 +73,18 @@ async function getResult(token: string): Promise<Judge0Result> {
     
     const jsonResult = await response.json();
 
-    // Judge0 sends back base64 encoded strings for stdout and stderr. We need to decode them.
-    // The previous implementation was flawed and was not correctly assigning the decoded values.
-    const decodedResult = { ...jsonResult };
-    if (decodedResult.stdout) {
-      decodedResult.stdout = Buffer.from(decodedResult.stdout, 'base64').toString('utf-8');
-    }
-    if (decodedResult.stderr) {
-      decodedResult.stderr = Buffer.from(decodedResult.stderr, 'base64').toString('utf-8');
-    }
+    // Judge0 sends back base64 encoded strings. We need to decode them.
+    const decodedStdout = jsonResult.stdout ? Buffer.from(jsonResult.stdout, 'base64').toString('utf-8') : null;
+    const decodedStderr = jsonResult.stderr ? Buffer.from(jsonResult.stderr, 'base64').toString('utf-8') : null;
 
-    return SubmissionResultSchema.parse(decodedResult);
+    // Construct the final, clean result object as per requirements.
+    const finalResult = {
+      stdout: decodedStdout,
+      stderr: decodedStderr,
+      status: jsonResult.status,
+    };
+    
+    return SubmissionResultSchema.parse(finalResult);
 }
 
 

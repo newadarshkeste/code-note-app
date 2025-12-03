@@ -69,7 +69,7 @@ export function NoteDisplay() {
     } else {
       setDirtyNoteContent(null);
     }
-  }, [activeNote?.id]);
+  }, [activeNote?.id, activeNote, setDirtyNoteContent, setIsDirty]);
   
   
   const handleContentChange = (newContent: string | undefined) => {
@@ -105,10 +105,19 @@ export function NoteDisplay() {
         }
 
         const result = await runCode(languageId, dirtyNoteContent.content);
-        setOutput(result.stdout || result.stderr || 'Execution finished with no output.');
+        
+        // Display output based on priority: stdout > stderr > status
+        if (result.stdout) {
+            setOutput(result.stdout);
+        } else if (result.stderr) {
+            setOutput(result.stderr);
+        } else {
+            setOutput(result.status.description);
+        }
     } catch (error) {
         console.error("Code Execution Error:", error);
-        setOutput('Execution failed, try again.');
+        const errorMessage = error instanceof Error ? error.message : 'Execution failed, try again.';
+        setOutput(errorMessage);
     } finally {
         setIsRunning(false);
     }
