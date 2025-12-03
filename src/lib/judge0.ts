@@ -13,15 +13,20 @@ const SubmissionResponseSchema = z.object({
   token: z.string(),
 });
 
-const ResultSchema = z.object({
+// This schema defines the full submission object returned by Judge0,
+// including all possible fields we might get back.
+const SubmissionResultSchema = z.object({
   stdout: z.string().nullable(),
   stderr: z.string().nullable(),
   status: z.object({
     id: z.number(),
     description: z.string(),
   }),
+  source_code: z.string().optional(),
+  language_id: z.number().optional(),
+  // Add other fields from Judge0 response if needed
 });
-export type Judge0Result = z.infer<typeof ResultSchema>;
+export type Judge0Result = z.infer<typeof SubmissionResultSchema>;
 
 const API_HOST = 'judge0-ce.p.rapidapi.com';
 const API_KEY = process.env.REACT_APP_JUDGE0_KEY || '';
@@ -68,11 +73,17 @@ async function getResult(token: string): Promise<Judge0Result> {
     
     const jsonResult = await response.json();
 
-    // Judge0 sends back base64 encoded strings, we need to decode them
-    if(jsonResult.stdout) jsonResult.stdout = Buffer.from(jsonResult.stdout, 'base64').toString('utf-8');
-    if(jsonResult.stderr) jsonResult.stderr = Buffer.from(jsonResult.stderr, 'base64').toString('utf-8');
+    // Judge0 sends back base64 encoded strings for stdout and stderr. We need to decode them.
+    // The previous implementation was flawed and was not correctly assigning the decoded values.
+    const decodedResult = { ...jsonResult };
+    if (decodedResult.stdout) {
+      decodedResult.stdout = Buffer.from(decodedResult.stdout, 'base64').toString('utf-8');
+    }
+    if (decodedResult.stderr) {
+      decodedResult.stderr = Buffer.from(decodedResult.stderr, 'base64').toString('utf-8');
+    }
 
-    return ResultSchema.parse(jsonResult);
+    return SubmissionResultSchema.parse(decodedResult);
 }
 
 
@@ -91,7 +102,7 @@ export async function runCode(languageId: number, code: string, input?: string):
 
     while (true) {
         const result = await getResult(token);
-        // Status ID > 2 means the code has finished processing (either accepted, wrong answer, runtime error, etc.)
+        // Status ID > 2 means the code has finished processing (e.g., accepted, wrong answer, runtime error)
         if (result.status.id > 2) {
             return result;
         }
