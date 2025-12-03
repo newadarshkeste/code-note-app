@@ -27,24 +27,24 @@
   }
 
   .dark {
-    --background: 222 47% 11%;
+    --background: 222 47% 9%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 14%;
+    --card: 222 47% 12%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
+    --popover: 222 47% 9%;
     --popover-foreground: 210 40% 98%;
     --primary: 217 91% 60%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 217 33% 17%;
+    --secondary: 217 33% 15%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
+    --muted: 217 33% 15%;
     --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
+    --accent: 217 33% 15%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 25%;
-    --input: 217 33% 25%;
+    --border: 217 33% 22%;
+    --input: 217 33% 22%;
     --ring: 217 91% 60%;
   }
 }
@@ -163,6 +163,9 @@
     overflow-wrap: anywhere;
     display: block;
     max-width: 100%;
+    min-height: 0;
+    flex-grow: 1;
+    overflow-y: auto;
   }
 
   .ai-assistant-output>*:first-child {
@@ -198,8 +201,10 @@
   }
 
   .ai-output {
-    white-space: normal;
-    overflow-y: visible;
+    flex-grow: 1;
+    min-height: 0;
+    overflow-y: auto;
+    white-space: pre-wrap;
   }
 
 
