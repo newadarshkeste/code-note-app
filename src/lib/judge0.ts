@@ -13,8 +13,6 @@ const SubmissionResponseSchema = z.object({
   token: z.string(),
 });
 
-// This schema defines the full submission object returned by Judge0,
-// including all possible fields we might get back.
 const SubmissionResultSchema = z.object({
   stdout: z.string().nullable(),
   stderr: z.string().nullable(),
@@ -22,9 +20,6 @@ const SubmissionResultSchema = z.object({
     id: z.number(),
     description: z.string(),
   }),
-  // The user does not want these fields, so they are omitted from the final type.
-  // source_code: z.string().optional(),
-  // language_id: z.number().optional(),
 });
 export type Judge0Result = z.infer<typeof SubmissionResultSchema>;
 
