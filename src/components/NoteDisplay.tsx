@@ -114,7 +114,7 @@ export function NoteDisplay() {
     
     try {
         console.log("ACTIVE NOTE LANGUAGE =", activeNote.language);
-        const normalizedLang = activeNote.language?.toLowerCase().replace(/[^a-z]/g, "");
+        const normalizedLang = activeNote.language?.toLowerCase().trim();
         console.log("Normalized lang:", normalizedLang);
         
         const languageId = getLanguageId(normalizedLang || 'plaintext');
@@ -238,7 +238,7 @@ export function NoteDisplay() {
             )}
             <Button onClick={() => setIsExportDialogOpen(true)} disabled={isExporting} size="sm">
               {isExporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Download className="h-4 w-4" />}
-              <span className="ml-2 hidden md:inline">{isExporting ? 'Exporting...' : 'Download PDF'}</span>
+              <span className="ml-2 hidden md-inline">{isExporting ? 'Exporting...' : 'Download PDF'}</span>
             </Button>
         </div>
       </header>
