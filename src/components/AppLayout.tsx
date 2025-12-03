@@ -4,6 +4,8 @@ import { TopicSidebar } from '@/components/TopicSidebar';
 import { NoteList } from '@/components/NoteList';
 import { NoteDisplay } from '@/components/NoteDisplay';
 import { AiAssistantPanel } from '@/components/AiAssistantPanel';
+import { StudyToolsPanel } from '@/components/StudyToolsPanel';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -11,6 +13,8 @@ import {
 } from "@/components/ui/resizable";
 
 export function AppLayout() {
+  const isMobile = useIsMobile();
+  
   return (
     <div className="h-dvh w-screen flex text-foreground bg-background font-body overflow-hidden min-h-0">
       <ResizablePanelGroup direction="horizontal">
@@ -34,6 +38,7 @@ export function AppLayout() {
             </ResizablePanelGroup>
         </ResizablePanel>
       </ResizablePanelGroup>
+      {!isMobile && <StudyToolsPanel />}
     </div>
   );
 }

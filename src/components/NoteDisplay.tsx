@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { generatePdf } from '@/lib/pdf-export';
 import { runCode } from '@/lib/judge0';
 import { getLanguageId } from '@/lib/language-mapping';
+import { useStudyStats } from '@/hooks/useStudyStats';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,6 +79,8 @@ export function NoteDisplay() {
     saveActiveNote,
   } = useNotes();
   const { toast } = useToast();
+  const { trackers } = useStudyStats();
+
 
   const [isExporting, setIsExporting] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
@@ -96,11 +98,9 @@ export function NoteDisplay() {
         }
       }
     };
-
-    document.addEventListener('keydown', handleKeyDown);
-
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isDirty, saveActiveNote]);
 
@@ -113,8 +113,21 @@ export function NoteDisplay() {
       });
       setIsDirty(false);
       setOutput(null);
+      
+      // Hook for study tracker
+      if(activeNote.type === 'code') {
+        trackers.startCodingTimer();
+      } else {
+        trackers.stopCodingTimer();
+      }
+
     } else {
       setDirtyNoteContent(null);
+      trackers.stopCodingTimer();
+    }
+    
+    return () => {
+        trackers.stopCodingTimer();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeNote?.id]);
@@ -122,6 +135,14 @@ export function NoteDisplay() {
 
   const handleContentChange = (newContent: string | undefined) => {
     if (newContent !== undefined && dirtyNoteContent) {
+      if(activeNote?.type === 'code') {
+          const oldLineCount = dirtyNoteContent.content.split('\n').length;
+          const newLineCount = newContent.split('\n').length;
+          if(newLineCount > oldLineCount) {
+              trackers.incrementLinesTyped();
+          }
+      }
+
       setDirtyNoteContent(prev => ({ ...prev!, content: newContent! }));
       if (!isDirty) setIsDirty(true);
     }
