@@ -10,7 +10,7 @@ import type { PracticeModeOutput } from '@/ai/flows/ai-assistant-flow';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CodeEditor } from '@/components/CodeEditor';
-import { Loader2, Sparkles, Trophy, ListChecks, Lightbulb, Repeat, Columns } from 'lucide-react';
+import { Loader2, Sparkles, Trophy, ListChecks, Lightbulb, Repeat, Columns, Dumbbell } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
