@@ -1,11 +1,12 @@
 'use client';
 
 import { Flame } from 'lucide-react';
-import { useStudyStats } from '@/hooks/useStudyStats';
+import { useNotes } from '@/context/NotesContext';
 import { Badge } from './ui/badge';
 
 export function StreakCounter() {
-    const { streak } = useStudyStats();
+    const { studyStats } = useNotes();
+    const { streak } = studyStats;
 
     if (streak.current === 0) {
         return null;

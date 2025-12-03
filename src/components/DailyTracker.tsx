@@ -2,7 +2,7 @@
 
 import { BarChart2, BookOpen, Clock, Code } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { useStudyStats } from '@/hooks/useStudyStats';
+import { useNotes } from '@/context/NotesContext';
 
 const StatItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: string | number }) => (
     <div className="flex items-center justify-between text-sm">
@@ -16,7 +16,8 @@ const StatItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label
 
 
 export function DailyTracker() {
-    const { dailyStats } = useStudyStats();
+    const { studyStats } = useNotes();
+    const { dailyStats } = studyStats;
     
     return (
         <Card>
@@ -31,7 +32,7 @@ export function DailyTracker() {
                 <StatItem icon={Clock} label="Focus Time" value={`${dailyStats.focusMinutesToday} min`} />
                 <StatItem icon={Clock} label="Coding Time" value={`${dailyStats.codingMinutesToday} min`} />
                 <StatItem icon={BookOpen} label="Notes Edited" value={dailyStats.notesEditedToday} />
-                <StatItem icon={Code} label="Lines Typed" value={dailyStats.linesTypedToday} />
+                <StatItem icon={Code} label="Lines Typed" value={daily_stats.linesTypedToday} />
             </CardContent>
         </Card>
     );

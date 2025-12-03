@@ -22,6 +22,7 @@ import {
 import { useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { useStudyStats } from '@/hooks/useStudyStats';
 
 interface DirtyNoteContent {
     title: string;
@@ -56,6 +57,7 @@ interface NotesContextType {
   dirtyNoteContent: DirtyNoteContent | null;
   setDirtyNoteContent: React.Dispatch<React.SetStateAction<DirtyNoteContent | null>>;
   saveActiveNote: () => Promise<void>;
+  studyStats: ReturnType<typeof useStudyStats>;
 }
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
@@ -86,6 +88,33 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     return null;
   }, [user, firestore, activeTopicId]);
 
+  const updateNote = useCallback(async (noteId: string, data: NoteUpdate) => {
+    if (!notesCollectionRef) return;
+    setIsSaving(true);
+    const noteDocRef = doc(notesCollectionRef, noteId);
+    
+    let finalData: NoteUpdate & { updatedAt: any } = {
+      ...data,
+      updatedAt: serverTimestamp(),
+    };
+
+    try {
+        await updateDoc(noteDocRef, finalData);
+        setIsDirty(false);
+    } catch (error) {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: noteDocRef.path,
+            operation: 'update',
+            requestResourceData: finalData
+        }));
+        throw new Error("Update failed due to permissions");
+    } finally {
+        setIsSaving(false);
+    }
+  }, [notesCollectionRef]);
+
+  const studyStats = useStudyStats(updateNote);
+
 
   useEffect(() => {
     if (!topicsRef) {
@@ -114,7 +143,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [topicsRef]);
+  }, [topicsRef, activeTopicId]);
 
   useEffect(() => {
     if (!notesCollectionRef) {
@@ -258,32 +287,6 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-
-  const updateNote = async (noteId: string, data: NoteUpdate) => {
-    if (!notesCollectionRef) return;
-    setIsSaving(true);
-    const noteDocRef = doc(notesCollectionRef, noteId);
-    
-    let finalData: NoteUpdate & { updatedAt: any } = {
-      ...data,
-      updatedAt: serverTimestamp(),
-    };
-
-    try {
-        await updateDoc(noteDocRef, finalData);
-        setIsDirty(false);
-    } catch (error) {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: noteDocRef.path,
-            operation: 'update',
-            requestResourceData: finalData
-        }));
-        throw new Error("Update failed due to permissions");
-    } finally {
-        setIsSaving(false);
-    }
-  };
-  
   const activeNote = useMemo(() => {
     return notes.find(note => note.id === activeNoteId) || null;
   }, [activeNoteId, notes]);
@@ -359,6 +362,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     dirtyNoteContent,
     setDirtyNoteContent,
     saveActiveNote,
+    studyStats,
   };
 
   return <NotesContext.Provider value={value}>{children}</NotesContext.Provider>;

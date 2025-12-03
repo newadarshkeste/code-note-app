@@ -7,11 +7,10 @@ import { useToast } from '@/hooks/use-toast';
 import { generatePdf } from '@/lib/pdf-export';
 import { runCode } from '@/lib/judge0';
 import { getLanguageId } from '@/lib/language-mapping';
-import { useStudyStats } from '@/hooks/useStudyStats';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Save, Loader2, Code, Type, FileText, Download, Play } from 'lucide-react';
+import { Save, Loader2, Type, Download, Play } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Skeleton } from './ui/skeleton';
@@ -29,7 +28,13 @@ const RichTextEditor = dynamic(() => import('@/components/RichTextEditor').then(
 function WelcomeScreen() {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-8">
-      <FileText className="w-24 h-24 text-muted-foreground/50 mb-4" />
+      <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/50 mb-4">
+          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <line x1="10" y1="9" x2="8" y2="9"/>
+      </svg>
       <h2 className="text-2xl font-headline font-semibold text-foreground">Welcome to CodeNote</h2>
       <p className="mt-2 text-muted-foreground">
         Select a note from the list to start editing, or create a new topic and note.
@@ -77,9 +82,10 @@ export function NoteDisplay() {
     dirtyNoteContent,
     setDirtyNoteContent,
     saveActiveNote,
+    studyStats,
   } = useNotes();
   const { toast } = useToast();
-  const { trackers } = useStudyStats();
+  const { trackers } = studyStats;
 
 
   const [isExporting, setIsExporting] = useState(false);
@@ -173,13 +179,8 @@ export function NoteDisplay() {
     setOutput('Executing code...');
 
     try {
-      console.log("ACTIVE NOTE LANGUAGE =", dirtyNoteContent.language);
-      const normalizedLang = dirtyNoteContent.language?.toLowerCase().trim();
-      console.log("Normalized lang:", normalizedLang);
-
-      const languageId = getLanguageId(normalizedLang || 'plaintext');
-      console.log("LANG ID:", languageId);
-
+      const languageId = getLanguageId(dirtyNoteContent.language || 'plaintext');
+      
       if (!languageId) {
         setOutput('Execution failed: Language not supported for execution.');
         setIsRunning(false);
@@ -187,10 +188,8 @@ export function NoteDisplay() {
       }
 
       const cleanCode = safeClean(dirtyNoteContent.content);
-      console.log('CLEAN CODE SENT TO JUDGE0:', cleanCode);
 
       const result = await runCode(languageId, cleanCode);
-      console.log('RAW RESULT FROM JUDGE0:', result);
 
       let outputText = "";
       if (result.stdout && result.stdout.trim() !== "") {

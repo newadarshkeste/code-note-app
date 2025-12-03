@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocalStorage } from './useLocalStorage';
-import { useNotes } from '@/context/NotesContext';
-import { isToday, isYesterday, startOfToday } from 'date-fns';
+import { isToday, isYesterday } from 'date-fns';
+import { NoteUpdate } from '@/lib/types';
 
 export type TimerMode = 'focus' | 'break' | 'longBreak';
 
-export const useStudyStats = () => {
+export const useStudyStats = (updateNote: (noteId: string, data: NoteUpdate) => Promise<void>) => {
     // Pomodoro State
     const [mode, setMode] = useLocalStorage<TimerMode>('study:mode', 'focus');
     const [isActive, setIsActive] = useLocalStorage('study:isActive', false);
@@ -34,7 +34,6 @@ export const useStudyStats = () => {
     const [linesTypedToday, setLinesTypedToday] = useLocalStorage('study:linesTypedToday', 0);
     const [codingTimeToday, setCodingTimeToday] = useLocalStorage('study:codingTimeToday', 0); // in seconds
     
-    const { isSaving } = useNotes();
 
     // --- Daily Reset Logic ---
     useEffect(() => {
@@ -47,7 +46,7 @@ export const useStudyStats = () => {
             setCodingTimeToday(0);
             setLastResetDate(new Date().toISOString());
         }
-    }, []);
+    }, [lastResetDate, setPomodorosToday, setNotesEditedToday, setLinesTypedToday, setCodingTimeToday, setLastResetDate]);
 
     // --- Streak Logic ---
     const incrementStreak = useCallback(() => {
@@ -141,11 +140,11 @@ export const useStudyStats = () => {
 
     // Track notes edited
     useEffect(() => {
-        if (isSaving) { // A note is being saved
-            incrementStreak();
+        if(updateNote){
+             incrementStreak();
             setNotesEditedToday(n => n + 1);
         }
-    }, [isSaving, setNotesEditedToday, incrementStreak]);
+    }, [updateNote, setNotesEditedToday, incrementStreak]);
 
     // Track lines typed (exposed function)
     const incrementLinesTyped = useCallback(() => {

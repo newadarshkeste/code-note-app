@@ -5,7 +5,7 @@ import { Play, Pause, RefreshCw, Settings } from 'lucide-react';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { useStudyStats } from '@/hooks/useStudyStats';
+import { useNotes } from '@/context/NotesContext';
 import {
   Dialog,
   DialogContent,
@@ -123,7 +123,8 @@ function TimerSettingsDialog({
 
 
 export function Pomodoro() {
-    const { pomodoro } = useStudyStats();
+    const { studyStats } = useNotes();
+    const { pomodoro } = studyStats;
     const {
         mode,
         timeLeft,
