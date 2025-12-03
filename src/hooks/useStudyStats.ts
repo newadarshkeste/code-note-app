@@ -13,7 +13,7 @@ const BREAK_DURATION = 5 * 60;
 export const useStudyStats = () => {
     // Pomodoro State
     const [mode, setMode] = useLocalStorage<TimerMode>('study:mode', 'focus');
-    const [isActive, setIsActive] = useState(false);
+    const [isActive, setIsActive] = useLocalStorage('study:isActive', false);
     const [timeLeft, setTimeLeft] = useLocalStorage('study:timeLeft', FOCUS_DURATION);
     const [pomodorosToday, setPomodorosToday] = useLocalStorage('study:pomodorosToday', 0);
     const [lastResetDate, setLastResetDate] = useLocalStorage('study:lastResetDate', new Date().toISOString());
