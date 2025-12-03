@@ -25,6 +25,7 @@
     --ring: 222.2 84% 49.4%;
     --radius: 0.5rem;
   }
+
   .dark {
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
@@ -52,24 +53,28 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
+
   /* Custom scrollbar styles */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
+
   ::-webkit-scrollbar-track {
     background: transparent;
   }
+
   ::-webkit-scrollbar-thumb {
     background: hsl(var(--border));
     border-radius: 4px;
   }
+
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground));
   }
@@ -83,21 +88,41 @@
     @apply mb-4;
   }
 
-  .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4 {
+  .ProseMirror h1,
+  .ProseMirror h2,
+  .ProseMirror h3,
+  .ProseMirror h4 {
     @apply mb-4 font-headline font-bold;
   }
 
-  .ProseMirror h1 { @apply text-4xl; }
-  .ProseMirror h2 { @apply text-3xl; }
-  .ProseMirror h3 { @apply text-2xl; }
-  .ProseMirror h4 { @apply text-xl; }
+  .ProseMirror h1 {
+    @apply text-4xl;
+  }
 
-  .ProseMirror ul, .ProseMirror ol {
+  .ProseMirror h2 {
+    @apply text-3xl;
+  }
+
+  .ProseMirror h3 {
+    @apply text-2xl;
+  }
+
+  .ProseMirror h4 {
+    @apply text-xl;
+  }
+
+  .ProseMirror ul,
+  .ProseMirror ol {
     @apply pl-6 mb-4;
   }
 
-  .ProseMirror ul { @apply list-disc; }
-  .ProseMirror ol { @apply list-decimal; }
+  .ProseMirror ul {
+    @apply list-disc;
+  }
+
+  .ProseMirror ol {
+    @apply list-decimal;
+  }
 
   .ProseMirror a {
     @apply text-primary underline;
@@ -110,19 +135,19 @@
   .ProseMirror code {
     @apply bg-muted text-foreground rounded px-1 py-0.5 font-code text-sm;
   }
-  
+
   .ProseMirror blockquote {
     @apply border-l-4 border-primary pl-4 italic my-4;
   }
-  
+
   .ProseMirror hr {
     @apply border-t border-border my-4;
   }
-  
+
   .ProseMirror:focus {
     @apply outline-none;
   }
-  
+
   .ProseMirror p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);
     float: left;
@@ -140,11 +165,11 @@
     max-width: 100%;
   }
 
-  .ai-assistant-output > *:first-child {
+  .ai-assistant-output>*:first-child {
     margin-top: 0;
   }
 
-  .ai-assistant-output > *:last-child {
+  .ai-assistant-output>*:last-child {
     margin-bottom: 0;
   }
 
@@ -153,7 +178,7 @@
   .ai-assistant-output ol {
     margin-bottom: 0.75rem;
   }
-  
+
   .ai-assistant-output pre {
     white-space: pre-wrap;
     word-break: break-word;
@@ -166,40 +191,45 @@
     white-space: pre-wrap;
     word-break: break-all;
   }
-  
+
   .ai-assistant-output ul,
   .ai-assistant-output ol {
     @apply pl-4;
   }
 
   .ai-output {
-    flex-grow: 1;
-    min-height: 0;
-    overflow-y: auto;
-    white-space: pre-wrap;
+    white-space: normal;
+    overflow-y: visible;
   }
+
 
   /* Code Output Box */
   .code-output-box {
-      @apply bg-muted/50 border-t;
-      max-height: 200px;
-      overflow-y: auto;
-      padding: 8px;
+    @apply bg-muted/50 border-t;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 8px;
   }
+
   .dark .code-output-box {
     @apply bg-muted/20;
   }
+
   .code-output-box pre {
-      margin: 0;
-      white-space: pre-wrap;
-      word-break: break-word;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
+
   .code-output-box code {
-      font-family: theme('fontFamily.code');
-      font-size: 0.875rem; /* 14px */
+    font-family: theme('fontFamily.code');
+    font-size: 0.875rem;
+    /* 14px */
   }
 }
 
-html, body, #__next {
+html,
+body,
+#__next {
   height: 100%;
 }

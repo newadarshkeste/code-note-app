@@ -40,19 +40,22 @@ function WelcomeScreen() {
 
 type ExportType = 'note' | 'topic' | 'all';
 
-function stripHtml(raw: string): string {
-    if (!raw) return '';
+function safeClean(code: string): string {
+    if (!code) return "";
   
-    let clean = raw.replace(/<[^>]+>/g, '');
-    
+    // First, convert entities that could be part of code
+    let clean = code
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&amp;/g, "&");
+  
+    // Then remove any remaining HTML tags and non-breaking spaces
     clean = clean
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'");
-    
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/&nbsp;/g, " ")
+      .replace(/<\/p>/gi, "\n") // Replace closing p tags with a newline
+      .replace(/<[^>]+>/g, ''); // Strip all other tags
+      
     return clean.trim();
 }
 
@@ -139,7 +142,7 @@ export function NoteDisplay() {
             return;
         }
         
-        const cleanCode = stripHtml(dirtyNoteContent.content).trimStart();
+        const cleanCode = safeClean(dirtyNoteContent.content);
         console.log('CLEAN CODE SENT TO JUDGE0:', cleanCode);
 
         const result = await runCode(languageId, cleanCode);
@@ -340,3 +343,5 @@ export function NoteDisplay() {
     </>
   );
 }
+
+    
