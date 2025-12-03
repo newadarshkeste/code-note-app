@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import Editor, { OnChange, loader } from '@monaco-editor/react';
+import type * as monaco from 'monaco-editor';
 import { useTheme } from 'next-themes';
 import { Skeleton } from './ui/skeleton';
 
