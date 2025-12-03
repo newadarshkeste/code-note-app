@@ -55,66 +55,68 @@ function NoteItem({ note, level = 0 }: { note: Note, level?: number }) {
         }
     };
     
-    const noteContent = (
+    const renderNoteContent = () => (
       <div className="group flex items-center justify-between w-full h-10 pr-1">
-        <Button
-          variant="ghost"
-          onClick={() => setActiveNoteId(note.id)}
-          className={cn(
-            "w-full justify-start gap-2 h-full text-sm",
-            activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent'
-          )}
-        >
-          {level > 0 && <CornerDownRight className="h-4 w-4 flex-shrink-0" style={{ marginLeft: `${level * 1}rem` }}/>}
-          {note.type === 'code' ? (
-            <Code className="h-4 w-4 flex-shrink-0" />
-          ) : (
-            <Type className="h-4 w-4 flex-shrink-0" />
-          )}
-          <span className="truncate flex-grow text-left">{note.title}</span>
-        </Button>
-        <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setRenameNote(note); setRenamingTitle(note.title); }}>
-            <Pencil className="h-4 w-4 text-muted-foreground" />
+          <Button
+              variant="ghost"
+              onClick={() => setActiveNoteId(note.id)}
+              className={cn(
+                  "w-full justify-start gap-2 h-full text-sm",
+                  activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent'
+              )}
+              style={{ paddingLeft: `${(level * 1.5) + 0.5}rem` }}
+          >
+              {!hasSubNotes && <div className="w-4 h-4 flex-shrink-0"></div>}
+              {note.type === 'code' ? (
+                  <Code className="h-4 w-4 flex-shrink-0" />
+              ) : (
+                  <Type className="h-4 w-4 flex-shrink-0" />
+              )}
+              <span className="truncate flex-grow text-left">{note.title}</span>
           </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => e.stopPropagation()}>
-                <Trash2 className="h-4 w-4 text-destructive" />
+          <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setRenameNote(note); setRenamingTitle(note.title); }}>
+                  <Pencil className="h-4 w-4 text-muted-foreground" />
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete "{note.title}" and all its sub-notes. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => deleteNote(note.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+              <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => e.stopPropagation()}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                      <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                              This will permanently delete "{note.title}" and all its sub-notes. This action cannot be undone.
+                          </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteNote(note.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                  </AlertDialogContent>
+              </AlertDialog>
+          </div>
       </div>
     );
 
     if (hasSubNotes) {
         return (
             <AccordionItem value={note.id} className="border-b-0">
-                 <div className={cn("flex items-center", activeNoteId === note.id && 'bg-primary/10 rounded-md')}>
+                <div className={cn("flex items-center w-full", activeNoteId === note.id && 'bg-primary/10 rounded-md')}>
                     <AccordionTrigger
-                        showArrow={hasSubNotes}
                         className={cn(
                             "p-1 rounded-sm hover:bg-accent/50 [&[data-state=open]>svg]:rotate-90",
-                            level > 0 && `pl-2`
+                            `pl-2`
                         )}
-                        style={{ marginLeft: `${level * 0.5}rem` }}
+                         style={{ marginLeft: `${level * 1.5}rem` }}
                     >
-                        <ChevronRight className="h-4 w-4 transition-transform duration-200" />
+                         <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200" />
                     </AccordionTrigger>
-                    {noteContent}
+                    <div className="flex-grow">
+                      {renderNoteContent()}
+                    </div>
                 </div>
                 <AccordionContent className="p-0">
                      {subNotes.map(subNote => (
@@ -127,14 +129,7 @@ function NoteItem({ note, level = 0 }: { note: Note, level?: number }) {
 
     return (
         <div className="py-1 flex items-center w-full">
-            {hasSubNotes ? (
-                 noteContent
-            ) : (
-                <div className="flex items-center w-full">
-                    <div style={{ marginLeft: `${(level * 0.5)}rem`, width: '28px' }} className="flex-shrink-0"></div>
-                     {noteContent}
-                </div>
-            )}
+            {renderNoteContent()}
         </div>
     );
 }

@@ -22,8 +22,8 @@ AccordionItem.displayName = "AccordionItem"
 
 const AccordionTrigger = React.forwardRef<
   React.ElementRef<typeof AccordionPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger> & { showArrow?: boolean }
->(({ className, children, showArrow = true, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
+>(({ className, children, ...props }, ref) => (
   <AccordionPrimitive.Header className="flex">
     <AccordionPrimitive.Trigger
       ref={ref}
@@ -34,7 +34,7 @@ const AccordionTrigger = React.forwardRef<
       {...props}
     >
       {children}
-      {showArrow && <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />}
+      {/* Default arrow is removed from here to allow custom arrow in the component using it */}
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ))
