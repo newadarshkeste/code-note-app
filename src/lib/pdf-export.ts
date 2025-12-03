@@ -13,11 +13,10 @@ const CONTENT_WIDTH = 595.28 - (PAGE_MARGIN * 2);
 const PAGE_HEIGHT = 841.89;
 
 // --------------------- HEADER ------------------------
-const addHeader = (doc: jsPDF, topicName: string, pageNumber: number) => {
+const addHeader = (doc: jsPDF, pageNumber: number) => {
   doc.setPage(pageNumber);
   doc.setFontSize(9);
   doc.setTextColor('#666');
-  doc.text(topicName, PAGE_MARGIN, 25);
   doc.text(`Page ${pageNumber}`, 595.28 - PAGE_MARGIN, 25, { align: 'right' });
   doc.setDrawColor('#ddd');
   doc.line(PAGE_MARGIN, 30, 595.28 - PAGE_MARGIN, 30);
@@ -38,10 +37,8 @@ const addFooter = (doc: jsPDF) => {
 const createStyledContainer = () => {
   const container = document.createElement('div');
   container.classList.add("pdf-render-container");
-  // This needs to be attached to the body to be rendered by html2canvas
   document.body.appendChild(container);
 
-  // Check if the style tag already exists to avoid duplicates
   if (!document.getElementById('pdf-style')) {
     const style = document.createElement("style");
     style.id = 'pdf-style';
@@ -78,7 +75,7 @@ const createStyledContainer = () => {
       }
       .pdf-note-container code {
         font-family: "Source Code Pro", "Courier New", monospace;
-        font-size: 7pt;
+        font-size: 8pt;
         line-height: 1.2;
         color: #000;
       }
@@ -103,23 +100,40 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
   const container = createStyledContainer();
 
   const sortedNotes = [...notes].sort((a, b) => {
-    if (a.topicName < b.topicName) return -1;
-    if (a.topicName > b.topicName) return 1;
+    if (a.topicName.toLowerCase() < b.topicName.toLowerCase()) return -1;
+    if (a.topicName.toLowerCase() > b.topicName.toLowerCase()) return 1;
     const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
     const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
     return dateA - dateB;
   });
   
-  doc.deletePage(1); // Remove the default blank page
+  doc.addPage();
+  doc.deletePage(1);
+
+  let yPos = PAGE_MARGIN;
+  let currentTopicName = '';
 
   for (let i = 0; i < sortedNotes.length; i++) {
     const note = sortedNotes[i];
-    let yPos = PAGE_MARGIN + 20;
-
-    // Each note starts on a new page to ensure stability
-    doc.addPage();
-    const currentPage = doc.getNumberOfPages();
-    addHeader(doc, note.topicName, currentPage);
+    
+    // --- Add a new page if content won't fit ---
+    // Estimate height. This is a rough guess; adjust as needed.
+    const noteHeightEstimate = (note.content?.split('\n').length || 1) * 10 + 80;
+    if (yPos + noteHeightEstimate > PAGE_HEIGHT - PAGE_MARGIN && i > 0) {
+        doc.addPage();
+        yPos = PAGE_MARGIN;
+        // Don't repeat topic header if it's the same
+    }
+    
+    // --- Topic Header ---
+    if(note.topicName !== currentTopicName) {
+        currentTopicName = note.topicName;
+        yPos += (yPos === PAGE_MARGIN ? 0 : 30); // Add space before new topic unless at top of page
+        doc.setFont("Helvetica", "bold");
+        doc.setFontSize(16);
+        doc.text(currentTopicName, PAGE_MARGIN, yPos);
+        yPos += 25;
+    }
 
     // -------- Note Title + Metadata ----------
     const created = note.createdAt?.toDate ? format(note.createdAt.toDate(), 'PPP') : 'N/A';
@@ -134,30 +148,34 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
     doc.setFontSize(8);
     doc.setTextColor("#444");
     doc.text(`Created: ${created}     Updated: ${updated}`, PAGE_MARGIN, yPos);
-    yPos += 20;
-
-    doc.setDrawColor("#ddd");
-    doc.line(PAGE_MARGIN, yPos - 12, CONTENT_WIDTH + PAGE_MARGIN, yPos - 12);
+    yPos += 15;
 
     // ========== CODE NOTE (Plain Text) ==========
     if (note.type === "code") {
+      const codeLines = doc.splitTextToSize(note.content || '', CONTENT_WIDTH - 10);
+      const codeBlockHeight = codeLines.length * 8 * 1.2 + 10;
+
+      // Check for page break before drawing code block
+      if (yPos + codeBlockHeight > PAGE_HEIGHT - PAGE_MARGIN) {
+          doc.addPage();
+          yPos = PAGE_MARGIN;
+      }
+
+      doc.setFillColor("#f3f4f6");
+      doc.rect(PAGE_MARGIN, yPos, CONTENT_WIDTH, codeBlockHeight, "F");
+
       doc.setFont("Courier", "normal");
       doc.setFontSize(8);
       doc.setTextColor("#000");
-
-      const codeLines = doc.splitTextToSize(note.content || '', CONTENT_WIDTH - 10);
-      const codeBlockHeight = codeLines.length * 8 * 1.2;
-      
-      doc.setFillColor("#f3f4f6");
-      doc.rect(PAGE_MARGIN, yPos, CONTENT_WIDTH, codeBlockHeight + 10, "F");
-
       doc.text(codeLines, PAGE_MARGIN + 5, yPos + 10, { lineHeightFactor: 1.2 });
+      yPos += codeBlockHeight + 15; // Spacing after note
     
     } else {
     // ============ RICH TEXT NOTE (CANVAS) ============
       const elem = document.createElement("div");
       elem.className = "pdf-note-container";
-      elem.innerHTML = note.content;
+      // This is a simple way to render the HTML, assuming it's safe and sanitized
+      elem.innerHTML = note.content; 
       container.innerHTML = "";
       container.appendChild(elem);
 
@@ -168,18 +186,22 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
       const pdfImgHeight = (imgProps.height * pdfImgWidth) / imgProps.width;
 
       if (yPos + pdfImgHeight > PAGE_HEIGHT - PAGE_MARGIN) {
-        // This case is unlikely if each note starts on a new page, but is a safety check.
         doc.addPage();
-        const newPage = doc.getNumberOfPages();
-        addHeader(doc, note.topicName, newPage);
-        yPos = PAGE_MARGIN + 20;
+        yPos = PAGE_MARGIN;
       }
 
       doc.addImage(imgData, "PNG", PAGE_MARGIN, yPos, pdfImgWidth, pdfImgHeight, undefined, 'FAST');
+      yPos += pdfImgHeight + 15; // Spacing after note
     }
   }
 
+  // Add headers and footers to all pages at the end
+  const pageCount = doc.getNumberOfPages();
+  for(let i = 1; i <= pageCount; i++) {
+    addHeader(doc, i);
+  }
   addFooter(doc);
+
   cleanupContainer(container);
   
   const filename = notes.length === 1 && notes[0].title
