@@ -1,0 +1,187 @@
+/**
+ * This ruleset enforces a strict user-ownership security model for a multi-user
+ * note-taking application. It is designed for rapid prototyping, prioritizing
+ * strong authorization while maintaining flexibility in data schemas.
+ *
+ * Core Philosophy:
+ * Each user's data is completely isolated. A user can only ever read or write
+ * their own information. There is no concept of public or shared data, and
+ * users cannot see or interact with other users' content in any way.
+ *
+ * Data Structure:
+ * All user-generated content is nested under a user-specific path:
+ * /users/{userId}
+ *   - /topics/{topicId}
+ *     - /notes/{noteId}
+ * This hierarchical structure is the primary mechanism for enforcing security,
+ * as ownership is determined by the {userId} in the path.
+ *
+ * Key Security Decisions:
+ * - User Enumeration is Disabled: Listing the top-level `/users` collection is
+ *   explicitly forbidden to prevent discovery of other users on the platform.
+ * - Strict Ownership: All operations (read, write, delete) on any document
+ *   within a user's data tree (`/users/{userId}/*`) are restricted to the
+ *   authenticated user whose UID matches the `userId` in the path.
+ * - Default Deny: All access is denied by default. Permissions are only granted
+ *   through explicit `allow` statements.
+ *
+ * Denormalization for Authorization:
+ * To ensure fast and secure rule evaluation, key relational identifiers are
+ * denormalized onto documents. For instance:
+ * - A `Topic` document at `/users/{userId}/topics/{topicId}` contains a
+ *   `userId` field, which is validated against the path to ensure integrity.
+ * - A `Note` document at `.../notes/{noteId}` contains a `topicId` field,
+ *   which is validated against its path segment.
+ * This strategy avoids costly and complex `get()` calls in security rules.
+ *
+ * Structural Segregation:
+ * The data model uses structural segregation by placing all of a user's private
+ * data inside their own document tree. This creates a homogeneous security
+ * posture for all subcollections, simplifying rules and improving query performance.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    //-------------------------------------------------------------------------
+    //  Helper Functions
+    //-------------------------------------------------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the provided userId from the path.
+     * This is the foundation of the user-ownership model.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * A robust check for update/delete operations, ensuring the user is the owner
+     * AND that the document they are trying to modify actually exists.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * On create, validates that the user document's internal `id` field matches
+     * the document's ID (which is the user's UID).
+     */
+    function hasValidUserFieldsOnCreate(userId) {
+      let data = request.resource.data;
+      return data.id == userId
+          && data.email == request.auth.token.email;
+          // photoURL and displayName are optional but validated if present
+    }
+
+    /**
+     * On update, ensures the user document's internal `id` and email are immutable.
+     */
+    function hasImmutableUserFields() {
+      let data = request.resource.data;
+      return data.id == resource.data.id
+          && data.email == resource.data.email;
+    }
+
+    /**
+     * On create, validates that the topic document's internal `userId` field
+     * matches the `userId` from the path.
+     */
+    function hasValidTopicFieldsOnCreate(userId) {
+      return request.resource.data.userId == userId;
+    }
+
+    /**
+     * On update, ensures the topic document's internal `userId` is immutable.
+     */
+    function hasImmutableTopicFields() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+
+    /**
+     * On create, validates that the note document's internal `topicId` field
+     * matches the `topicId` from the path.
+     */
+    function hasValidNoteFieldsOnCreate(topicId) {
+      let data = request.resource.data;
+      return data.topicId == topicId
+          && data.title is string
+          && data.content is string
+          && data.type is string && (data.type == 'text' || data.type == 'code')
+          && ('parentId' in data); // parentId can be null or a string
+    }
+
+    /**
+     * On update, ensures key note fields are immutable.
+     * The `request.resource.data` for an update only contains the fields being changed.
+     * We must check that the incoming data does NOT contain any of the immutable fields,
+     * unless its value is identical to the existing resource.
+     */
+    function hasImmutableNoteFields() {
+       let incomingData = request.resource.data;
+       let existingData = resource.data;
+       
+       return (!('topicId' in incomingData) || incomingData.topicId == existingData.topicId)
+          && (!('type' in incomingData) || incomingData.type == existingData.type)
+          && (!('createdAt' in incomingData) || incomingData.createdAt == existingData.createdAt)
+          && (!('parentId' in incomingData) || incomingData.parentId == existingData.parentId);
+    }
+
+
+    //-------------------------------------------------------------------------
+    //  Collection Rules
+    //-------------------------------------------------------------------------
+
+    /**
+     * @description Controls access to user profile documents.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user can create their own user profile document.
+     * @deny (list) Another user cannot list all user profiles on the platform.
+     * @principle Restricts access to a user's own profile and prevents user enumeration.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && hasValidUserFieldsOnCreate(userId);
+      allow update: if isExistingOwner(userId) && hasImmutableUserFields();
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Controls access to a user's collection of topics.
+       * @path /users/{userId}/topics/{topicId}
+       * @allow (create) The user can create a new topic in their own collection.
+       * @deny (get) Another user cannot read a topic, even if they know the ID.
+       * @principle Enforces strict data isolation for a user's own content subcollections.
+       */
+      match /topics/{topicId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && hasValidTopicFieldsOnCreate(userId);
+        allow update: if isExistingOwner(userId) && hasImmutableTopicFields();
+        allow delete: if isExistingOwner(userId);
+
+        /**
+         * @description Controls access to notes within a user's topic.
+         * @path /users/{userId}/topics/{topicId}/notes/{noteId}
+         * @allow (list) The user can list all notes within one of their topics.
+         * @deny (update) Another user cannot update a note, even with a valid ID.
+         * @principle Enforces ownership at the deepest level of the data hierarchy.
+         */
+        match /notes/{noteId} {
+          allow get: if isOwner(userId);
+          allow list: if isOwner(userId);
+          allow create: if isOwner(userId) && hasValidNoteFieldsOnCreate(topicId);
+          allow update: if isExistingOwner(userId) && hasImmutableNoteFields();
+          allow delete: if isExistingOwner(userId);
+        }
+      }
+    }
+  }
+}

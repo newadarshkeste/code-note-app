@@ -90,7 +90,8 @@ export function NoteDisplay() {
     } else {
       setDirtyNoteContent(null);
     }
-  }, [activeNote?.id, activeNote, setDirtyNoteContent, setIsDirty]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeNote?.id]);
   
   
   const handleContentChange = (newContent: string | undefined) => {
