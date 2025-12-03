@@ -82,11 +82,8 @@ export function NoteDisplay() {
     dirtyNoteContent,
     setDirtyNoteContent,
     saveActiveNote,
-    studyStats,
   } = useNotes();
   const { toast } = useToast();
-  const { trackers } = studyStats;
-
 
   const [isExporting, setIsExporting] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
@@ -119,36 +116,14 @@ export function NoteDisplay() {
       });
       setIsDirty(false);
       setOutput(null);
-      
-      // Hook for study tracker
-      if(activeNote.type === 'code') {
-        trackers.startCodingTimer();
-      } else {
-        trackers.stopCodingTimer();
-      }
-
     } else {
       setDirtyNoteContent(null);
-      trackers.stopCodingTimer();
     }
-    
-    return () => {
-        trackers.stopCodingTimer();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeNote?.id]);
 
 
   const handleContentChange = (newContent: string | undefined) => {
     if (newContent !== undefined && dirtyNoteContent) {
-      if(activeNote?.type === 'code') {
-          const oldLineCount = dirtyNoteContent.content.split('\n').length;
-          const newLineCount = newContent.split('\n').length;
-          if(newLineCount > oldLineCount) {
-              trackers.incrementLinesTyped();
-          }
-      }
-
       setDirtyNoteContent(prev => ({ ...prev!, content: newContent! }));
       if (!isDirty) setIsDirty(true);
     }
