@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
-import { File, FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight } from 'lucide-react';
+import { File, FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight, ChevronRight, ChevronDown } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Note } from '@/lib/types';
@@ -39,6 +39,7 @@ function NoteItem({ note, level = 0 }: { note: Note, level?: number }) {
         setActiveNoteId, 
         getSubNotes, 
         deleteNote,
+        updateNote
     } = useNotes();
     
     const [renameNote, setRenameNote] = useState<Note | null>(null);
@@ -48,70 +49,74 @@ function NoteItem({ note, level = 0 }: { note: Note, level?: number }) {
 
     const handleRenameNote = async () => {
         if (renameNote && renamingTitle.trim()) {
-            // updateNote is missing from context in this scope, let's assume it should be there
-            // await updateNote(renameNote.id, { title: renamingTitle.trim() });
+            await updateNote(renameNote.id, { title: renamingTitle.trim() });
             setRenameNote(null);
             setRenamingTitle('');
         }
     };
     
-    const NoteContent = (
-         <div className="group flex items-center gap-1 w-full">
-            <Button
-                variant="ghost"
-                onClick={() => setActiveNoteId(note.id)}
-                className={cn(
-                    "w-full justify-start gap-2 h-10 text-sm",
-                    activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent',
-                    level > 0 && `pl-${4 + level * 2}`
-                )}
-            >
-                {level > 0 && <CornerDownRight className="h-4 w-4 flex-shrink-0" />}
-                {note.type === 'code' ? (
-                    <Code className="h-4 w-4 flex-shrink-0" />
-                ) : (
-                    <Type className="h-4 w-4 flex-shrink-0" />
-                )}
-                <span className="truncate flex-grow text-left">{note.title}</span>
-            </Button>
-            <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setRenameNote(note); setRenamingTitle(note.title); }}>
-                    <Pencil className="h-4 w-4 text-muted-foreground" />
-                </Button>
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                        This will permanently delete "{note.title}" and all its sub-notes. This action cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteNote(note.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            </div>
-            {/* Rename dialog can be added here if needed */}
+    const noteContent = (
+      <div className="group flex items-center justify-between w-full h-10 pr-1">
+        <Button
+          variant="ghost"
+          onClick={() => setActiveNoteId(note.id)}
+          className={cn(
+            "w-full justify-start gap-2 h-full text-sm",
+            activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent'
+          )}
+        >
+          {level > 0 && <CornerDownRight className="h-4 w-4 flex-shrink-0" style={{ marginLeft: `${level * 1}rem` }}/>}
+          {note.type === 'code' ? (
+            <Code className="h-4 w-4 flex-shrink-0" />
+          ) : (
+            <Type className="h-4 w-4 flex-shrink-0" />
+          )}
+          <span className="truncate flex-grow text-left">{note.title}</span>
+        </Button>
+        <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setRenameNote(note); setRenamingTitle(note.title); }}>
+            <Pencil className="h-4 w-4 text-muted-foreground" />
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => e.stopPropagation()}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete "{note.title}" and all its sub-notes. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => deleteNote(note.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
-    )
+      </div>
+    );
 
     if (hasSubNotes) {
         return (
             <AccordionItem value={note.id} className="border-b-0">
-                <AccordionTrigger
-                    showArrow={hasSubNotes}
-                    className="p-0 hover:no-underline [&[data-state=open]>div>button]:bg-accent"
-                >
-                    {NoteContent}
-                </AccordionTrigger>
-                <AccordionContent className="p-0 pl-4">
+                 <div className={cn("flex items-center", activeNoteId === note.id && 'bg-primary/10 rounded-md')}>
+                    <AccordionTrigger
+                        showArrow={hasSubNotes}
+                        className={cn(
+                            "p-1 rounded-sm hover:bg-accent/50 [&[data-state=open]>svg]:rotate-90",
+                            level > 0 && `pl-2`
+                        )}
+                        style={{ marginLeft: `${level * 0.5}rem` }}
+                    >
+                        <ChevronRight className="h-4 w-4 transition-transform duration-200" />
+                    </AccordionTrigger>
+                    {noteContent}
+                </div>
+                <AccordionContent className="p-0">
                      {subNotes.map(subNote => (
                         <NoteItem key={subNote.id} note={subNote} level={level + 1}/>
                     ))}
@@ -120,7 +125,18 @@ function NoteItem({ note, level = 0 }: { note: Note, level?: number }) {
         )
     }
 
-    return <div className="py-1">{NoteContent}</div>
+    return (
+        <div className="py-1 flex items-center w-full">
+            {hasSubNotes ? (
+                 noteContent
+            ) : (
+                <div className="flex items-center w-full">
+                    <div style={{ marginLeft: `${(level * 0.5)}rem`, width: '28px' }} className="flex-shrink-0"></div>
+                     {noteContent}
+                </div>
+            )}
+        </div>
+    );
 }
 
 
