@@ -10,7 +10,7 @@ import { getLanguageId } from '@/lib/language-mapping';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Save, Loader2, Type, Download, Play } from 'lucide-react';
+import { Save, Loader2, Type, Download, Play, Dumbbell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Skeleton } from './ui/skeleton';
@@ -18,6 +18,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { PracticeModeModal } from './PracticeModeModal';
+
 
 const RichTextEditor = dynamic(() => import('@/components/RichTextEditor').then(mod => mod.RichTextEditor), {
   ssr: false,
@@ -48,7 +50,6 @@ type ExportType = 'note' | 'topic' | 'all';
 function safeClean(code: string): string {
   if (!code) return "";
 
-  // Convert HTML entities to actual characters FIRST
   code = code
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/&nbsp;/g, " ")
@@ -58,11 +59,9 @@ function safeClean(code: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'");
 
-  // Replace <p> ... </p> with proper lines
   code = code.replace(/<\/p>/gi, "\n");
   code = code.replace(/<p[^>]*>/gi, "");
 
-  // Remove ONLY visual container tags — not generic <>
   code = code
     .replace(/<\/?(div|span|strong|em|h\d|section|article|ul|ol|li|pre|code)[^>]*>/gi, "");
 
@@ -88,6 +87,7 @@ export function NoteDisplay() {
   const [isExporting, setIsExporting] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportType, setExportType] = useState<ExportType>('note');
+  const [isPracticeModalOpen, setIsPracticeModalOpen] = useState(false);
 
   const [isRunning, setIsRunning] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
@@ -163,7 +163,6 @@ export function NoteDisplay() {
       }
 
       const cleanCode = safeClean(dirtyNoteContent.content);
-
       const result = await runCode(languageId, cleanCode);
 
       let outputText = "";
@@ -179,7 +178,7 @@ export function NoteDisplay() {
     } catch (error) {
       console.error("Code Execution Error:", error);
       let errorMessage = error instanceof Error ? error.message : 'Execution failed, try again.';
-      if (errorMessage.includes("429") && errorMessage.includes("quota")) {
+      if (errorMessage.includes("429") && (errorMessage.includes("quota") || errorMessage.includes("Quota"))) {
         errorMessage = "You have exceeded the daily limit for code execution. Please try again tomorrow.";
       }
       setOutput(errorMessage);
@@ -268,6 +267,10 @@ export function NoteDisplay() {
 
             {activeNote.type === 'code' && (
               <>
+                <Button onClick={() => setIsPracticeModalOpen(true)} size="sm" variant="secondary">
+                  <Dumbbell className="h-4 w-4" />
+                  <span className="ml-2 hidden md:inline">Practice</span>
+                </Button>
                 <Select value={dirtyNoteContent.language || 'plaintext'} onValueChange={handleLanguageChange}>
                   <SelectTrigger className="w-[120px] h-9 text-sm">
                     <SelectValue placeholder="Select language" />
@@ -361,6 +364,16 @@ export function NoteDisplay() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {activeNote && activeNote.type === 'code' && (
+        <PracticeModeModal
+          isOpen={isPracticeModalOpen}
+          onClose={() => setIsPracticeModalOpen(false)}
+          originalCode={activeNote.content}
+          language={activeNote.language || 'plaintext'}
+          noteId={activeNote.id}
+        />
+      )}
     </>
   );
 }

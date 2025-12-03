@@ -1,6 +1,6 @@
 'use server';
 
-import { aiAssistant } from '@/ai/flows/ai-assistant-flow';
+import { aiAssistant, practiceMode } from '@/ai/flows/ai-assistant-flow';
 import { z } from 'zod';
 
 const assistantInputSchema = z.object({
@@ -9,7 +9,7 @@ const assistantInputSchema = z.object({
     fileDataUri: z.string().optional(),
 }).refine(data => data.prompt || data.fileDataUri, {
     message: "Either a prompt or a file must be provided.",
-    path: ["prompt"], // you can assign the error to a specific path
+    path: ["prompt"],
 });
 
 export async function getAiAssistantResponse(code: string, prompt: string, fileDataUri?: string) {
@@ -20,6 +20,25 @@ export async function getAiAssistantResponse(code: string, prompt: string, fileD
     } catch (error) {
         console.error('Error getting AI assistant response:', error);
         const errorMessage = error instanceof z.ZodError 
+            ? error.errors.map(e => e.message).join(', ') 
+            : 'An unexpected error occurred.';
+        return { success: false, error: errorMessage };
+    }
+}
+
+const practiceModeInputSchema = z.object({
+    originalCode: z.string(),
+    userAttempt: z.string(),
+});
+
+export async function getPracticeModeFeedback(originalCode: string, userAttempt: string) {
+    try {
+        const validatedInput = practiceModeInputSchema.parse({ originalCode, userAttempt });
+        const result = await practiceMode(validatedInput);
+        return { success: true, feedback: result };
+    } catch (error) {
+        console.error('Error getting practice mode feedback:', error);
+         const errorMessage = error instanceof z.ZodError 
             ? error.errors.map(e => e.message).join(', ') 
             : 'An unexpected error occurred.';
         return { success: false, error: errorMessage };

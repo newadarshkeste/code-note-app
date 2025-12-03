@@ -19,6 +19,8 @@ export interface StudyStats {
     totalNotesEdited: number;
     totalLinesTyped: number;
     topicMinutes: Record<string, number>;
+    practiceSessions: Record<string, { count: number, averageScore: number }>; // key = noteId
+    totalPracticeSessions: number;
 }
 
 export interface StudySessionData {
@@ -37,6 +39,8 @@ const defaultStats: StudyStats = {
     totalNotesEdited: 0,
     totalLinesTyped: 0,
     topicMinutes: {},
+    practiceSessions: {},
+    totalPracticeSessions: 0,
 };
 
 export const useStudyStats = () => {
@@ -61,7 +65,6 @@ export const useStudyStats = () => {
     const [pomodoroCycleCount, setPomodoroCycleCount] = useLocalStorage('study:pomodoroCycleCount', 0);
     const [sessionMinutes, setSessionMinutes] = useState(0);
 
-    // Update study stats when a Pomodoro is completed
     const onPomodoroComplete = useCallback(async () => {
         if (!user || !statsRef) return;
 
@@ -75,7 +78,6 @@ export const useStudyStats = () => {
             [`dailyMinutes.${todayStr}`]: increment(minutes),
         };
 
-        // --- Streak Logic ---
         const lastDate = stats.lastStudyDate ? new Date(stats.lastStudyDate) : null;
         const today = new Date();
         let newStreak = stats.streak || 0;
@@ -85,7 +87,6 @@ export const useStudyStats = () => {
         } else if (lastDate && isYesterday(lastDate)) {
             newStreak += 1; // Increment streak
         }
-        // If it's the same day, do nothing.
 
         updateData.streak = newStreak;
         updateData.lastStudyDate = todayStr;
@@ -103,8 +104,6 @@ export const useStudyStats = () => {
 
     }, [user, firestore, statsRef, stats, focusDuration]);
 
-
-    // Pomodoro Timer Effect
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
         if (isActive && timeLeft > 0) {
@@ -116,7 +115,7 @@ export const useStudyStats = () => {
             }, 1000);
         } else if (isActive && timeLeft === 0) {
             if (mode === 'focus') {
-                onPomodoroComplete(); // Update backend stats
+                onPomodoroComplete();
                 const newCycleCount = pomodoroCycleCount + 1;
                 setPomodoroCycleCount(newCycleCount);
 
@@ -127,10 +126,10 @@ export const useStudyStats = () => {
                     setMode('break');
                     setTimeLeft(breakDuration * 60);
                 }
-            } else { // break or longBreak
+            } else { 
                 setMode('focus');
                 setTimeLeft(focusDuration * 60);
-                setSessionMinutes(0); // Reset session timer
+                setSessionMinutes(0);
             }
         }
 
@@ -191,7 +190,6 @@ export const useStudyStats = () => {
             }
         }
 
-        // --- Streak Logic ---
         const lastDate = stats.lastStudyDate ? new Date(stats.lastStudyDate) : null;
         const today = new Date();
         let newStreak = stats.streak || 0;
@@ -220,6 +218,31 @@ export const useStudyStats = () => {
         }
 
     }, [user, firestore, statsRef, stats]);
+
+    const recordPracticeSession = useCallback(async (noteId: string, score: number) => {
+        if (!user || !statsRef) return;
+        
+        const existingSession = stats.practiceSessions?.[noteId] || { count: 0, averageScore: 0 };
+        const newCount = existingSession.count + 1;
+        const newAverage = ((existingSession.averageScore * existingSession.count) + score) / newCount;
+
+        const updateData = {
+            totalPracticeSessions: increment(1),
+            [`practiceSessions.${noteId}.count`]: increment(1),
+            [`practiceSessions.${noteId}.averageScore`]: newAverage
+        };
+        
+        // If it's the first time, we need to set the initial values.
+        if (existingSession.count === 0) {
+             updateData[`practiceSessions.${noteId}.averageScore`] = score;
+        }
+        
+        try {
+            await setDoc(statsRef, updateData, { merge: true });
+        } catch(error) {
+             console.error("Failed to record practice session:", error);
+        }
+    }, [user, statsRef, stats.practiceSessions]);
 
 
     return useMemo(() => {
@@ -252,13 +275,15 @@ export const useStudyStats = () => {
                 totalNotesEdited: stats?.totalNotesEdited || 0,
                 totalLinesTyped: stats?.totalLinesTyped || 0
             },
+            practiceSession: {
+                recordPracticeSession,
+            },
             updateStudyStatsOnNoteSave,
         };
     }, [
         stats,
         mode, timeLeft, isActive, toggleTimer, resetTimer, 
         focusDuration, breakDuration, longBreakDuration, pomodorosPerCycle, 
-        pomodoroCycleCount, updateDurations, sessionMinutes, updateStudyStatsOnNoteSave
+        pomodoroCycleCount, updateDurations, sessionMinutes, updateStudyStatsOnNoteSave, recordPracticeSession
     ]);
 };
-    
