@@ -5,6 +5,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
+import CodeBlock from '@tiptap/extension-code-block';
 import {
   Bold,
   Italic,
@@ -136,13 +137,15 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        // Disable history extension to manage history manually if needed
-        history: false,
-        // Disable codeBlock from starter kit, we will add our own without highlighting
+        // The Lowlight based codeBlock is disabled here
         codeBlock: false,
       }),
-      // Add codeBlock without lowlight
-      StarterKit.extensions.find(ext => ext.name === 'codeBlock'),
+      // We re-add the codeBlock extension without any highlighting.
+      CodeBlock.configure({
+        HTMLAttributes: {
+            class: 'font-code'
+        }
+      }),
       Underline,
       Link.configure({
         openOnClick: false,
