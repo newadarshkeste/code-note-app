@@ -106,14 +106,16 @@ export function NoteDisplay() {
 
         const result = await runCode(languageId, dirtyNoteContent.content);
         
-        // Display output based on priority: stdout > stderr > status
-        if (result.stdout) {
-            setOutput(result.stdout);
-        } else if (result.stderr) {
-            setOutput(result.stderr);
+        let outputText = "";
+        if (result.stdout && result.stdout.trim() !== "") {
+            outputText = result.stdout;
+        } else if (result.stderr && result.stderr.trim() !== "") {
+            outputText = result.stderr;
         } else {
-            setOutput(result.status.description);
+            outputText = result.status.description;
         }
+        setOutput(outputText);
+
     } catch (error) {
         console.error("Code Execution Error:", error);
         const errorMessage = error instanceof Error ? error.message : 'Execution failed, try again.';
