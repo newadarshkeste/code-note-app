@@ -38,6 +38,11 @@ function WelcomeScreen() {
 
 type ExportType = 'note' | 'topic' | 'all';
 
+function stripHtml(raw: string): string {
+    if (!raw) return '';
+    return raw.replace(/<[^>]+>/g, '');
+}
+
 export function NoteDisplay() {
   const { 
     activeNote, 
@@ -103,8 +108,9 @@ export function NoteDisplay() {
             setIsRunning(false);
             return;
         }
-
-        const result = await runCode(languageId, dirtyNoteContent.content);
+        
+        const cleanCode = stripHtml(dirtyNoteContent.content);
+        const result = await runCode(languageId, cleanCode);
         
         let outputText = "";
         if (result.stdout && result.stdout.trim() !== "") {
