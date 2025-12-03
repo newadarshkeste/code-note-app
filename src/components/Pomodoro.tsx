@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -38,6 +39,17 @@ function TimerSettingsDialog({
         onSave(focus, breakTime);
         setIsOpen(false);
     };
+    
+    const handleFocusChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(e.target.value, 10);
+        setFocus(Math.max(1, isNaN(value) ? 1 : value));
+    }
+
+    const handleBreakChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(e.target.value, 10);
+        setBreakTime(Math.max(1, isNaN(value) ? 1 : value));
+    }
+
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -57,7 +69,7 @@ function TimerSettingsDialog({
                             id="focus-duration"
                             type="number"
                             value={focus}
-                            onChange={(e) => setFocus(Math.max(1, parseInt(e.target.value, 10)))}
+                            onChange={handleFocusChange}
                             className="col-span-3"
                         />
                     </div>
@@ -69,7 +81,7 @@ function TimerSettingsDialog({
                             id="break-duration"
                             type="number"
                             value={breakTime}
-                            onChange={(e) => setBreakTime(Math.max(1, parseInt(e.target.value, 10)))}
+                            onChange={handleBreakChange}
                             className="col-span-3"
                         />
                     </div>
