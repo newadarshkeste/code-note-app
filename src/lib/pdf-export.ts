@@ -54,10 +54,10 @@ const createStyledContainer = () => {
           box-sizing: border-box;
           width: 100%;
           page-break-inside: avoid;
-          font-size: 7pt;
+          font-size: 8pt;
       }
       .note-title { 
-          font-size: 12pt !important; 
+          font-size: 10pt !important; 
           margin-top: 0;
           margin-bottom: 5px; 
           font-weight: bold;
@@ -85,10 +85,10 @@ const createStyledContainer = () => {
       .content-body blockquote { padding-left: 1rem; border-left: 3px solid #d1d5db; font-style: italic; color: #4b5563; margin: 0.4em 0; }
       .content-body a { color: #2563eb; text-decoration: underline; }
       .content-body h1, .content-body h2, .content-body h3, .content-body h4 { font-family: "Helvetica", sans-serif; margin-bottom: 0.4em; font-weight: 600; line-height: 1.2; }
-      .content-body h1 { font-size: 1.4em !important; }
-      .content-body h2 { font-size: 1.2em !important; }
-      .content-body h3 { font-size: 1.1em !important; }
-      .content-body h4 { font-size: 1.0em !important; }
+      .content-body h1 { font-size: 1.2em !important; }
+      .content-body h2 { font-size: 1.1em !important; }
+      .content-body h3 { font-size: 1.0em !important; }
+      .content-body h4 { font-size: 0.9em !important; }
 
       /* Code block specific styling for syntax highlighting */
       .content-body pre {
@@ -120,15 +120,6 @@ const createStyledContainer = () => {
           font-size: inherit !important;
           line-height: inherit !important;
       }
-       /* Common syntax highlighting colors - subtle for print */
-      .token.comment, .token.prolog, .token.doctype, .token.cdata { color: #6a737d !important; }
-      .token.punctuation { color: #393a34 !important; }
-      .token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #9a6e3a !important; }
-      .token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token-inserted { color: #032f62 !important; }
-      .token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string { color: #9a6e3a !important; }
-      .token.atrule, .token.attr-value, .token.keyword { color: #d73a49 !important; }
-      .token.function, .token.class-name { color: #6f42c1 !important; }
-      .token.regex, .token.important, .token.variable { color: #e36209 !important; }
     `;
     container.appendChild(style);
 
@@ -140,7 +131,6 @@ const renderNoteToCanvas = async (note: NoteForPdf, container: HTMLDivElement): 
     const createdAt = note.createdAt?.toDate ? format(note.createdAt.toDate(), 'PPP') : 'N/A';
     const updatedAt = note.updatedAt?.toDate ? format(note.updatedAt.toDate(), 'PPP') : 'N/A';
 
-    // The AI flow is now responsible for providing raw, unescaped HTML
     let contentHtml = note.highlightedContent || note.content || '';
     
     const noteElement = document.createElement('div');
@@ -161,7 +151,7 @@ const renderNoteToCanvas = async (note: NoteForPdf, container: HTMLDivElement): 
     const canvas = await html2canvas(container, {
         useCORS: true,
         logging: false,
-        scale: 2, // Increase scale for better resolution
+        scale: 1.5,
     });
 
     return canvas;
@@ -177,7 +167,6 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
   const renderContainer = createStyledContainer();
   let currentTopicName = '';
   
-  // Sort notes by topic first, then by creation date.
   const sortedNotes = [...notes].sort((a, b) => {
     if (a.topicName < b.topicName) return -1;
     if (a.topicName > b.topicName) return 1;
@@ -186,23 +175,29 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
     return dateA - dateB;
   });
 
-  let yPos = PAGE_MARGIN + 20; // Initial Y position for the first page
+  let yPos = PAGE_MARGIN + 20;
 
   for (let i = 0; i < sortedNotes.length; i++) {
     const note = sortedNotes[i];
 
-    // If topic changes or it's the first note, start a new page
-    if (i === 0 || note.topicName !== currentTopicName) {
-      if (i > 0) {
+    // Only create a new page if needed
+    if (i === 0) {
+        // First note → add first page
         doc.addPage();
-      }
-      currentTopicName = note.topicName;
-      yPos = PAGE_MARGIN + 20; // Reset Y position for new topic/page
+        doc.deletePage(1);
+        addHeader(doc, note.topicName);
+        addFooter(doc);
+    } else {
+        // Check available vertical space
+        if (yPos + 150 > PAGE_HEIGHT - PAGE_MARGIN - 40) {
+            doc.addPage();
+            addHeader(doc, note.topicName);
+            addFooter(doc);
+            yPos = PAGE_MARGIN + 20;
+        }
     }
-
-    // Add header and footer for the current page
-    addHeader(doc, currentTopicName);
-    addFooter(doc);
+    currentTopicName = note.topicName;
+    doc.setPage(doc.getNumberOfPages()); // Make sure we're on the last page
 
     const canvas = await renderNoteToCanvas(note, renderContainer);
     
@@ -210,7 +205,7 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
     const imgProps = doc.getImageProperties(imgData);
     
     const pdfImgWidth = CONTENT_WIDTH;
-    const pdfImgHeight = (imgProps.height * pdfImgWidth) / imgProps.width;
+    const pdfImgHeight = ((imgProps.height * pdfImgWidth) / imgProps.width) * 0.70;
 
     // Check if the note fits on the current page
     if (yPos + pdfImgHeight > PAGE_HEIGHT - PAGE_MARGIN) {
@@ -221,22 +216,7 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
     }
 
     doc.addImage(imgData, 'PNG', PAGE_MARGIN, yPos, pdfImgWidth, pdfImgHeight);
-    yPos += pdfImgHeight + 20; // Update yPos and add some spacing
-    
-    // Add new page for the next note if it's not the last one
-    if (i < sortedNotes.length - 1) {
-       // Only add a page if the topic is changing.
-       if(sortedNotes[i+1].topicName !== currentTopicName) {
-         // This space will be handled by the new topic logic at loop start
-       } else {
-         // If next note is in the same topic, check for space.
-         // A simple heuristic: if we are more than halfway down, new page.
-         if (yPos > PAGE_HEIGHT / 2) {
-           doc.addPage();
-           yPos = PAGE_MARGIN + 20;
-         }
-       }
-    }
+    yPos += pdfImgHeight + 20;
   }
 
   document.body.removeChild(renderContainer);
