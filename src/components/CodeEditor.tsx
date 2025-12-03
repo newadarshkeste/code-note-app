@@ -1,20 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Editor, { OnChange, loader } from '@monaco-editor/react';
 import { useTheme } from 'next-themes';
 import { Skeleton } from './ui/skeleton';
 
-// Set default theme to vs-dark-plus
-loader.init().then((monaco) => {
-  import('monaco-themes/themes/vs-dark-plus.json')
-    .then(data => {
-      monaco.editor.defineTheme('vs-dark-plus', data as any);
-      // We don't need to set it here, just define it.
-      // The component's `theme` prop will handle selection.
-    });
-});
-
+// We only need to define the theme once.
+let nightOwlThemeDefined = false;
 
 interface CodeEditorProps {
   language?: string;
@@ -26,7 +18,22 @@ interface CodeEditorProps {
 export function CodeEditor({ language, value, onChange, options }: CodeEditorProps) {
   const { theme } = useTheme();
 
-  const finalTheme = theme === 'dark' ? 'vs-dark-plus' : 'light';
+  useEffect(() => {
+    // This code will only run on the client side.
+    if (!nightOwlThemeDefined) {
+      loader.init().then((monaco) => {
+        try {
+          const nightOwlTheme = require('monaco-themes/themes/Night Owl.json');
+          monaco.editor.defineTheme('night-owl', nightOwlTheme);
+          nightOwlThemeDefined = true;
+        } catch (error) {
+          console.error("Failed to load Monaco theme:", error);
+        }
+      });
+    }
+  }, []);
+
+  const finalTheme = theme === 'dark' ? 'night-owl' : 'light';
 
   const defaultOptions: monaco.editor.IStandaloneEditorConstructionOptions = {
     minimap: { enabled: false },
