@@ -5,7 +5,7 @@ import { useNotes } from '@/context/NotesContext';
 import { getAiAssistantResponse } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Sparkles, Loader2, User, Bot } from 'lucide-react';
+import { Sparkles, Loader2, User, Bot, Paperclip, XCircle, File as FileIcon, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,12 @@ import { Card, CardContent, CardHeader } from './ui/card';
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+interface Attachment {
+  name: string;
+  type: string; // e.g., 'image/png', 'application/pdf'
+  dataUri: string;
 }
 
 function AiAssistantWelcome() {
@@ -33,11 +39,12 @@ export function AiAssistantPanel() {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [attachment, setAttachment] = useState<Attachment | null>(null);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Scroll to the bottom whenever messages change or loading state changes
     if (scrollAreaRef.current) {
         const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
         if (viewport) {
@@ -50,20 +57,38 @@ export function AiAssistantPanel() {
   }, [messages, isLoading]);
 
   useEffect(() => {
-    // Clear messages when the active note changes
     setMessages([]);
+    setAttachment(null);
   }, [activeNote]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (loadEvent) => {
+        setAttachment({
+          name: file.name,
+          type: file.type,
+          dataUri: loadEvent.target?.result as string,
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeNote || !prompt.trim() || isLoading) return;
+    if (!activeNote || (!prompt.trim() && !attachment) || isLoading) return;
 
-    const userMessage: ChatMessage = { role: 'user', content: prompt };
+    const userMessageContent = prompt.trim() + (attachment ? `\n\n[Attached: ${attachment.name}]` : '');
+    const userMessage: ChatMessage = { role: 'user', content: userMessageContent };
     setMessages((prev) => [...prev, userMessage]);
     setPrompt('');
     setIsLoading(true);
 
-    const response = await getAiAssistantResponse(activeNote.content, prompt);
+    const response = await getAiAssistantResponse(activeNote.content, prompt, attachment?.dataUri);
+
+    setAttachment(null); // Clear attachment after sending
 
     if (response.success && response.answer) {
       const assistantMessage: ChatMessage = { role: 'assistant', content: response.answer };
@@ -74,7 +99,6 @@ export function AiAssistantPanel() {
         title: 'AI Assistant Error',
         description: response.error || 'Could not get a response from the AI.',
       });
-      // Remove the user message if the API call failed
       setMessages(prev => prev.slice(0, -1));
     }
 
@@ -97,7 +121,7 @@ export function AiAssistantPanel() {
               <div className="px-4 py-6 space-y-6">
                 {messages.length === 0 && (
                    <p className="text-sm text-muted-foreground">
-                      I have access to <span className="font-semibold text-foreground">{activeNote.title}</span>. Ask me to explain, debug, or modify it.
+                      I have access to <span className="font-semibold text-foreground">{activeNote.title}</span>. Ask me to explain, debug, or modify it. You can also attach a file.
                    </p>
                 )}
                 {messages.map((message, index) => (
@@ -109,7 +133,7 @@ export function AiAssistantPanel() {
                     )}>
                       <div 
                         className="ai-assistant-output" 
-                        dangerouslySetInnerHTML={{ __html: message.content }} 
+                        dangerouslySetInnerHTML={{ __html: message.content.replace(/\n/g, '<br />') }} 
                       />
                     </div>
                      {message.role === 'user' && <User className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1.5" />}
@@ -127,23 +151,60 @@ export function AiAssistantPanel() {
             </ScrollArea>
             <div className="p-4 border-t bg-card/50 flex-shrink-0">
                 <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-                    <Textarea
-                    placeholder="e.g., 'Explain this function...'"
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    className="resize-none font-body text-sm"
-                    disabled={isLoading}
-                    rows={2}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSubmit(e);
-                        }
-                    }}
-                    />
-                    <Button type="submit" disabled={isLoading || !prompt.trim()}>
-                    {isLoading ? <Loader2 className="animate-spin h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-                    <span className="ml-2">Ask AI</span>
+                    {attachment && (
+                      <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border text-sm">
+                        {attachment.type.startsWith('image/') ? (
+                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <FileIcon className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span className="truncate flex-1">{attachment.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setAttachment(null)}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    <div className="relative flex items-center">
+                        <Textarea
+                            placeholder="e.g., 'Explain this function...'"
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            className="resize-none font-body text-sm pr-10"
+                            disabled={isLoading}
+                            rows={2}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSubmit(e);
+                                }
+                            }}
+                        />
+                         <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                            accept="image/png, image/jpeg, image/jpg, image/webp, application/pdf"
+                         />
+                         <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon" 
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isLoading || !!attachment}
+                          >
+                           <Paperclip className="h-4 w-4"/>
+                         </Button>
+                    </div>
+                    <Button type="submit" disabled={isLoading || (!prompt.trim() && !attachment)}>
+                        {isLoading ? <Loader2 className="animate-spin h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                        <span className="ml-2">Ask AI</span>
                     </Button>
                 </form>
             </div>

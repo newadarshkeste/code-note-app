@@ -24,12 +24,16 @@ export async function getHighlightedCode(code: string) {
 
 const assistantInputSchema = z.object({
     code: z.string(),
-    prompt: z.string().min(1, { message: 'Prompt cannot be empty' }),
+    prompt: z.string(),
+    fileDataUri: z.string().optional(),
+}).refine(data => data.prompt || data.fileDataUri, {
+    message: "Either a prompt or a file must be provided.",
+    path: ["prompt"], // you can assign the error to a specific path
 });
 
-export async function getAiAssistantResponse(code: string, prompt: string) {
+export async function getAiAssistantResponse(code: string, prompt: string, fileDataUri?: string) {
     try {
-        const validatedInput = assistantInputSchema.parse({ code, prompt });
+        const validatedInput = assistantInputSchema.parse({ code, prompt, fileDataUri });
         const result = await aiAssistant(validatedInput);
         return { success: true, answer: result.answer };
     } catch (error) {
