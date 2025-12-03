@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useNotes } from '@/context/NotesContext';
 import { useToast } from '@/hooks/use-toast';
 import { generatePdf } from '@/lib/pdf-export';
+import { runCode } from '@/lib/judge0';
+import { getLanguageId } from '@/lib/language-mapping';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Save, Loader2, Code, Type, FileText, Download } from 'lucide-react';
+import { Save, Loader2, Code, Type, FileText, Download, Play } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Skeleton } from './ui/skeleton';
@@ -39,15 +41,14 @@ type ExportType = 'note' | 'topic' | 'all';
 export function NoteDisplay() {
   const { 
     activeNote, 
-    updateNote, 
     isDirty, 
     setIsDirty, 
     isSaving, 
     notes, 
     activeTopic, 
     getAllNotes,
-    setDirtyNoteContent,
     dirtyNoteContent,
+    setDirtyNoteContent,
     saveActiveNote,
   } = useNotes();
   const { toast } = useToast();
@@ -55,12 +56,16 @@ export function NoteDisplay() {
   const [isExporting, setIsExporting] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportType, setExportType] = useState<ExportType>('note');
+
+  const [isRunning, setIsRunning] = useState(false);
+  const [output, setOutput] = useState<string | null>(null);
   
   // Set initial state only when the active note ID changes
   useEffect(() => {
     if (activeNote) {
       setDirtyNoteContent({ title: activeNote.title, content: activeNote.content });
       setIsDirty(false); // Reset dirty state on note change
+      setOutput(null); // Clear output when note changes
     } else {
       setDirtyNoteContent(null);
     }
@@ -84,6 +89,31 @@ export function NoteDisplay() {
   const handleManualSave = async () => {
     await saveActiveNote();
   };
+
+  const handleRunCode = async () => {
+    if (!activeNote || activeNote.type !== 'code' || !dirtyNoteContent) return;
+
+    setIsRunning(true);
+    setOutput('Executing code...');
+    
+    try {
+        const languageId = getLanguageId(activeNote.language || 'plaintext');
+        if (!languageId) {
+            setOutput('Execution failed: Language not supported for execution.');
+            setIsRunning(false);
+            return;
+        }
+
+        const result = await runCode(languageId, dirtyNoteContent.content);
+        setOutput(result.stdout || result.stderr || 'Execution finished with no output.');
+    } catch (error) {
+        console.error("Code Execution Error:", error);
+        setOutput('Execution failed, try again.');
+    } finally {
+        setIsRunning(false);
+    }
+  };
+
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -163,6 +193,12 @@ export function NoteDisplay() {
               <Save className="h-4 w-4" />
               <span className="ml-2 hidden md:inline">{isSaving ? 'Saving...' : (isDirty ? 'Unsaved' : 'Saved')}</span>
             </Button>
+            {activeNote.type === 'code' && (
+              <Button onClick={handleRunCode} disabled={isRunning} size="sm">
+                {isRunning ? <Loader2 className="animate-spin h-4 w-4" /> : <Play className="h-4 w-4" />}
+                <span className="ml-2 hidden md:inline">{isRunning ? 'Running...' : 'Run Code'}</span>
+              </Button>
+            )}
             <Button onClick={() => setIsExportDialogOpen(true)} disabled={isExporting} size="sm">
               {isExporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Download className="h-4 w-4" />}
               <span className="ml-2 hidden md:inline">{isExporting ? 'Exporting...' : 'Download PDF'}</span>
@@ -172,12 +208,19 @@ export function NoteDisplay() {
 
       <div className="flex-grow relative min-h-0">
         {activeNote.type === 'code' ? (
-           <CodeEditor
-              key={activeNote.id}
-              value={dirtyNoteContent.content}
-              onChange={handleContentChange}
-              language={activeNote?.language || 'plaintext'}
-            />
+          <div className='h-full flex flex-col'>
+            <div className='flex-grow min-h-0'>
+                <CodeEditor
+                    key={activeNote.id}
+                    value={dirtyNoteContent.content}
+                    onChange={handleContentChange}
+                    language={activeNote?.language || 'plaintext'}
+                    />
+            </div>
+            <div className="code-output-box flex-shrink-0">
+                <pre><code>{output || '(no output)'}</code></pre>
+            </div>
+           </div>
         ) : (
           <RichTextEditor
             key={activeNote.id}
