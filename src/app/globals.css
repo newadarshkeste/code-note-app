@@ -172,6 +172,12 @@
     @apply pl-4;
   }
 
+  .ai-output {
+    overflow-y: auto;
+    min-height: 0;
+    flex-grow: 1;
+  }
+
   /* Code Output Box */
   .code-output-box {
       @apply bg-muted/50 border-t;

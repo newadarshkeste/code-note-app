@@ -12,7 +12,7 @@ import {
 
 export function AppLayout() {
   return (
-    <div className="h-dvh w-screen flex text-foreground bg-background font-body overflow-hidden">
+    <div className="h-dvh w-screen flex text-foreground bg-background font-body overflow-hidden min-h-0">
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="w-[240px] flex-none">
           <TopicSidebar />
