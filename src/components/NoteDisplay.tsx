@@ -88,6 +88,23 @@ export function NoteDisplay() {
   const [output, setOutput] = useState<string | null>(null);
 
   useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault();
+        if (isDirty) {
+          saveActiveNote();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isDirty, saveActiveNote]);
+
+  useEffect(() => {
     if (activeNote) {
       setDirtyNoteContent({
         title: activeNote.title,
@@ -287,7 +304,7 @@ export function NoteDisplay() {
 
             <Button onClick={() => setIsExportDialogOpen(true)} disabled={isExporting} size="sm">
               {isExporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Download className="h-4 w-4" />}
-              <span className="ml-2 hidden md:inline">{isExporting ? 'Exporting...' : 'Download PDF'}</span>
+              <span className="ml-2 hidden md-inline">{isExporting ? 'Exporting...' : 'Download PDF'}</span>
             </Button>
           </div>
         </header>
