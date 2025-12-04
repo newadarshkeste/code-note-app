@@ -73,10 +73,10 @@ function safeClean(code: string): string {
 
 interface NoteDisplayProps {
   isMobile: boolean;
-  onMenuClick?: () => void;
+  mobileHeaderActions?: React.ReactNode;
 }
 
-export function NoteDisplay({ isMobile, onMenuClick }: NoteDisplayProps) {
+export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps) {
   const {
     activeNote,
     isDirty,
@@ -247,11 +247,7 @@ export function NoteDisplay({ isMobile, onMenuClick }: NoteDisplayProps) {
       <div className="h-full w-full flex flex-col items-center justify-center bg-background/80">
         {isMobile && (
            <header className="flex-shrink-0 w-full flex items-center justify-between p-2 border-b h-[65px] bg-background">
-             <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={onMenuClick}>
-                  <Menu className="h-5 w-5" />
-                </Button>
-            </SheetTrigger>
+             {mobileHeaderActions}
             <div/>
            </header>
         )}
@@ -264,13 +260,7 @@ export function NoteDisplay({ isMobile, onMenuClick }: NoteDisplayProps) {
 
   const renderHeader = () => (
      <header className="flex-shrink-0 flex items-center justify-between p-2 md:p-4 border-b h-[65px] bg-background gap-2">
-        {isMobile && (
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={onMenuClick}>
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-        )}
+        {isMobile && mobileHeaderActions}
         <div className="flex items-center gap-3 flex-grow min-w-0">
           <Input
             value={dirtyNoteContent.title}

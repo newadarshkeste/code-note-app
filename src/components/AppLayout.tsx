@@ -47,25 +47,31 @@ function MobileLayout() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   return (
-    <div className="flex flex-col h-dvh w-screen overflow-hidden">
-      <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <SheetTrigger asChild>
-          {/* This button will be rendered by the mobile header in NoteDisplay */}
-          <div />
-        </SheetTrigger>
+    <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+      <div className="flex flex-col h-dvh w-screen overflow-hidden">
         <SheetContent side="left" className="p-0 w-[300px] flex flex-col">
           <div className="flex-shrink-0">
-             <TopicSidebar />
+            <TopicSidebar />
           </div>
           <div className="flex-grow min-h-0 border-t">
             <NoteList />
           </div>
         </SheetContent>
-      </Sheet>
-      <div className="flex flex-col flex-grow min-h-0">
-        <NoteDisplay isMobile={true} onMenuClick={() => setIsDrawerOpen(true)} />
+        
+        <div className="flex flex-col flex-grow min-h-0">
+          <NoteDisplay 
+            isMobile={true}
+            mobileHeaderActions={
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+            }
+          />
+        </div>
       </div>
-    </div>
+    </Sheet>
   );
 }
 
