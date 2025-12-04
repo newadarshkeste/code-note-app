@@ -66,6 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // This can happen if the user closes the popup or on other errors.
         // It's generally safe to ignore this during initialization.
         console.warn("getRedirectResult error:", error.message);
+      })
+      .finally(() => {
+        // We still need the onAuthStateChanged listener to set the final state,
+        // but handling the redirect here ensures the user document is created promptly.
       });
 
 
@@ -100,9 +104,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithGoogle = async () => {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
+    setLoading(true); // Set loading state before redirect
     try {
       await signInWithRedirect(auth, provider);
     } catch (error) {
+      setLoading(false);
       if ((error as AuthError).code !== 'auth/popup-closed-by-user') {
         console.error("Error during Google sign-in redirect:", error);
       }
@@ -111,10 +117,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUpWithEmail = async (email: string, password: string): Promise<boolean> => {
     if (!auth) return false;
+    setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
+      // No need to set loading to false, onAuthStateChanged will handle it
       return true;
     } catch (error) {
+      setLoading(false);
       const authError = error as AuthError;
       toast({
         variant: 'destructive',
@@ -127,15 +136,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
     if (!auth) return false;
+    setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // No need to set loading to false, onAuthStateChanged will handle it
       return true;
     } catch (error) {
+      setLoading(false);
       const authError = error as AuthError;
       toast({
         variant: 'destructive',
         title: 'Sign In Failed',
-        description: authError.message || 'Invalid credentials. Please try again.',
+        description: 'Invalid credentials. Please try again.',
       });
       return false;
     }
