@@ -5,3 +5,12 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+
+# This section makes the /api/reminders endpoint public so that
+# external services like cron-job.org can call it without authentication.
+headers:
+  - path: /api/reminders
+    headers:
+      # This policy allows all users (including unauthenticated ones) to access the path.
+      - key: 'x-goog-iap-allowed-users-policy'
+        value: 'allUsers'
