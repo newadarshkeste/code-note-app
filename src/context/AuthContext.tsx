@@ -147,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await sendPasswordResetEmail(auth, email);
       toast({
         title: 'Password Reset Email Sent',
-        description: `An email has been sent to ${email} with instructions to reset your password.`,
+        description: `An email has been sent to ${email}. If you don't see it, please check your spam folder.`,
       });
       return true;
     } catch (error) {
