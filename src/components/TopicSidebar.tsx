@@ -41,8 +41,11 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { Skeleton } from './ui/skeleton';
 
+interface TopicSidebarProps {
+  isMobile?: boolean;
+}
 
-export function TopicSidebar() {
+export function TopicSidebar({ isMobile = false }: TopicSidebarProps) {
   const {
     topics,
     topicsLoading,
@@ -75,45 +78,59 @@ export function TopicSidebar() {
         setRenamingName('');
     }
   };
+  
+  const handleSelectTopic = (topicId: string) => {
+    if (activeTopicId === topicId) {
+      setActiveTopicId(null);
+      setTimeout(() => setActiveTopicId(topicId), 0);
+    } else {
+      setActiveTopicId(topicId);
+    }
+  };
+
 
   const filteredTopics = topics.filter(topic => 
     topic.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
+  const headerContent = !isMobile && (
+      <header className="flex-shrink-0 p-4 flex items-center justify-between border-b h-[65px]">
+          <CodeNoteLogo />
+          <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                          <Avatar className="h-8 w-8">
+                              <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'User'} />
+                              <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                          </Avatar>
+                      </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                      <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                          <p className="text-sm font-medium leading-none">{user?.displayName}</p>
+                          <p className="text-xs leading-none text-muted-foreground">
+                          {user?.email}
+                          </p>
+                      </div>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={logout}>
+                          <LogOut className="mr-2 h-4 w-4" />
+                          <span>Log out</span>
+                      </DropdownMenuItem>
+                  </DropdownMenuContent>
+              </DropdownMenu>
+          </div>
+      </header>
+  );
+
   return (
     <>
-      <div className="h-full flex flex-col bg-card/80 border-r">
-        <header className="flex-shrink-0 p-4 flex items-center justify-between border-b h-[65px]">
-            <CodeNoteLogo />
-            <div className="flex items-center gap-2">
-                <ThemeToggle />
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'User'} />
-                                <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
-                            </Avatar>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="end" forceMount>
-                        <DropdownMenuLabel className="font-normal">
-                        <div className="flex flex-col space-y-1">
-                            <p className="text-sm font-medium leading-none">{user?.displayName}</p>
-                            <p className="text-xs leading-none text-muted-foreground">
-                            {user?.email}
-                            </p>
-                        </div>
-                        </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={logout}>
-                            <LogOut className="mr-2 h-4 w-4" />
-                            <span>Log out</span>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-        </header>
+      <div className={cn("h-full flex flex-col bg-card/80", !isMobile && "border-r")}>
+        {headerContent}
 
         <div className="p-4 flex-shrink-0">
           <div className="relative">
@@ -141,9 +158,10 @@ export function TopicSidebar() {
                     <li key={topic.id} className="group flex items-center gap-1">
                         <Button
                             variant="ghost"
-                            onClick={() => setActiveTopicId(topic.id)}
+                            onClick={() => handleSelectTopic(topic.id)}
                             className={cn(
                                 "w-full justify-start gap-2 h-10 text-sm",
+                                activeTopicId === topic.id && isMobile ? 'bg-secondary' : 
                                 activeTopicId === topic.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent'
                             )}
                         >

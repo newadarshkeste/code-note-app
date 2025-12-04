@@ -27,14 +27,21 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
-import { File, FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight, ChevronRight, ChevronDown } from 'lucide-react';
+import { File, FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight, ChevronRight, ChevronLeft } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Note } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
-function NoteItem({ note, level = 0, onNoteSelect }: { note: Note, level?: number, onNoteSelect: (noteId: string) => void }) {
+interface NoteItemProps {
+    note: Note;
+    level?: number;
+    onNoteSelect: (noteId: string) => void;
+    isMobile?: boolean;
+}
+
+function NoteItem({ note, level = 0, onNoteSelect, isMobile }: NoteItemProps) {
     const { 
         activeNoteId, 
         getSubNotes, 
@@ -64,7 +71,7 @@ function NoteItem({ note, level = 0, onNoteSelect }: { note: Note, level?: numbe
                   "w-full justify-start gap-2 h-full text-sm",
                   activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent'
               )}
-              style={{ paddingLeft: `${(level * 1.5) + (hasSubNotes ? 0.25 : 2)}rem` }}
+              style={{ paddingLeft: `${(level * 1.5) + (hasSubNotes ? 0.25 : (isMobile ? 1 : 2))}rem` }}
           >
               {note.type === 'code' ? (
                   <Code className="h-4 w-4 flex-shrink-0" />
@@ -119,7 +126,7 @@ function NoteItem({ note, level = 0, onNoteSelect }: { note: Note, level?: numbe
                 </div>
                 <AccordionContent className="p-0">
                      {subNotes.map(subNote => (
-                        <NoteItem key={subNote.id} note={subNote} level={level + 1} onNoteSelect={onNoteSelect} />
+                        <NoteItem key={subNote.id} note={subNote} level={level + 1} onNoteSelect={onNoteSelect} isMobile={isMobile} />
                     ))}
                 </AccordionContent>
             </AccordionItem>
@@ -133,8 +140,13 @@ function NoteItem({ note, level = 0, onNoteSelect }: { note: Note, level?: numbe
     );
 }
 
+interface NoteListProps {
+  isMobile?: boolean;
+  onNoteSelect?: () => void;
+  onBack?: () => void;
+}
 
-export function NoteList() {
+export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListProps) {
     const {
         activeTopic,
         notes,
@@ -160,6 +172,12 @@ export function NoteList() {
     const [isUnsavedDialogOpen, setIsUnsavedDialogOpen] = useState(false);
     
     const handleNoteSelection = (noteId: string) => {
+        if (isMobile && onNoteSelect) {
+            setActiveNoteId(noteId);
+            onNoteSelect();
+            return;
+        }
+
         if (isDirty) {
             setPendingNoteId(noteId);
             setIsUnsavedDialogOpen(true);
@@ -231,7 +249,14 @@ export function NoteList() {
         <>
             <div className="h-full w-full flex flex-col bg-card border-r">
                 <header className="flex-shrink-0 p-4 flex items-center justify-between border-b h-[65px]">
+                    {isMobile && onBack && (
+                        <Button variant="ghost" size="sm" onClick={onBack} className="mr-2">
+                           <ChevronLeft className="h-4 w-4 mr-1" />
+                           Topics
+                        </Button>
+                    )}
                     <h2 className="text-lg font-headline font-semibold truncate" title={activeTopic.name}>{activeTopic.name}</h2>
+                    <div/>
                 </header>
                 
                 <div className="p-4 flex-shrink-0 space-y-4">
@@ -280,7 +305,7 @@ export function NoteList() {
                         ) : (
                             <Accordion type="multiple" className="w-full">
                                 {filteredNotes.map((note) => (
-                                    <NoteItem key={note.id} note={note} onNoteSelect={handleNoteSelection} />
+                                    <NoteItem key={note.id} note={note} onNoteSelect={handleNoteSelection} isMobile={isMobile} />
                                 ))}
                             </Accordion>
                         )}

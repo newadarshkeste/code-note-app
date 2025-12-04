@@ -17,6 +17,8 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { CodeNoteLogo } from './CodeNoteLogo';
+import { useNotes } from '@/context/NotesContext';
+import { cn } from '@/lib/utils';
 
 function DesktopLayout() {
   return (
@@ -46,18 +48,44 @@ function DesktopLayout() {
 
 function MobileLayout() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { activeTopicId, setActiveTopicId } = useNotes();
+  
+  const handleNoteSelected = () => {
+    setIsDrawerOpen(false);
+  };
+  
+  const handleBackToTopics = () => {
+    setActiveTopicId(null);
+  };
 
   return (
     <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
       <div className="flex flex-col h-dvh w-screen overflow-hidden">
-        <SheetContent side="left" className="p-0 w-[300px] flex flex-col">
+        <SheetContent side="left" className="p-0 w-[300px] flex flex-col overflow-x-hidden">
             <SheetHeader className="p-4 border-b">
                 <SheetTitle>
                     <CodeNoteLogo />
                 </SheetTitle>
             </SheetHeader>
-            <div className="flex-grow min-h-0">
-                <NoteList />
+            <div className="flex-grow min-h-0 relative">
+              <div className={cn(
+                  "absolute inset-0 transition-transform duration-300 ease-in-out",
+                  activeTopicId ? "-translate-x-full" : "translate-x-0"
+              )}>
+                  <TopicSidebar isMobile={true} />
+              </div>
+              <div className={cn(
+                  "absolute inset-0 transition-transform duration-300 ease-in-out",
+                  activeTopicId ? "translate-x-0" : "translate-x-full"
+              )}>
+                  {activeTopicId && (
+                    <NoteList 
+                        isMobile={true} 
+                        onNoteSelect={handleNoteSelected} 
+                        onBack={handleBackToTopics}
+                    />
+                  )}
+              </div>
             </div>
         </SheetContent>
         
