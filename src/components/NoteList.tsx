@@ -253,12 +253,6 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         <>
             <div className="h-full w-full flex flex-col bg-card border-r">
                 <header className="flex-shrink-0 p-4 flex items-center justify-between border-b h-[65px]">
-                    {isMobile && onBack && (
-                        <Button variant="ghost" size="sm" onClick={onBack} className="mr-2">
-                           <ChevronLeft className="h-4 w-4 mr-1" />
-                           Topics
-                        </Button>
-                    )}
                     <h2 className="text-lg font-headline font-semibold truncate" title={activeTopic.name}>{activeTopic.name}</h2>
                     <div/>
                 </header>

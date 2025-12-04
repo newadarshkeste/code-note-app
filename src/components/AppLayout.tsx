@@ -19,6 +19,8 @@ import {
 import { CodeNoteLogo } from './CodeNoteLogo';
 import { useNotes } from '@/context/NotesContext';
 import { cn } from '@/lib/utils';
+import { Input } from './ui/input';
+
 
 function DesktopLayout() {
   return (
@@ -54,14 +56,17 @@ function MobileLayout() {
     setIsDrawerOpen(false);
   };
   
-  const handleTopicSelected = () => {
+  const handleTopicSelected = (topicId: string) => {
+    // When a topic is selected, we want to show the note list for that topic.
+    setActiveTopicId(topicId);
+    setActiveNoteId(null);
     setIsDrawerOpen(false);
   };
 
-  const showTopics = !activeTopicId;
+  const showTopics = !activeTopicId && !activeNote;
   const showNotes = activeTopicId && !activeNote;
   const showNoteDisplay = !!activeNote;
-
+  
   const getHeader = () => {
     return (
        <header className="flex-shrink-0 w-full flex items-center justify-between p-2 border-b h-[65px] bg-background">
@@ -71,7 +76,7 @@ function MobileLayout() {
             </Button>
           </SheetTrigger>
           <div className="flex-grow min-w-0">
-            {showNoteDisplay && activeNote && (
+             {showNoteDisplay && activeNote && (
                <Input
                   value={activeNote.title}
                   readOnly
@@ -104,13 +109,27 @@ function MobileLayout() {
           <div className="flex-grow min-h-0">
             {showTopics && (
               <div className="h-full w-full flex flex-col">
-                 {getHeader()}
-                 <TopicSidebar isMobile onTopicSelect={() => {}} />
+                 <header className="flex-shrink-0 w-full flex items-center justify-between p-2 border-b h-[65px] bg-background">
+                    <SheetTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <Menu className="h-5 w-5" />
+                      </Button>
+                    </SheetTrigger>
+                    <div/>
+                 </header>
+                 <TopicSidebar isMobile onTopicSelect={handleTopicSelected} />
               </div>
             )}
             {showNotes && activeTopicId && (
               <div className="h-full w-full flex flex-col">
-                 {getHeader()}
+                 <header className="flex-shrink-0 w-full flex items-center justify-between p-2 border-b h-[65px] bg-background">
+                    <SheetTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <Menu className="h-5 w-5" />
+                      </Button>
+                    </SheetTrigger>
+                    <div/>
+                 </header>
                  <NoteList 
                     isMobile={true} 
                     onNoteSelect={handleNoteSelected} 
@@ -125,8 +144,12 @@ function MobileLayout() {
               <NoteDisplay 
                 isMobile={true}
                 mobileHeaderActions={
-                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon">
+                   <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => {
+                      // This is the key fix: when showing a note, clicking the hamburger
+                      // should go back to the note list of the current topic.
+                      setActiveNoteId(null);
+                    }}>
                       <Menu className="h-5 w-5" />
                     </Button>
                   </SheetTrigger>
