@@ -92,7 +92,7 @@ export function AiAssistantPanel() {
   useEffect(() => {
     setMessages([]);
     setAttachment(null);
-  }, [activeNote]);
+  }, [activeNote?.id]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
