@@ -14,3 +14,8 @@ headers:
       # This policy allows all users (including unauthenticated ones) to access the path.
       - key: 'x-goog-iap-allowed-users-policy'
         value: 'allUsers'
+  - path: /api/reminders/
+    headers:
+      # This policy is duplicated for the trailing-slash case to ensure it's public.
+      - key: 'x-goog-iap-allowed-users-policy'
+        value: 'allUsers'
