@@ -1,18 +1,38 @@
+import { NextRequest, NextResponse } from "next/server";
+import { sendEmail } from "@/services/email";
 
-import { NextRequest, NextResponse } from 'next/server';
-import { sendEmail } from '@/services/email';
-import { z } from 'zod';
-
-const ReminderRequestSchema = z.object({
-  reminderType: z.enum([
-    'morningDSAReminder',
-    'noonDSAReminder',
-    'eveningDSAReminder',
-    'nightDSAReminder',
-  ]),
-});
-
-const reminderDetails = {
+const reminderDetails: Record<string, { subject: string; body: string }> = {
+  morning: {
+    subject: "🌅 Your Morning DSA Trigger from CodeNote",
+    body: `
+      <p>Hello Adarsh,</p>
+      <p>Time to kickstart your day with some problem-solving!</p>
+      <p><b>Your goal:</b> 45 minutes of focused DSA. No shorts. No scrolling.</p>
+      <p>Let's make today count!</p>
+    `,
+  },
+  noon: {
+    subject: "☀️ Quick Noon Study Check-in",
+    body: `
+      <p>Hi Adarsh,</p>
+      <p>Have you revised anything yet today?</p>
+      <p>Even one problem makes a difference.</p>
+    `,
+  },
+  evening: {
+    subject: "🌆 Time for an Evening Revision",
+    body: `
+      <p>Good evening Adarsh,</p>
+      <p>Try 20 minutes of revision before relaxing.</p>
+    `,
+  },
+  night: {
+    subject: "🌙 One Last Practice for the Night",
+    body: `
+      <p>Hey Adarsh,</p>
+      <p>One DSA problem before sleep boosts long-term memory.</p>
+    `,
+  },
   morningDSAReminder: {
     subject: "🌅 Your Morning DSA Trigger from CodeNote",
     body: `
@@ -52,34 +72,57 @@ const reminderDetails = {
   },
 };
 
-const TARGET_EMAIL = 'adarshkeste.yt@gmail.com';
+const TARGET_EMAIL = "adarshkeste.yt@gmail.com";
+
+export async function GET(req: NextRequest) {
+  const type = req.nextUrl.searchParams.get("type");
+
+  if (!type || !reminderDetails[type]) {
+    return NextResponse.json(
+      { error: "Invalid or missing reminder type" },
+      { status: 400 }
+    );
+  }
+
+  const details = reminderDetails[type];
+  const result = await sendEmail({
+    to: TARGET_EMAIL,
+    subject: details.subject,
+    body: details.body,
+  });
+
+  return NextResponse.json({
+    success: true,
+    message: `GET reminder (${type}) sent to ${TARGET_EMAIL}`,
+    result,
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const json = await req.json();
-    const parsed = ReminderRequestSchema.safeParse(json);
+    const data = await req.json();
+    const type = data.reminderType;
 
-    if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid reminder type provided.' }, { status: 400 });
+    if (!type || !reminderDetails[type]) {
+      return NextResponse.json(
+        { error: "Invalid reminder type" },
+        { status: 400 }
+      );
     }
 
-    const { reminderType } = parsed.data;
-    const details = reminderDetails[reminderType];
-
+    const details = reminderDetails[type];
     const result = await sendEmail({
       to: TARGET_EMAIL,
       subject: details.subject,
       body: details.body,
     });
 
-    if (result.success) {
-      return NextResponse.json({ message: `Successfully sent ${reminderType} to ${TARGET_EMAIL}` });
-    } else {
-      return NextResponse.json({ error: 'Failed to send email.' }, { status: 500 });
-    }
-
+    return NextResponse.json({
+      success: true,
+      message: `POST reminder (${type}) sent to ${TARGET_EMAIL}`,
+      result,
+    });
   } catch (error) {
-    console.error('API Reminders Error:', error);
-    return NextResponse.json({ error: 'An internal server error occurred.' }, { status: 500 });
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
