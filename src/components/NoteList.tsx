@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -71,7 +72,7 @@ function NoteItem({ note, level = 0, onNoteSelect, isMobile }: NoteItemProps) {
                   "w-full justify-start gap-2 h-full text-sm",
                   activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent'
               )}
-              style={{ paddingLeft: `${(level * 1.5) + (hasSubNotes ? 0.25 : (isMobile ? 1 : 2))}rem` }}
+              style={{ paddingLeft: `${(level * 1.5) + (hasSubNotes ? 0.25 : 2)}rem` }}
           >
               {note.type === 'code' ? (
                   <Code className="h-4 w-4 flex-shrink-0" />

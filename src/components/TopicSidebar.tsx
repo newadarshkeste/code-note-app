@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -80,12 +81,7 @@ export function TopicSidebar({ isMobile = false }: TopicSidebarProps) {
   };
   
   const handleSelectTopic = (topicId: string) => {
-    if (activeTopicId === topicId) {
-      setActiveTopicId(null);
-      setTimeout(() => setActiveTopicId(topicId), 0);
-    } else {
-      setActiveTopicId(topicId);
-    }
+    setActiveTopicId(topicId);
   };
 
 
