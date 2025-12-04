@@ -22,7 +22,7 @@ export const sendEmail = async ({ to, subject, body }: EmailParams) => {
 
   const msg = {
     to: to,
-    from: 'reminders@codenote.app', // You must verify this sender address in SendGrid
+    from: 'adarshkeste.job2025@gmail.com', // You must verify this sender address in SendGrid
     subject: subject,
     text: body,
     html: `<p>${body}</p>`,

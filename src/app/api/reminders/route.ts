@@ -31,7 +31,7 @@ const reminderDetails = {
   },
 };
 
-const TARGET_EMAIL = 'adarshkeste.job2025@gmail.com';
+const TARGET_EMAIL = 'adarshkeste.yt@gmail.com';
 
 export async function POST(req: NextRequest) {
   try {
