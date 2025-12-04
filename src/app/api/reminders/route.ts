@@ -1,3 +1,4 @@
+'use server';
 
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/services/email";
@@ -38,39 +39,51 @@ const reminderDetails: Record<string, { subject: string; body: string }> = {
     `,
   },
   morningDSAReminder: {
-    subject: "🌅 Your Morning DSA Trigger from CodeNote",
+    subject: "🌅 Rise and Code, Adarsh! Your Daily DSA Challenge Awaits",
     body: `
-      <p>Hello Adarsh,</p>
-      <p>Time to kickstart your day with some problem-solving!</p>
-      <p><b>Your goal:</b> 45 minutes of focused Data Structures & Algorithms practice. Remember, no distractions, no shorts, no scrolling.</p>
+      <p>Good morning Adarsh,</p>
+      <p>A new day is a new opportunity to sharpen your skills. Your personal CodeNote assistant is here to help you get started.</p>
+      <p><b>Today's Focus:</b> 45 minutes of dedicated Data Structures & Algorithms practice. Remember, consistency is key to mastery.</p>
+      <p>You can do it!</p>
       <p>Best,<br/>The CodeNote Assistant</p>
+      <hr style="border:none; border-top: 1px solid #eee; margin: 20px 0;" />
+      <p style="font-size: 12px; color: #999;">Sent from your <a href="https://code-note-app.onrender.com/" style="color: #999;">CodeNote App</a>.</p>
     `,
   },
   noonDSAReminder: {
-    subject: "☀️ Quick Noon Study Check-in",
+    subject: "☀️ Adarsh, How's Your Study Streak Going?",
     body: `
       <p>Hi Adarsh,</p>
-      <p>Just a friendly check-in. Have you had a chance to revise anything yet today?</p>
-      <p>Even one problem on CodeNote can make a big difference. Keep the momentum going!</p>
+      <p>Just a friendly check-in from your CodeNote assistant. Have you had a chance to tackle a problem today?</p>
+      <p>Even a quick 15-minute review can make a huge difference in your learning. Don't break the chain!</p>
+      <p>Keep up the great work,</p>
       <p>Cheers,<br/>The CodeNote Assistant</p>
+      <hr style="border:none; border-top: 1px solid #eee; margin: 20px 0;" />
+      <p style="font-size: 12px; color: #999;">This reminder was sent from your <a href="https://code-note-app.onrender.com/" style="color: #999;">CodeNote App</a>.</p>
     `,
   },
   eveningDSAReminder: {
-    subject: "🌆 Time for an Evening Revision",
+    subject: "🌆 Evening Revision Session with CodeNote",
     body: `
       <p>Good evening Adarsh,</p>
-      <p>How about a quick revision session to solidify what you've learned?</p>
-      <p>Even 20 minutes of review can significantly boost your retention. Let's lock in that knowledge!</p>
-      <p>Keep it up,<br/>The CodeNote Assistant</p>
+      <p>The day is winding down, which makes it a perfect time to solidify what you've learned. How about a quick revision session?</p>
+      <p>Reviewing a concept or re-doing a problem for just 20 minutes can significantly boost retention. Let's lock in that knowledge!</p>
+      <p>Keep it up,</p>
+      <p>Your CodeNote Assistant</p>
+      <hr style="border:none; border-top: 1px solid #eee; margin: 20px 0;" />
+      <p style="font-size: 12px; color: #999;">Sent via the reminder service in your <a href="https://code-note-app.onrender.com/" style="color: #999;">CodeNote App</a>.</p>
     `,
   },
   nightDSAReminder: {
-    subject: "🌙 One Last Practice for the Night",
+    subject: "🌙 One Last Problem Before You Rest, Adarsh?",
     body: `
       <p>Hey Adarsh,</p>
-      <p>Before you wrap up your day, try to solve at least one DSA problem.</p>
-      <p>It's a powerful way to end the day and reinforces your learning right before sleep.</p>
-      <p>Happy coding,<br/>The CodeNote Assistant</p>
+      <p>As you get ready to wrap up your day, consider solving one more problem. It's a powerful way to reinforce learning right before sleep, helping your brain process the information overnight.</p>
+      <p>End the day on a high note!</p>
+      <p>Happy coding,</p>
+      <p>The CodeNote Assistant</p>
+      <hr style="border:none; border-top: 1px solid #eee; margin: 20px 0;" />
+      <p style="font-size: 12px; color: #999;">This is a scheduled reminder from your <a href="https://code-note-app.onrender.com/" style="color: #999;">CodeNote App</a>.</p>
     `,
   },
 };
