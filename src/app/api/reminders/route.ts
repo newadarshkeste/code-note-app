@@ -1,5 +1,9 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/services/email";
+
+// Check for the secret key from environment variables
+const CRON_SECRET = process.env.CRON_SECRET;
 
 const reminderDetails: Record<string, { subject: string; body: string }> = {
   morning: {
@@ -39,7 +43,6 @@ const reminderDetails: Record<string, { subject: string; body: string }> = {
       <p>Hello Adarsh,</p>
       <p>Time to kickstart your day with some problem-solving!</p>
       <p><b>Your goal:</b> 45 minutes of focused Data Structures & Algorithms practice. Remember, no distractions, no shorts, no scrolling.</p>
-      <p>Let's make today count!</p>
       <p>Best,<br/>The CodeNote Assistant</p>
     `,
   },
@@ -75,7 +78,14 @@ const reminderDetails: Record<string, { subject: string; body: string }> = {
 const TARGET_EMAIL = "adarshkeste.yt@gmail.com";
 
 export async function GET(req: NextRequest) {
-  const type = req.nextUrl.searchParams.get("type");
+  const { searchParams } = req.nextUrl;
+  const type = searchParams.get("type");
+  const secret = searchParams.get("secret");
+
+  // Validate the secret key
+  if (!CRON_SECRET || secret !== CRON_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   if (!type || !reminderDetails[type]) {
     return NextResponse.json(
@@ -102,7 +112,10 @@ export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
     const type = data.reminderType;
-
+    
+    // The secret should be part of the POST body for consistency, but for this use case,
+    // we'll stick to making GET requests public with a secret.
+    // POST requests will remain as they were but won't be used by cron-job.org.
     if (!type || !reminderDetails[type]) {
       return NextResponse.json(
         { error: "Invalid reminder type" },
