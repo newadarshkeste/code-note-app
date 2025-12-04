@@ -10,7 +10,8 @@ import {
   AuthError, 
   getRedirectResult,
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
@@ -22,6 +23,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<boolean>;
   signInWithEmail: (email: string, password: string) => Promise<boolean>;
+  sendPasswordReset: (email: string) => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
@@ -139,6 +141,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const sendPasswordReset = async (email: string): Promise<boolean> => {
+    if (!auth) return false;
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({
+        title: 'Password Reset Email Sent',
+        description: `An email has been sent to ${email} with instructions to reset your password.`,
+      });
+      return true;
+    } catch (error) {
+      const authError = error as AuthError;
+      toast({
+        variant: 'destructive',
+        title: 'Password Reset Failed',
+        description: authError.message || 'Could not send reset email. Please check the address and try again.',
+      });
+      return false;
+    }
+  };
+
   const logout = async () => {
     if (!auth) return;
     try {
@@ -148,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value = { user, loading, loginWithGoogle, signUpWithEmail, signInWithEmail, logout };
+  const value = { user, loading, loginWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, logout };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
