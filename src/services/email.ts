@@ -34,7 +34,7 @@ export const sendEmail = async ({ to, subject, body }: EmailParams) => {
 
   const msg = {
     to: to,
-    from: 'adarshkeste.job2025@gmail.com',
+    from: 'reminders@codenote.app', // Changed to a more legitimate, system-style address
     subject: subject,
     text: createPlainText(body), // Generate a plain text version
     html: body, // Use the HTML body directly
