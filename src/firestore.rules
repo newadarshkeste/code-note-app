@@ -111,10 +111,10 @@ service cloud.firestore {
        let incomingData = request.resource.data;
        let existingData = resource.data;
        
-       return (!('topicId' in incomingData) || incomingData.topicId == existingData.topicId)
-          && (!('type' in incomingData) || incomingData.type == existingData.type)
-          && (!('createdAt' in incomingData) || incomingData.createdAt == existingData.createdAt)
-          && (!('parentId' in incomingData) || incomingData.parentId == existingData.parentId);
+       return incomingData.topicId == existingData.topicId
+          && incomingData.type == existingData.type
+          && incomingData.createdAt == existingData.createdAt
+          && incomingData.parentId == existingData.parentId;
     }
 
     //-------------------------------------------------------------------------
@@ -158,4 +158,3 @@ service cloud.firestore {
     }
   }
 }
-    
