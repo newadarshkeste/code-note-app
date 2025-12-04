@@ -12,7 +12,7 @@ if (!SENDGRID_API_KEY) {
 interface EmailParams {
   to: string;
   subject: string;
-  body: string;
+  body: string; // Body is expected to be HTML
 }
 
 export const sendEmail = async ({ to, subject, body }: EmailParams) => {
@@ -20,12 +20,24 @@ export const sendEmail = async ({ to, subject, body }: EmailParams) => {
     throw new Error("SendGrid is not configured. Cannot send email.");
   }
 
+  // A simple function to strip HTML for the plain text version
+  const createPlainText = (html: string) => {
+    return html
+      .replace(/<p>/g, '')
+      .replace(/<\/p>/g, '\n')
+      .replace(/<br\s*\/?>/g, '\n')
+      .replace(/<b>/g, '')
+      .replace(/<\/b>/g, '')
+      .replace(/<[^>]+>/g, '')
+      .trim();
+  }
+
   const msg = {
     to: to,
-    from: 'adarshkeste.job2025@gmail.com', // You must verify this sender address in SendGrid
+    from: 'adarshkeste.job2025@gmail.com',
     subject: subject,
-    text: body,
-    html: `<p>${body}</p>`,
+    text: createPlainText(body), // Generate a plain text version
+    html: body, // Use the HTML body directly
   };
 
   try {
