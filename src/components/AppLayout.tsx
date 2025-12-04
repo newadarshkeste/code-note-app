@@ -1,3 +1,4 @@
+
 'use client';
 
 import { TopicSidebar } from '@/components/TopicSidebar';
@@ -6,38 +7,75 @@ import { NoteDisplay } from '@/components/NoteDisplay';
 import { AiAssistantPanel } from '@/components/AiAssistantPanel';
 import { StudyToolsPanel } from '@/components/StudyToolsPanel';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Menu } from 'lucide-react';
+import React, { useState } from 'react';
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
 
+function DesktopLayout() {
+  return (
+    <ResizablePanelGroup direction="horizontal">
+      <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="hidden lg:block min-w-[240px]">
+        <TopicSidebar />
+      </ResizablePanel>
+      <ResizableHandle withHandle className="hidden lg:flex" />
+      <ResizablePanel defaultSize={22} minSize={18} maxSize={35} className="hidden md:block min-w-[260px]">
+        <NoteList />
+      </ResizablePanel>
+      <ResizableHandle withHandle className="hidden md:flex" />
+      <ResizablePanel defaultSize={58} minSize={30}>
+          <ResizablePanelGroup direction="horizontal">
+              <ResizablePanel defaultSize={65} minSize={40}>
+                  <NoteDisplay isMobile={false} />
+              </ResizablePanel>
+              <ResizableHandle withHandle className="hidden xl:flex" />
+              <ResizablePanel defaultSize={35} minSize={25} maxSize={40} className="hidden xl:block">
+                  <AiAssistantPanel />
+              </ResizablePanel>
+          </ResizablePanelGroup>
+      </ResizablePanel>
+    </ResizablePanelGroup>
+  );
+}
+
+function MobileLayout() {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  return (
+    <div className="flex flex-col h-dvh w-screen overflow-hidden">
+      <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+        <SheetTrigger asChild>
+          {/* This button will be rendered by the mobile header in NoteDisplay */}
+          <div />
+        </SheetTrigger>
+        <SheetContent side="left" className="p-0 w-[300px] flex flex-col">
+          <div className="flex-shrink-0">
+             <TopicSidebar />
+          </div>
+          <div className="flex-grow min-h-0 border-t">
+            <NoteList />
+          </div>
+        </SheetContent>
+      </Sheet>
+      <div className="flex flex-col flex-grow min-h-0">
+        <NoteDisplay isMobile={true} onMenuClick={() => setIsDrawerOpen(true)} />
+      </div>
+    </div>
+  );
+}
+
+
 export function AppLayout() {
   const isMobile = useIsMobile();
   
   return (
     <div className="h-dvh w-screen flex text-foreground bg-background font-body overflow-hidden min-h-0">
-      <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="w-[240px] flex-none">
-          <TopicSidebar />
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={22} minSize={18} maxSize={35} className="w-[260px] flex-none">
-          <NoteList />
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={58} minSize={30}>
-            <ResizablePanelGroup direction="horizontal">
-                <ResizablePanel defaultSize={65} minSize={40}>
-                    <NoteDisplay />
-                </ResizablePanel>
-                <ResizableHandle withHandle />
-                <ResizablePanel defaultSize={35} minSize={25} maxSize={40}>
-                    <AiAssistantPanel />
-                </ResizablePanel>
-            </ResizablePanelGroup>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+      {isMobile ? <MobileLayout /> : <DesktopLayout />}
       {!isMobile && <StudyToolsPanel />}
     </div>
   );

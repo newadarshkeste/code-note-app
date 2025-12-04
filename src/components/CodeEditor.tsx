@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect } from 'react';
@@ -14,9 +15,10 @@ interface CodeEditorProps {
   value: string;
   onChange?: OnChange;
   options?: monaco.editor.IStandaloneEditorConstructionOptions;
+  isMobile?: boolean;
 }
 
-export function CodeEditor({ language, value, onChange, options }: CodeEditorProps) {
+export function CodeEditor({ language, value, onChange, options, isMobile = false }: CodeEditorProps) {
   const { theme } = useTheme();
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export function CodeEditor({ language, value, onChange, options }: CodeEditorPro
   const finalTheme = theme === 'dark' ? 'night-owl' : 'light';
 
   const defaultOptions: monaco.editor.IStandaloneEditorConstructionOptions = {
-    minimap: { enabled: false },
+    minimap: { enabled: !isMobile },
     fontSize: 14,
     lineNumbers: 'on',
     roundedSelection: false,
@@ -47,15 +49,23 @@ export function CodeEditor({ language, value, onChange, options }: CodeEditorPro
     wordWrap: 'on',
   };
 
+  const mobileOptions: monaco.editor.IStandaloneEditorConstructionOptions = isMobile ? {
+      // Add any mobile-specific overrides here, e.g., smaller font size if needed
+  } : {};
+
+  const finalOptions = { ...defaultOptions, ...options, ...mobileOptions };
+
   return (
-    <Editor
-      height="100%"
-      language={language}
-      value={value}
-      onChange={onChange}
-      theme={finalTheme}
-      loading={<Skeleton className="h-full w-full" />}
-      options={{ ...defaultOptions, ...options }}
-    />
+    <div className={isMobile ? "h-[50vh] max-h-[50vh]" : "h-full"}>
+        <Editor
+            height="100%"
+            language={language}
+            value={value}
+            onChange={onChange}
+            theme={finalTheme}
+            loading={<Skeleton className="h-full w-full" />}
+            options={finalOptions}
+        />
+    </div>
   );
 }

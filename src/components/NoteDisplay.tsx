@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -10,7 +11,7 @@ import { getLanguageId } from '@/lib/language-mapping';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Save, Loader2, Type, Download, Play, Dumbbell } from 'lucide-react';
+import { Save, Loader2, Type, Download, Play, Dumbbell, Menu, ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Skeleton } from './ui/skeleton';
@@ -19,6 +20,8 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { PracticeModeModal } from './PracticeModeModal';
+import { SheetTrigger } from './ui/sheet';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 
 
 const RichTextEditor = dynamic(() => import('@/components/RichTextEditor').then(mod => mod.RichTextEditor), {
@@ -68,8 +71,12 @@ function safeClean(code: string): string {
   return code.trim();
 }
 
+interface NoteDisplayProps {
+  isMobile: boolean;
+  onMenuClick?: () => void;
+}
 
-export function NoteDisplay() {
+export function NoteDisplay({ isMobile, onMenuClick }: NoteDisplayProps) {
   const {
     activeNote,
     isDirty,
@@ -88,6 +95,7 @@ export function NoteDisplay() {
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportType, setExportType] = useState<ExportType>('note');
   const [isPracticeModalOpen, setIsPracticeModalOpen] = useState(false);
+  const [isOutputOpen, setIsOutputOpen] = useState(false);
 
   const [isRunning, setIsRunning] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
@@ -116,6 +124,7 @@ export function NoteDisplay() {
       });
       setIsDirty(false);
       setOutput(null);
+      setIsOutputOpen(false);
     } else {
       setDirtyNoteContent(null);
     }
@@ -152,6 +161,7 @@ export function NoteDisplay() {
 
     setIsRunning(true);
     setOutput('Executing code...');
+    if(isMobile) setIsOutputOpen(true);
 
     try {
       const languageId = getLanguageId(dirtyNoteContent.language || 'plaintext');
@@ -235,42 +245,60 @@ export function NoteDisplay() {
   if (!activeNote || !dirtyNoteContent) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-background/80">
-        <WelcomeScreen />
+        {isMobile && (
+           <header className="flex-shrink-0 w-full flex items-center justify-between p-2 border-b h-[65px] bg-background">
+             <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={onMenuClick}>
+                  <Menu className="h-5 w-5" />
+                </Button>
+            </SheetTrigger>
+            <div/>
+           </header>
+        )}
+        <div className="flex-grow w-full">
+            <WelcomeScreen />
+        </div>
       </div>
     );
   }
 
-  return (
-    <>
-      <div className="h-full w-full flex flex-col bg-background">
-        <header className="flex-shrink-0 flex items-center justify-between p-4 border-b h-[65px] bg-background">
-          <div className="flex items-center gap-3 flex-grow min-w-0">
-            <Input
-              value={dirtyNoteContent.title}
-              onChange={handleTitleChange}
-              placeholder="Note Title"
-              className="text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-xl h-auto p-0 bg-transparent truncate"
-            />
-            {activeNote.type !== 'code' && (
-              <Badge variant="outline" className="flex-shrink-0">
-                <Type className="h-3 w-3 mr-1.5" />
-                Text
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-            {isSaving && <Loader2 className="animate-spin h-4 w-4 text-muted-foreground" />}
-            <Button onClick={handleManualSave} disabled={isSaving || !isDirty} size="sm" variant="ghost">
-              <Save className="h-4 w-4" />
-              <span className="ml-2 hidden md:inline">{isSaving ? 'Saving...' : (isDirty ? 'Unsaved' : 'Saved')}</span>
+  const renderHeader = () => (
+     <header className="flex-shrink-0 flex items-center justify-between p-2 md:p-4 border-b h-[65px] bg-background gap-2">
+        {isMobile && (
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={onMenuClick}>
+              <Menu className="h-5 w-5" />
             </Button>
+          </SheetTrigger>
+        )}
+        <div className="flex items-center gap-3 flex-grow min-w-0">
+          <Input
+            value={dirtyNoteContent.title}
+            onChange={handleTitleChange}
+            placeholder="Note Title"
+            className="text-base md:text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-xl h-auto p-0 bg-transparent truncate"
+          />
+          {activeNote.type !== 'code' && (
+            <Badge variant="outline" className="flex-shrink-0 hidden sm:flex">
+              <Type className="h-3 w-3 mr-1.5" />
+              Text
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-2">
+          {isSaving && <Loader2 className="animate-spin h-4 w-4 text-muted-foreground" />}
+          <Button onClick={handleManualSave} disabled={isSaving || !isDirty} size={isMobile ? 'icon' : 'sm'} variant="ghost">
+            <Save className="h-4 w-4" />
+            <span className="ml-2 hidden md:inline">{isSaving ? 'Saving...' : (isDirty ? 'Unsaved' : 'Saved')}</span>
+          </Button>
 
-            {activeNote.type === 'code' && (
-              <>
-                <Button onClick={() => setIsPracticeModalOpen(true)} size="sm" variant="secondary">
-                  <Dumbbell className="h-4 w-4" />
-                  <span className="ml-2 hidden md:inline">Practice</span>
-                </Button>
+          {activeNote.type === 'code' && (
+            <>
+              <Button onClick={() => setIsPracticeModalOpen(true)} size={isMobile ? 'icon' : 'sm'} variant="secondary">
+                <Dumbbell className="h-4 w-4" />
+                <span className="ml-2 hidden md:inline">Practice</span>
+              </Button>
+              {!isMobile && (
                 <Select value={dirtyNoteContent.language || 'plaintext'} onValueChange={handleLanguageChange}>
                   <SelectTrigger className="w-[120px] h-9 text-sm">
                     <SelectValue placeholder="Select language" />
@@ -293,34 +321,61 @@ export function NoteDisplay() {
                     <SelectItem value="plaintext">Plain Text</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button onClick={handleRunCode} disabled={isRunning} size="sm">
-                  {isRunning ? <Loader2 className="animate-spin h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  <span className="ml-2 hidden md:inline">{isRunning ? 'Running...' : 'Run Code'}</span>
-                </Button>
-              </>
-            )}
+              )}
+              <Button onClick={handleRunCode} disabled={isRunning} size={isMobile ? 'icon' : 'sm'}>
+                {isRunning ? <Loader2 className="animate-spin h-4 w-4" /> : <Play className="h-4 w-4" />}
+                <span className="ml-2 hidden md:inline">{isRunning ? 'Running...' : 'Run'}</span>
+              </Button>
+            </>
+          )}
 
-            <Button onClick={() => setIsExportDialogOpen(true)} disabled={isExporting} size="sm">
-              {isExporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Download className="h-4 w-4" />}
-              <span className="ml-2 hidden md-inline">{isExporting ? 'Exporting...' : 'Download PDF'}</span>
-            </Button>
-          </div>
-        </header>
+          <Button onClick={() => setIsExportDialogOpen(true)} disabled={isExporting} size={isMobile ? 'icon' : 'sm'} variant="outline">
+            {isExporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Download className="h-4 w-4" />}
+            <span className="ml-2 hidden md:inline">PDF</span>
+          </Button>
+        </div>
+      </header>
+  );
+
+  return (
+    <>
+      <div className="h-full w-full flex flex-col bg-background min-h-0">
+        {renderHeader()}
 
         <div className="flex-grow relative min-h-0">
           {activeNote.type === 'code' ? (
             <div className='h-full flex flex-col'>
-              <div className='flex-grow min-h-0'>
+              <div className='flex-grow min-h-0 md:h-auto md:max-h-full'>
                 <CodeEditor
                   key={activeNote.id}
                   value={dirtyNoteContent.content}
                   onChange={handleContentChange}
                   language={dirtyNoteContent.language || 'plaintext'}
+                  isMobile={isMobile}
                 />
               </div>
-              <div className="code-output-box flex-shrink-0">
-                <pre><code>{output || '(no output)'}</code></pre>
-              </div>
+              
+              {isMobile ? (
+                 <Collapsible open={isOutputOpen} onOpenChange={setIsOutputOpen}>
+                  <CollapsibleTrigger asChild>
+                    <div className="border-t bg-muted/50 p-2 flex justify-between items-center cursor-pointer">
+                      <h3 className="font-semibold text-sm">Output</h3>
+                      <Button variant="ghost" size="icon" className="h-6 w-6">
+                        {isOutputOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="code-output-box flex-shrink-0 h-[20vh]">
+                      <pre><code>{output || '(no output)'}</code></pre>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              ) : (
+                <div className="code-output-box flex-shrink-0">
+                  <pre><code>{output || '(no output)'}</code></pre>
+                </div>
+              )}
             </div>
           ) : (
             <RichTextEditor

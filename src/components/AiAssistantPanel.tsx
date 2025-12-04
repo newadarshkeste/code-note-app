@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -138,7 +139,7 @@ export function AiAssistantPanel() {
   };
   
   return (
-    <div className="h-full flex flex-col bg-card/50 min-h-0 overflow-hidden">
+    <div className="h-full flex flex-col bg-card/50 min-h-0 overflow-hidden xl:border-l">
       <header className="flex-shrink-0 p-4 flex items-center gap-2 border-b h-[65px]">
           <Sparkles className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-headline font-semibold">AI Assistant</h2>
@@ -149,35 +150,37 @@ export function AiAssistantPanel() {
           <AiAssistantWelcome />
         ) : (
           <div className="flex flex-col h-full min-h-0">
-            <div className="flex-grow min-h-0 overflow-y-auto px-4 py-6 space-y-6">
-                {messages.length === 0 && (
-                   <p className="text-sm text-muted-foreground">
-                      I have access to <span className="font-semibold text-foreground">{activeNote.title}</span>. Ask me to explain, debug, or modify it. You can also attach a file.
-                   </p>
-                )}
-                {messages.map((message, index) => (
-                  <div key={index} className={cn('flex items-start gap-3 w-full', message.role === 'user' ? 'justify-end' : 'justify-start')}>
-                    {message.role === 'assistant' && <Bot className="h-5 w-5 text-primary flex-shrink-0 mt-1.5" />}
-                    <div className={cn(
-                      'rounded-lg p-3 text-sm max-w-[90%] w-auto text-foreground', 
-                      message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                    )}>
-                      <div className="ai-output">
-                        <MessageContent content={message.content} />
+            <ScrollArea className="flex-grow min-h-0" ref={scrollAreaRef}>
+              <div className="px-4 py-6 space-y-6">
+                  {messages.length === 0 && (
+                     <p className="text-sm text-muted-foreground">
+                        I have access to <span className="font-semibold text-foreground">{activeNote.title}</span>. Ask me to explain, debug, or modify it. You can also attach a file.
+                     </p>
+                  )}
+                  {messages.map((message, index) => (
+                    <div key={index} className={cn('flex items-start gap-3 w-full', message.role === 'user' ? 'justify-end' : 'justify-start')}>
+                      {message.role === 'assistant' && <Bot className="h-5 w-5 text-primary flex-shrink-0 mt-1.5" />}
+                      <div className={cn(
+                        'rounded-lg p-3 text-sm max-w-[90%] w-auto text-foreground', 
+                        message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                      )}>
+                        <div className="ai-output">
+                          <MessageContent content={message.content} />
+                        </div>
                       </div>
+                       {message.role === 'user' && <User className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1.5" />}
                     </div>
-                     {message.role === 'user' && <User className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1.5" />}
-                  </div>
-                ))}
-                {isLoading && (
-                   <div className="flex items-start gap-3">
-                      <Bot className="h-5 w-5 text-primary flex-shrink-0 mt-1.5" />
-                      <div className="rounded-lg p-3 text-sm bg-muted">
-                          <Loader2 className="animate-spin h-5 w-5" />
-                      </div>
-                  </div>
-                )}
-              </div>
+                  ))}
+                  {isLoading && (
+                     <div className="flex items-start gap-3">
+                        <Bot className="h-5 w-5 text-primary flex-shrink-0 mt-1.5" />
+                        <div className="rounded-lg p-3 text-sm bg-muted">
+                            <Loader2 className="animate-spin h-5 w-5" />
+                        </div>
+                    </div>
+                  )}
+                </div>
+            </ScrollArea>
             <div className="p-4 border-t bg-card/50 flex-shrink-0">
                 <form onSubmit={handleSubmit} className="flex flex-col gap-2">
                     {attachment && (
