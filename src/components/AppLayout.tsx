@@ -8,7 +8,7 @@ import { AiAssistantPanel } from '@/components/AiAssistantPanel';
 import { StudyToolsPanel } from '@/components/StudyToolsPanel';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
 import React, { useState } from 'react';
 import {
@@ -16,6 +16,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
+import { CodeNoteLogo } from './CodeNoteLogo';
 
 function DesktopLayout() {
   return (
@@ -50,12 +51,14 @@ function MobileLayout() {
     <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
       <div className="flex flex-col h-dvh w-screen overflow-hidden">
         <SheetContent side="left" className="p-0 w-[300px] flex flex-col">
-          <div className="flex-shrink-0">
-            <TopicSidebar />
-          </div>
-          <div className="flex-grow min-h-0 border-t">
-            <NoteList />
-          </div>
+            <SheetHeader className="p-4 border-b">
+                <SheetTitle>
+                    <CodeNoteLogo />
+                </SheetTitle>
+            </SheetHeader>
+            <div className="flex-grow min-h-0">
+                <NoteList />
+            </div>
         </SheetContent>
         
         <div className="flex flex-col flex-grow min-h-0">
