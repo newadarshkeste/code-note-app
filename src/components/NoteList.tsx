@@ -173,17 +173,14 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
     const [isUnsavedDialogOpen, setIsUnsavedDialogOpen] = useState(false);
     
     const handleNoteSelection = (noteId: string) => {
-        if (isMobile && onNoteSelect) {
-            setActiveNoteId(noteId);
-            onNoteSelect();
-            return;
-        }
-
         if (isDirty) {
             setPendingNoteId(noteId);
             setIsUnsavedDialogOpen(true);
         } else {
             setActiveNoteId(noteId);
+            if (isMobile && onNoteSelect) {
+                onNoteSelect();
+            }
         }
     };
     
@@ -192,6 +189,9 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         setIsDirty(false);
         if (pendingNoteId) {
             setActiveNoteId(pendingNoteId);
+             if (isMobile && onNoteSelect) {
+                onNoteSelect();
+            }
         }
         setIsUnsavedDialogOpen(false);
         setPendingNoteId(null);
@@ -201,6 +201,9 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         setIsDirty(false);
         if (pendingNoteId) {
             setActiveNoteId(pendingNoteId);
+            if (isMobile && onNoteSelect) {
+                onNoteSelect();
+            }
         }
         setIsUnsavedDialogOpen(false);
         setPendingNoteId(null);

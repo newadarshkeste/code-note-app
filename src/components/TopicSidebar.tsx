@@ -44,9 +44,10 @@ import { Skeleton } from './ui/skeleton';
 
 interface TopicSidebarProps {
   isMobile?: boolean;
+  onTopicSelect?: (topicId: string) => void;
 }
 
-export function TopicSidebar({ isMobile = false }: TopicSidebarProps) {
+export function TopicSidebar({ isMobile = false, onTopicSelect }: TopicSidebarProps) {
   const {
     topics,
     topicsLoading,
@@ -82,6 +83,9 @@ export function TopicSidebar({ isMobile = false }: TopicSidebarProps) {
   
   const handleSelectTopic = (topicId: string) => {
     setActiveTopicId(topicId);
+    if(isMobile && onTopicSelect) {
+      onTopicSelect(topicId);
+    }
   };
 
 
@@ -157,7 +161,6 @@ export function TopicSidebar({ isMobile = false }: TopicSidebarProps) {
                             onClick={() => handleSelectTopic(topic.id)}
                             className={cn(
                                 "w-full justify-start gap-2 h-10 text-sm",
-                                activeTopicId === topic.id && isMobile ? 'bg-secondary' : 
                                 activeTopicId === topic.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent'
                             )}
                         >

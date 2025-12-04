@@ -48,61 +48,95 @@ function DesktopLayout() {
 
 function MobileLayout() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const { activeTopicId, setActiveTopicId } = useNotes();
+  const { activeTopicId, setActiveTopicId, activeNote, setActiveNoteId } = useNotes();
   
   const handleNoteSelected = () => {
     setIsDrawerOpen(false);
   };
   
-  const handleBackToTopics = () => {
-    setActiveTopicId(null);
+  const handleTopicSelected = () => {
+    setIsDrawerOpen(false);
   };
 
+  const showTopics = !activeTopicId;
+  const showNotes = activeTopicId && !activeNote;
+  const showNoteDisplay = !!activeNote;
+
+  const getHeader = () => {
+    return (
+       <header className="flex-shrink-0 w-full flex items-center justify-between p-2 border-b h-[65px] bg-background">
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <div className="flex-grow min-w-0">
+            {showNoteDisplay && activeNote && (
+               <Input
+                  value={activeNote.title}
+                  readOnly
+                  className="text-base md:text-lg font-headline border-0 shadow-none focus-visible:ring-0 flex-grow !text-xl h-auto p-0 bg-transparent truncate"
+                />
+            )}
+          </div>
+          {showNoteDisplay && (
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-2">
+              {/* Actions for NoteDisplay can go here if needed */}
+            </div>
+          )}
+        </header>
+    )
+  }
+
   return (
-    <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-      <div className="flex flex-col h-dvh w-screen overflow-hidden">
-        <SheetContent side="left" className="p-0 w-[300px] flex flex-col overflow-x-hidden">
+    <div className="flex flex-col h-dvh w-screen overflow-hidden">
+      <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+        <SheetContent side="left" className="p-0 w-[300px] flex flex-col">
             <SheetHeader className="p-4 border-b">
                 <SheetTitle>
                     <CodeNoteLogo />
                 </SheetTitle>
             </SheetHeader>
-            <div className="flex-grow min-h-0 relative">
-              <div className={cn(
-                  "absolute inset-0 transition-transform duration-300 ease-in-out",
-                  activeTopicId ? "-translate-x-full" : "translate-x-0"
-              )}>
-                  <TopicSidebar isMobile={true} />
-              </div>
-              <div className={cn(
-                  "absolute inset-0 transition-transform duration-300 ease-in-out",
-                  activeTopicId ? "translate-x-0" : "translate-x-full"
-              )}>
-                  {activeTopicId && (
-                    <NoteList 
-                        isMobile={true} 
-                        onNoteSelect={handleNoteSelected} 
-                        onBack={handleBackToTopics}
-                    />
-                  )}
-              </div>
-            </div>
+            <TopicSidebar isMobile={true} onTopicSelect={handleTopicSelected} />
         </SheetContent>
         
         <div className="flex flex-col flex-grow min-h-0">
-          <NoteDisplay 
-            isMobile={true}
-            mobileHeaderActions={
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-            }
-          />
+          <div className="flex-grow min-h-0">
+            {showTopics && (
+              <div className="h-full w-full flex flex-col">
+                 {getHeader()}
+                 <TopicSidebar isMobile onTopicSelect={() => {}} />
+              </div>
+            )}
+            {showNotes && activeTopicId && (
+              <div className="h-full w-full flex flex-col">
+                 {getHeader()}
+                 <NoteList 
+                    isMobile={true} 
+                    onNoteSelect={handleNoteSelected} 
+                    onBack={() => {
+                      setActiveNoteId(null);
+                      setActiveTopicId(null);
+                    }}
+                />
+              </div>
+            )}
+            {showNoteDisplay && (
+              <NoteDisplay 
+                isMobile={true}
+                mobileHeaderActions={
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Menu className="h-5 w-5" />
+                    </Button>
+                  </SheetTrigger>
+                }
+              />
+            )}
+          </div>
         </div>
-      </div>
-    </Sheet>
+      </Sheet>
+    </div>
   );
 }
 
