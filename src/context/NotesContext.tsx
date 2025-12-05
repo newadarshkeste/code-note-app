@@ -400,7 +400,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   const activeNote = useMemo(() => {
     if (!activeNoteId) return null;
     const note = notes.find(note => note.id === activeNoteId);
-    return note && note.type !== 'folder' ? note : null;
+    return note || null;
   }, [activeNoteId, notes]);
   
 
@@ -411,7 +411,6 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   const getSubNotes = useCallback((parentId: string | null) => {
     return notes
       .filter(note => (note.parentId || null) === (parentId || null))
-      // FIX: Gracefully handle notes without an 'order' field by treating it as 0.
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   }, [notes]);
 
@@ -506,7 +505,3 @@ export function useNotes() {
   }
   return context;
 }
-
-    
-
-    

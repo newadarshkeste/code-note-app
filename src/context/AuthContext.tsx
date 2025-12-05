@@ -15,8 +15,9 @@ import {
   sendPasswordResetEmail
 } from 'firebase/auth';
 import { useFirebase } from '@/firebase';
-import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDoc, Firestore } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { Auth } from 'firebase/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -31,16 +32,31 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // CORRECT: Get services from useFirebase hook inside the component body.
-  const { auth, firestore } = useFirebase(); 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  // DEFERRED INITIALIZATION: We will get these from the hook inside useEffect.
+  // This is the key to preventing the server-side crash.
+  const [auth, setAuth] = useState<Auth | null>(null);
+  const [firestore, setFirestore] = useState<Firestore | null>(null);
+  const firebaseServices = useFirebase();
 
   useEffect(() => {
-    // We can now safely assume auth and firestore are available due to the provider nesting.
+    // This effect runs only on the client, safely providing the services.
+    if (firebaseServices) {
+      setAuth(firebaseServices.auth);
+      setFirestore(firebaseServices.firestore);
+    }
+  }, [firebaseServices]);
+
+  useEffect(() => {
+    // This effect handles the auth logic and now depends on the client-safe auth/firestore state.
     if (!auth || !firestore) {
-        setLoading(false);
+        // If services aren't available yet (e.g., during server render),
+        // we can't determine auth state, so we just wait.
+        // The loading state is managed to prevent UI flashes.
+        setLoading(true);
         return;
     };
     
@@ -112,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
+      // The onAuthStateChanged listener will handle the rest.
       return true;
     } catch (error) {
       setLoading(false);
@@ -130,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // The onAuthStateChanged listener will handle the rest.
       return true;
     } catch (error) {
       setLoading(false);
@@ -166,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) return;
     try {
       await signOut(auth);
+      // The onAuthStateChanged listener will set user to null.
     } catch (error) {
       console.error("Error signing out:", error);
     }
