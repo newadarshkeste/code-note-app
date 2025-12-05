@@ -27,7 +27,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
-import { FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight, GripVertical } from 'lucide-react';
+import { FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight, GripVertical, ChevronRight, ChevronDown } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Note } from '@/lib/types';
@@ -51,16 +51,19 @@ import {
     useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 
-function SortableNoteItem({ note, level = 0, onNoteSelect }: { note: Note, level?: number, isMobile?: boolean, onNoteSelect: (id: string) => void }) {
+function SortableNoteItem({ note, onNoteSelect }: { note: Note, onNoteSelect: (id: string) => void }) {
     const { 
         activeNoteId, 
         getSubNotes, 
         deleteNote,
-        updateNote
+        updateNote,
+        notes,
     } = useNotes();
     const [renameNote, setRenameNote] = useState<Note | null>(null);
     const [renamingTitle, setRenamingTitle] = useState('');
+    const [isExpanded, setIsExpanded] = useState(true);
     
     const {
         attributes,
@@ -77,7 +80,7 @@ function SortableNoteItem({ note, level = 0, onNoteSelect }: { note: Note, level
         opacity: isDragging ? 0.5 : 1,
     };
 
-    const subNotes = getSubNotes(note.id);
+    const subNotes = useMemo(() => getSubNotes(note.id), [getSubNotes, note.id, notes]);
     const hasSubNotes = subNotes.length > 0;
 
     const handleRenameNote = async () => {
@@ -89,20 +92,29 @@ function SortableNoteItem({ note, level = 0, onNoteSelect }: { note: Note, level
     };
     
     return (
-        <div ref={setNodeRef} style={style} className="relative">
-            <div className="group flex items-center justify-between w-full h-10 pr-1 my-1 rounded-md bg-card/80 hover:bg-accent/80">
+        <Collapsible open={isExpanded} onOpenChange={setIsExpanded} className="relative w-full">
+            <div ref={setNodeRef} style={style} className="group flex items-center w-full my-1 rounded-md bg-card/80 hover:bg-accent/80 pr-1">
+                <div 
+                    {...attributes} 
+                    {...listeners} 
+                    className="cursor-grab p-2 text-muted-foreground hover:bg-muted rounded-l-md"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <GripVertical className="h-4 w-4" />
+                </div>
+                 <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="icon" className={cn("h-8 w-8", !hasSubNotes && "invisible")}>
+                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </Button>
+                </CollapsibleTrigger>
                 <Button
                     variant="ghost"
                     onClick={() => onNoteSelect(note.id)}
                     className={cn(
-                        "w-full justify-start gap-2 h-full text-sm",
+                        "flex-grow justify-start gap-2 h-full text-sm",
                         activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : ''
                     )}
-                    style={{ paddingLeft: `${(level * 1.5) + 1}rem` }}
                 >
-                    <div {...attributes} {...listeners} className="cursor-grab p-2 -ml-2">
-                        <GripVertical className="h-4 w-4 text-muted-foreground" />
-                    </div>
                     {note.type === 'code' ? (
                         <Code className="h-4 w-4 flex-shrink-0" />
                     ) : (
@@ -136,16 +148,45 @@ function SortableNoteItem({ note, level = 0, onNoteSelect }: { note: Note, level
                 </div>
             </div>
 
-            {hasSubNotes && (
-                <div className="pl-6">
-                    <SortableContext items={subNotes.map(n => n.id)} strategy={verticalListSortingStrategy}>
-                       {subNotes.map(subNote => (
-                           <SortableNoteItem key={subNote.id} note={subNote} level={level + 1} onNoteSelect={onNoteSelect} />
-                       ))}
-                    </SortableContext>
+            <CollapsibleContent>
+                {hasSubNotes && (
+                    <div className="pl-6">
+                        <SortableContext items={subNotes.map(n => n.id)} strategy={verticalListSortingStrategy}>
+                           {subNotes.map(subNote => (
+                               <SortableNoteItem key={subNote.id} note={subNote} onNoteSelect={onNoteSelect} />
+                           ))}
+                        </SortableContext>
+                    </div>
+                )}
+            </CollapsibleContent>
+             <AlertDialog open={!!renameNote} onOpenChange={(isOpen) => !isOpen && setRenameNote(null)}>
+                <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Rename Note</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="rename-note-name" className="text-right">
+                        New Name
+                    </Label>
+                    <Input
+                        id="rename-note-name"
+                        value={renamingTitle}
+                        onChange={(e) => setRenamingTitle(e.target.value)}
+                        className="col-span-3 font-body"
+                        onKeyDown={(e) => e.key === 'Enter' && handleRenameNote()}
+                    />
+                    </div>
                 </div>
-            )}
-        </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="secondary" onClick={() => setRenameNote(null)}>Cancel</Button>
+                    </DialogClose>
+                    <Button onClick={handleRenameNote}>Rename</Button>
+                </DialogFooter>
+                </DialogContent>
+            </AlertDialog>
+        </Collapsible>
     );
 }
 
@@ -250,31 +291,31 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
         setActiveDragId(null);
-        if (active.id !== over?.id) {
+        if (over && active.id !== over.id) {
            handleNoteDrop(active.id as string, over?.id as string | null);
+        } else if (!over) {
+            // Dropped into empty space, make it a top-level note
+            handleNoteDrop(active.id as string, null);
         }
     };
      const handleDragOver = (event: DragOverEvent) => {
-        const { active, over } = event;
-        const activeId = active.id as string;
-        const overId = over?.id as string | null;
-
-        if (!overId || activeId === overId) return;
-
-        const activeNote = notes.find(n => n.id === activeId);
-        const overNote = notes.find(n => n.id === overId);
-
-        if (!activeNote || !overNote) return;
-
-        // Logic to handle dropping over a note (making it a subnote)
-        // This is a simplified version. A full implementation would need more complex state updates.
-        // For now, we only handle reordering.
+        // This is where we could implement logic for visual feedback, e.g., showing where the note will be dropped.
     };
 
     const topLevelNotes = useMemo(() => {
         const lowerCaseSearch = noteSearch.toLowerCase();
-        const filtered = notes.filter(note => note.title.toLowerCase().includes(lowerCaseSearch));
-        return filtered.filter(note => !note.parentId);
+        // First, filter all notes by the search term
+        const allFilteredNotes = notes.filter(note => note.title.toLowerCase().includes(lowerCaseSearch));
+        
+        // If there's no search, return only top-level notes.
+        if (!noteSearch) {
+             return allFilteredNotes.filter(note => !note.parentId);
+        }
+        
+        // If there is a search, we want to show all matching notes, regardless of level.
+        // We'll reconstruct the hierarchy. For simplicity here, we'll just show them as a flat list
+        // when searching. A more complex implementation could still show the hierarchy.
+        return allFilteredNotes;
     }, [notes, noteSearch]);
 
 
@@ -355,7 +396,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                              >
                                  <SortableContext items={notes.map(n => n.id)} strategy={verticalListSortingStrategy}>
                                      {topLevelNotes.map(note => (
-                                        <SortableNoteItem key={note.id} note={note} onNoteSelect={handleNoteSelection} isMobile={isMobile} />
+                                        <SortableNoteItem key={note.id} note={note} onNoteSelect={handleNoteSelection} />
                                     ))}
                                  </SortableContext>
                              </DndContext>
@@ -468,3 +509,5 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         </>
     );
 }
+
+    
