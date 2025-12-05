@@ -36,18 +36,19 @@ function AiAssistantWelcome() {
 }
 
 const MessageContent = React.memo(({ content }: { content: string }) => {
-    const parts = content.split(/(\`\`\`[\w\s-]*\n[\s\S]*?\n\`\`\`)/g);
+    // Regex to split the content by markdown code blocks, keeping the delimiters
+    const parts = content.split(/(\`\`\`[\w-]*\n[\s\S]*?\n\`\`\`)/g).filter(Boolean);
 
     return (
         <div className="ai-assistant-output">
             {parts.map((part, index) => {
-                const codeBlockMatch = part.match(/\`\`\`(\w*)\n([\s\S]*?)\n\`\`\`/);
+                const codeBlockMatch = part.match(/^\`\`\`(\w*)\n([\s\S]*?)\n\`\`\`$/);
                 if (codeBlockMatch) {
                     const language = codeBlockMatch[1] || 'plaintext';
                     const code = codeBlockMatch[2];
                     return (
                         <div key={index} className="my-3 rounded-md border bg-background overflow-hidden">
-                            <div className="h-48">
+                            <div className="h-auto max-h-96">
                                 <CodeEditor
                                     value={code}
                                     language={language}
@@ -57,9 +58,18 @@ const MessageContent = React.memo(({ content }: { content: string }) => {
                         </div>
                     );
                 }
+
+                // For non-code parts, process them for inline code and paragraphs
+                if (part.trim()) {
+                    const paragraphs = part.trim().split('\n').filter(p => p.trim() !== '').map((p, i) => {
+                        // Replace inline code backticks
+                        const withInlineCode = p.replace(/`([^`]+)`/g, '<code class="bg-background/50 px-1 py-0.5 rounded text-sm whitespace-pre-wrap word-break-all">$1</code>');
+                        return `<p>${withInlineCode}</p>`;
+                    }).join('');
+                    return <div key={index} dangerouslySetInnerHTML={{ __html: paragraphs }} />;
+                }
                 
-                const paragraphs = part.split('\n').filter(p => p.trim() !== '').map((p, i) => `<p>${p.replace(/`([^`]+)`/g, '<code>$1</code>')}</p>`).join('');
-                return <div key={index} dangerouslySetInnerHTML={{ __html: paragraphs }} />;
+                return null;
             })}
         </div>
     );
@@ -246,4 +256,5 @@ export function AiAssistantPanel() {
   );
 }
 
+    
     
