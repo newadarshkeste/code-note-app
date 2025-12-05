@@ -1,7 +1,8 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Palette } from 'lucide-react';
+import { Palette, Undo2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Label } from './ui/label';
@@ -92,7 +93,16 @@ export function ThemeCustomizer() {
     }, [primaryHsl]);
 
     useEffect(() => {
-        document.documentElement.style.setProperty('--background', backgroundHsl);
+        // This targets the --background variable for the .dark theme selector specifically
+        const darkThemeSelector = '.dark'; 
+        const root = document.documentElement;
+        
+        // To apply the background change only in dark mode, we can create a specific style rule
+        // or just apply it to the main background variable, which has more effect in dark mode by default.
+        // For simplicity and effectiveness given the current CSS setup, we'll just set the main --background.
+        // The light theme has its own background set, so this primarily impacts dark mode.
+        root.style.setProperty('--background', backgroundHsl);
+        
     }, [backgroundHsl]);
 
     const handlePrimaryColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,6 +119,13 @@ export function ThemeCustomizer() {
         setBackgroundHsl(newHsl);
     };
 
+    const handleReset = () => {
+        setPrimaryHsl(defaultPrimaryHsl);
+        setBackgroundHsl(defaultDarkBackgroundHsl);
+        setPrimaryColor(hslToHex(defaultPrimaryHsl));
+        setBackgroundColor(hslToHex(defaultDarkBackgroundHsl));
+    };
+
     return (
         <Popover>
             <PopoverTrigger asChild>
@@ -117,34 +134,39 @@ export function ThemeCustomizer() {
                 </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-auto p-4">
-                <div className="flex flex-col gap-4">
-                    <div>
+                <div className="grid gap-y-4">
+                    <div className="space-y-2">
                         <Label htmlFor="primary-color" className="font-semibold">Primary Color</Label>
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-2">
                             <input
                                 id="primary-color"
                                 type="color"
                                 value={primaryColor}
                                 onChange={handlePrimaryColorChange}
-                                className="h-8 w-8 rounded-md border-none cursor-pointer"
+                                className="h-8 w-8 rounded-md border-none cursor-pointer p-0"
                             />
                             <span className="text-sm text-muted-foreground font-mono">{primaryColor.toUpperCase()}</span>
                         </div>
                     </div>
-                    <Separator />
-                     <div>
-                        <Label htmlFor="background-color" className="font-semibold">Background Color</Label>
-                        <div className="flex items-center gap-2 mt-2">
+                    
+                     <div className="space-y-2">
+                        <Label htmlFor="background-color" className="font-semibold">Background Color (Dark)</Label>
+                        <div className="flex items-center gap-2">
                             <input
                                 id="background-color"
                                 type="color"
                                 value={backgroundColor}
                                 onChange={handleBackgroundColorChange}
-                                className="h-8 w-8 rounded-md border-none cursor-pointer"
+                                className="h-8 w-8 rounded-md border-none cursor-pointer p-0"
                             />
                             <span className="text-sm text-muted-foreground font-mono">{backgroundColor.toUpperCase()}</span>
                         </div>
                     </div>
+                    <Separator />
+                    <Button onClick={handleReset} variant="ghost" className="w-full justify-center text-sm">
+                        <Undo2 className="h-4 w-4 mr-2" />
+                        Reset to Default
+                    </Button>
                 </div>
             </PopoverContent>
         </Popover>
