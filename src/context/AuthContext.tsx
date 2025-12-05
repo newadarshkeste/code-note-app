@@ -14,10 +14,9 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { useFirebase } from '@/firebase';
-import { doc, setDoc, serverTimestamp, getDoc, Firestore } from 'firebase/firestore';
+import { useFirebase } from '@/firebase/provider';
+import { doc, setDoc, serverTimestamp, getDoc, Firestore, Auth } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Auth } from 'firebase/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -36,29 +35,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
-  // DEFERRED INITIALIZATION: We will get these from the hook inside useEffect.
-  // This is the key to preventing the server-side crash.
-  const [auth, setAuth] = useState<Auth | null>(null);
-  const [firestore, setFirestore] = useState<Firestore | null>(null);
+  // This hook can ONLY be called here if FirebaseProvider is a parent.
   const firebaseServices = useFirebase();
 
   useEffect(() => {
-    // This effect runs only on the client, safely providing the services.
-    if (firebaseServices) {
-      setAuth(firebaseServices.auth);
-      setFirestore(firebaseServices.firestore);
-    }
-  }, [firebaseServices]);
-
-  useEffect(() => {
     // This effect handles the auth logic and now depends on the client-safe auth/firestore state.
-    if (!auth || !firestore) {
-        // If services aren't available yet (e.g., during server render),
-        // we can't determine auth state, so we just wait.
-        // The loading state is managed to prevent UI flashes.
+    if (!firebaseServices.auth || !firebaseServices.firestore) {
         setLoading(true);
         return;
     };
+
+    const auth = firebaseServices.auth;
+    const firestore = firebaseServices.firestore;
     
     getRedirectResult(auth)
       .then(async (result) => {
@@ -107,14 +95,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   
     return () => unsubscribe();
-  }, [auth, firestore]);
+  }, [firebaseServices.auth, firebaseServices.firestore]);
 
   const loginWithGoogle = async () => {
-    if (!auth) return;
+    if (!firebaseServices.auth) return;
     const provider = new GoogleAuthProvider();
     setLoading(true);
     try {
-      await signInWithRedirect(auth, provider);
+      await signInWithRedirect(firebaseServices.auth, provider);
     } catch (error) {
       setLoading(false);
       if ((error as AuthError).code !== 'auth/popup-closed-by-user') {
@@ -124,10 +112,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUpWithEmail = async (email: string, password: string): Promise<boolean> => {
-    if (!auth) return false;
+    if (!firebaseServices.auth) return false;
     setLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      await createUserWithEmailAndPassword(firebaseServices.auth, email, password);
       // The onAuthStateChanged listener will handle the rest.
       return true;
     } catch (error) {
@@ -143,10 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
-    if (!auth) return false;
+    if (!firebaseServices.auth) return false;
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(firebaseServices.auth, email, password);
       // The onAuthStateChanged listener will handle the rest.
       return true;
     } catch (error) {
@@ -161,9 +149,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const sendPasswordReset = async (email: string): Promise<boolean> => {
-    if (!auth) return false;
+    if (!firebaseServices.auth) return false;
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(firebaseServices.auth, email);
       toast({
         title: 'Password Reset Email Sent',
         description: `An email has been sent to ${email}. If you don't see it, please check your spam folder.`,
@@ -181,9 +169,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    if (!auth) return;
+    if (!firebaseServices.auth) return;
     try {
-      await signOut(auth);
+      await signOut(firebaseServices.auth);
       // The onAuthStateChanged listener will set user to null.
     } catch (error) {
       console.error("Error signing out:", error);

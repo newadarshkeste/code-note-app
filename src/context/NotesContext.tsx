@@ -155,12 +155,20 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     }
     setNotesLoading(true);
     
-    // Sort by 'order' which was added for drag-and-drop.
-    // We will handle legacy notes without 'order' in the getSubNotes function.
-    const q = query(notesCollectionRef, orderBy('order', 'asc'));
+    // Sort by 'createdAt' as a fallback for notes without an 'order' field.
+    const q = query(notesCollectionRef, orderBy('createdAt', 'desc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedNotes = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Note));
+      const fetchedNotes = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            ...data,
+            id: doc.id,
+            // Provide default values for old notes that might be missing these fields
+            order: data.order ?? 0,
+            parentId: data.parentId ?? null,
+        } as Note;
+      });
       setNotes(fetchedNotes);
       setNotesLoading(false);
     }, (error) => {
