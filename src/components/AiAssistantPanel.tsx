@@ -36,40 +36,43 @@ function AiAssistantWelcome() {
 }
 
 const MessageContent = React.memo(({ content }: { content: string }) => {
-    const parts = content.split(/(```[\w-]*\n[\s\S]*?\n```)/g).filter(Boolean);
+  try {
+    const parts = content.split(/(\`\`\`[\w\s-]*\n[\s\S]*?\n\`\`\`)/g);
 
     return (
-        <div className="ai-assistant-output">
-            {parts.map((part, index) => {
-                const codeBlockMatch = part.match(/^```(\w*)\n([\s\S]*?)\n```$/);
-                if (codeBlockMatch) {
-                    const language = codeBlockMatch[1] || 'plaintext';
-                    const code = codeBlockMatch[2];
-                    return (
-                        <div key={index} className="my-3 rounded-md border bg-background overflow-hidden">
-                            <div className="h-auto max-h-96">
-                                <CodeEditor
-                                    value={code}
-                                    language={language}
-                                    options={{ readOnly: true, domReadOnly: true, minimap: { enabled: false } }}
-                                />
-                            </div>
-                        </div>
-                    );
-                }
+      <div className="ai-assistant-output">
+        {parts.map((part, index) => {
+          const match = part.match(/\`\`\`(\w*)\n([\s\S]*?)\n\`\`\`/);
+          if (match) {
+            return (
+              <div key={index} className="my-3 rounded-md border bg-background overflow-hidden">
+                <div className="h-48">
+                  <CodeEditor
+                    value={match[2]}
+                    language={match[1] || "plaintext"}
+                    options={{ readOnly: true, domReadOnly: true, minimap: { enabled: false } }}
+                  />
+                </div>
+              </div>
+            );
+          }
 
-                if (part.trim()) {
-                    const paragraphs = part.trim().split('\n').filter(p => p.trim() !== '').map((p, i) => {
-                        const withInlineCode = p.replace(/`([^`]+)`/g, '<code class="bg-background/50 px-1 py-0.5 rounded text-sm whitespace-pre-wrap word-break-all">$1</code>');
-                        return `<p>${withInlineCode}</p>`;
-                    }).join('');
-                    return <div key={index} dangerouslySetInnerHTML={{ __html: paragraphs }} />;
-                }
-                
-                return null;
-            })}
-        </div>
+          // Fallback text renderer
+          return (
+            <p key={index} className="whitespace-pre-wrap leading-relaxed">
+              {part}
+            </p>
+          );
+        })}
+      </div>
     );
+  } catch (err) {
+    return (
+      <p className="text-red-500 text-sm">
+        (Error rendering message)
+      </p>
+    );
+  }
 });
 MessageContent.displayName = 'MessageContent';
 
