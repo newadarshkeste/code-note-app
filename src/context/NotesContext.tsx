@@ -130,7 +130,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
       const fetchedTopics = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Topic));
       setTopics(fetchedTopics);
       if (!activeTopicId && fetchedTopics.length > 0) {
-        setActiveTopicId(fetchedTopics[0].id);
+        // Do not auto-select a topic if one isn't already selected, this causes issues on mobile.
+        // setActiveTopicId(fetchedTopics[0].id); 
       } else if (fetchedTopics.length === 0) {
         setActiveTopicId(null);
       }
@@ -144,7 +145,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [topicsRef, activeTopicId]);
+  }, [topicsRef]);
 
   useEffect(() => {
     if (!notesCollectionRef) {
@@ -305,48 +306,32 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
     const overNote = overId ? notes.find(n => n.id === overId) : null;
     
-    // Scenario 1: Dropped into a new parent
-    if (overId && activeNote.id !== overId) {
-        const newParentId = overId;
-        const siblings = notes.filter(n => n.parentId === newParentId).sort((a,b) => a.order - b.order);
-        const newOrder = siblings.length > 0 ? siblings[siblings.length - 1].order + 1 : 0;
-        
-        const batch = writeBatch(firestore);
-        const noteRef = doc(notesCollectionRef, activeNote.id);
-        batch.update(noteRef, { parentId: newParentId, order: newOrder });
+    // This is a placeholder for a more complex drop logic.
+    // For now, let's assume we are reordering items within the same parent context.
+    const parentId = activeNote.parentId;
+    
+    const itemsInSameContext = notes.filter(n => n.parentId === parentId).sort((a,b) => a.order - b.order);
+    const activeIndex = itemsInSameContext.findIndex(i => i.id === activeId);
+    let overIndex;
 
-        // Re-order old siblings
-        const oldSiblings = notes
-            .filter(n => n.parentId === activeNote.parentId && n.id !== activeNote.id)
-            .sort((a, b) => a.order - b.order);
-        
-        oldSiblings.forEach((sibling, index) => {
-            if (sibling.order !== index) {
-                const siblingRef = doc(notesCollectionRef, sibling.id);
-                batch.update(siblingRef, { order: index });
-            }
-        });
-
-        await batch.commit();
-        return;
+    if (overId) {
+        overIndex = itemsInSameContext.findIndex(i => i.id === overId);
+    } else {
+        // If dropping at the end of a list (overId is null)
+        overIndex = itemsInSameContext.length;
     }
 
-    // Scenario 2: Reordering within the same list
-    const activeIndex = notes.findIndex(n => n.id === activeId);
-    const overIndex = overId ? notes.findIndex(n => n.id === overId) : notes.length;
-    
     if (activeIndex === -1 || activeIndex === overIndex) return;
-    
-    let newItems = [...notes];
+
+    const newItems = [...itemsInSameContext];
     const [movedItem] = newItems.splice(activeIndex, 1);
-    newItems.splice(overIndex, 0, movedItem);
+    newItems.splice(overIndex > activeIndex ? overIndex -1 : overIndex, 0, movedItem);
 
     const batch = writeBatch(firestore);
-
     newItems.forEach((note, index) => {
         if (note.order !== index) {
-             const noteRef = doc(notesCollectionRef, note.id);
-             batch.update(noteRef, { order: index, parentId: null });
+            const noteRef = doc(notesCollectionRef, note.id);
+            batch.update(noteRef, { order: index });
         }
     });
 
@@ -357,7 +342,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         toast({ variant: 'destructive', title: "Error", description: "Could not save new note order." });
     }
 
-  }, [notes, notesCollectionRef, firestore]);
+  }, [notes, notesCollectionRef, firestore, toast]);
 
   const activeNote = useMemo(() => {
     return notes.find(note => note.id === activeNoteId) || null;
@@ -418,7 +403,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         description: 'Could not save the note.',
       });
     }
-  }, [activeNote, isDirty, dirtyNoteContent, updateNote, studyStats]);
+  }, [activeNote, isDirty, dirtyNoteContent, updateNote, studyStats, toast]);
 
   const value = {
     topics,
@@ -461,3 +446,5 @@ export function useNotes() {
   }
   return context;
 }
+
+    
