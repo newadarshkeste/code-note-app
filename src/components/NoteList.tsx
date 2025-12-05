@@ -27,10 +27,10 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
-import { FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight, GripVertical, ChevronRight, ChevronDown, Folder } from 'lucide-react';
+import { FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight, GripVertical, ChevronRight, ChevronDown, Folder, Plus } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
-import { Note } from '@/lib/types';
+import { Note, Topic } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import {
@@ -53,7 +53,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 
-function SortableNoteItem({ note, onNoteSelect }: { note: Note, onNoteSelect: (id: string) => void }) {
+function SortableNoteItem({ note, onNoteSelect, onAddInside }: { note: Note, onNoteSelect: (id: string) => void, onAddInside: (parentId: string) => void }) {
     const { 
         activeNoteId, 
         getSubNotes, 
@@ -132,6 +132,11 @@ function SortableNoteItem({ note, onNoteSelect }: { note: Note, onNoteSelect: (i
                     <span className="truncate flex-grow text-left">{note.title}</span>
                 </Button>
                 <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    {note.type === 'folder' && (
+                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onAddInside(note.id); }}>
+                            <Plus className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                    )}
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setRenameNote(note); setRenamingTitle(note.title); }}>
                         <Pencil className="h-4 w-4 text-muted-foreground" />
                     </Button>
@@ -162,7 +167,7 @@ function SortableNoteItem({ note, onNoteSelect }: { note: Note, onNoteSelect: (i
                     <div className="pl-6">
                         <SortableContext items={subNotes.map(n => n.id)} strategy={verticalListSortingStrategy}>
                            {subNotes.map(subNote => (
-                               <SortableNoteItem key={subNote.id} note={subNote} onNoteSelect={onNoteSelect} />
+                               <SortableNoteItem key={subNote.id} note={subNote} onNoteSelect={onNoteSelect} onAddInside={onAddInside} />
                            ))}
                         </SortableContext>
                     </div>
@@ -224,7 +229,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
     const [newNoteType, setNewNoteType] = useState<'code' | 'text' | 'folder'>('code');
     const [newNoteLanguage, setNewNoteLanguage] = useState('javascript');
     const [noteSearch, setNoteSearch] = useState('');
-    const [isSubNote, setIsSubNote] = useState(false);
+    const [newNoteParentId, setNewNoteParentId] = useState<string | null>(null);
     const [pendingNoteId, setPendingNoteId] = useState<string | null>(null);
     const [isUnsavedDialogOpen, setIsUnsavedDialogOpen] = useState(false);
     const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -239,7 +244,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
     const handleNoteSelection = (noteId: string) => {
         const note = notes.find(n => n.id === noteId);
         if (note && note.type === 'folder') {
-            return; // Don't select folders as active notes for editing
+            return;
         }
 
         if (isDirty) {
@@ -251,6 +256,13 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                 onNoteSelect();
             }
         }
+    };
+
+    const handleAddInside = (parentId: string) => {
+        setNewNoteParentId(parentId);
+        setNewNoteType('code'); // Default to code
+        setNewNoteTitle('');
+        setIsNoteDialogOpen(true);
     };
     
     const handleSaveAndSwitch = async () => {
@@ -288,13 +300,13 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
             await addNote({ 
                 title: newNoteTitle.trim(), 
                 type: newNoteType,
-                parentId: isSubNote && activeNote ? activeNote.id : null,
+                parentId: newNoteParentId,
                 language: newNoteType === 'code' ? newNoteLanguage : undefined
             });
             setNewNoteTitle('');
             setNewNoteType('code');
             setIsNoteDialogOpen(false);
-            setIsSubNote(false);
+            setNewNoteParentId(null);
         }
     };
     
@@ -308,27 +320,20 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         if (over && active.id !== over.id) {
            handleNoteDrop(active.id as string, over?.id as string | null);
         } else if (!over) {
-            // Dropped into empty space, make it a top-level note
             handleNoteDrop(active.id as string, null);
         }
     };
      const handleDragOver = (event: DragOverEvent) => {
-        // This is where we could implement logic for visual feedback, e.g., showing where the note will be dropped.
     };
 
     const topLevelNotes = useMemo(() => {
         const lowerCaseSearch = noteSearch.toLowerCase();
-        // First, filter all notes by the search term
         const allFilteredNotes = notes.filter(note => note.title.toLowerCase().includes(lowerCaseSearch));
         
-        // If there's no search, return only top-level notes.
         if (!noteSearch) {
              return allFilteredNotes.filter(note => !note.parentId);
         }
         
-        // If there is a search, we want to show all matching notes, regardless of level.
-        // We'll reconstruct the hierarchy. For simplicity here, we'll just show them as a flat list
-        // when searching. A more complex implementation could still show the hierarchy.
         return allFilteredNotes;
     }, [notes, noteSearch]);
 
@@ -340,6 +345,15 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
             </div>
         );
     }
+    
+    const getDialogDescription = () => {
+        if (newNoteParentId) {
+            const parentFolder = notes.find(n => n.id === newNoteParentId);
+            return `This item will be created in the folder "${parentFolder?.title}".`;
+        }
+        return `This item will be created in the topic "${activeTopic.name}".`;
+    };
+
 
     return (
         <>
@@ -370,7 +384,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                      <Button
                         className="w-full justify-center gap-2"
                         onClick={() => {
-                            setIsSubNote(false);
+                            setNewNoteParentId(null);
                             setNewNoteType('code');
                             setIsNoteDialogOpen(true);
                         }}
@@ -398,7 +412,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                              >
                                  <SortableContext items={notes.map(n => n.id)} strategy={verticalListSortingStrategy}>
                                      {topLevelNotes.map(note => (
-                                        <SortableNoteItem key={note.id} note={note} onNoteSelect={handleNoteSelection} />
+                                        <SortableNoteItem key={note.id} note={note} onNoteSelect={handleNoteSelection} onAddInside={handleAddInside} />
                                     ))}
                                  </SortableContext>
                              </DndContext>
@@ -427,7 +441,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
             </AlertDialog>
 
             <Dialog open={isNoteDialogOpen} onOpenChange={(isOpen) => {
-                if(!isOpen) setIsSubNote(false);
+                if(!isOpen) setNewNoteParentId(null);
                 setIsNoteDialogOpen(isOpen);
             }}>
                 <DialogContent>
@@ -436,7 +450,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                          Create New Item
                     </DialogTitle>
                      <DialogDescription>
-                        This item will be created in the topic "{activeTopic.name}". You can drag it into a folder later.
+                        {getDialogDescription()}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -512,3 +526,5 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         </>
     );
 }
+
+    
