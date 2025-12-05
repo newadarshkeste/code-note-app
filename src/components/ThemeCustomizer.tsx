@@ -8,9 +8,11 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Label } from './ui/label';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Separator } from './ui/separator';
+import { useTheme } from 'next-themes';
 
 // Function to convert HSL string to Hex color
 function hslToHex(hslStr: string): string {
+    if (!hslStr) return '#000000';
     const [h, s, l] = hslStr.split(' ').map(val => parseFloat(val.replace('%', '')));
     const sDecimal = s / 100;
     const lDecimal = l / 100;
@@ -78,32 +80,31 @@ function hexToHsl(hex: string): string {
 
 
 export function ThemeCustomizer() {
+    const { theme } = useTheme();
     // Default HSL values from globals.css
     const defaultPrimaryHsl = '221 83% 53%';
-    const defaultDarkBackgroundHsl = '222 47% 9%';
+    const defaultLightBackgroundHsl = '0 0% 100%'; // Pure White for light mode
+    const defaultDarkBackgroundHsl = '222 47% 9%'; // Original dark background
     
     const [primaryHsl, setPrimaryHsl] = useLocalStorage('theme-primary-hsl', defaultPrimaryHsl);
-    const [backgroundHsl, setBackgroundHsl] = useLocalStorage('theme-background-hsl', defaultDarkBackgroundHsl);
+    const [lightBackgroundHsl, setLightBackgroundHsl] = useLocalStorage('theme-light-background-hsl', defaultLightBackgroundHsl);
+    const [darkBackgroundHsl, setDarkBackgroundHsl] = useLocalStorage('theme-dark-background-hsl', defaultDarkBackgroundHsl);
 
     const [primaryColor, setPrimaryColor] = useState(() => hslToHex(primaryHsl));
-    const [backgroundColor, setBackgroundColor] = useState(() => hslToHex(backgroundHsl));
-
+    const [backgroundColor, setBackgroundColor] = useState(() => hslToHex(theme === 'dark' ? darkBackgroundHsl : lightBackgroundHsl));
+    
+    // Update UI and CSS variable for primary color
     useEffect(() => {
         document.documentElement.style.setProperty('--primary', primaryHsl);
     }, [primaryHsl]);
-
+    
+    // Update UI and CSS variable for background color
     useEffect(() => {
-        // This targets the --background variable for the .dark theme selector specifically
-        const darkThemeSelector = '.dark'; 
-        const root = document.documentElement;
-        
-        // To apply the background change only in dark mode, we can create a specific style rule
-        // or just apply it to the main background variable, which has more effect in dark mode by default.
-        // For simplicity and effectiveness given the current CSS setup, we'll just set the main --background.
-        // The light theme has its own background set, so this primarily impacts dark mode.
-        root.style.setProperty('--background', backgroundHsl);
-        
-    }, [backgroundHsl]);
+        const currentBgHsl = theme === 'dark' ? darkBackgroundHsl : lightBackgroundHsl;
+        document.documentElement.style.setProperty('--background', currentBgHsl);
+        setBackgroundColor(hslToHex(currentBgHsl));
+    }, [theme, lightBackgroundHsl, darkBackgroundHsl]);
+
 
     const handlePrimaryColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newHex = e.target.value;
@@ -116,14 +117,25 @@ export function ThemeCustomizer() {
         const newHex = e.target.value;
         setBackgroundColor(newHex);
         const newHsl = hexToHsl(newHex);
-        setBackgroundHsl(newHsl);
+        if (theme === 'dark') {
+            setDarkBackgroundHsl(newHsl);
+        } else {
+            setLightBackgroundHsl(newHsl);
+        }
     };
 
     const handleReset = () => {
         setPrimaryHsl(defaultPrimaryHsl);
-        setBackgroundHsl(defaultDarkBackgroundHsl);
+        setLightBackgroundHsl(defaultLightBackgroundHsl);
+        setDarkBackgroundHsl(defaultDarkBackgroundHsl);
+        
         setPrimaryColor(hslToHex(defaultPrimaryHsl));
-        setBackgroundColor(hslToHex(defaultDarkBackgroundHsl));
+        // Set the hex color based on the current theme after resetting
+        if (theme === 'dark') {
+             setBackgroundColor(hslToHex(defaultDarkBackgroundHsl));
+        } else {
+             setBackgroundColor(hslToHex(defaultLightBackgroundHsl));
+        }
     };
 
     return (
@@ -150,7 +162,7 @@ export function ThemeCustomizer() {
                     </div>
                     
                      <div className="space-y-2">
-                        <Label htmlFor="background-color" className="font-semibold">Background Color (Dark)</Label>
+                        <Label htmlFor="background-color" className="font-semibold">Background Color</Label>
                         <div className="flex items-center gap-2">
                             <input
                                 id="background-color"
