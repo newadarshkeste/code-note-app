@@ -54,7 +54,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 
-function SortableNoteItem({ note, onNoteSelect, onAddInside }: { note: Note, onNoteSelect: (id: string) => void, onAddInside: (parentId: string) => void }) {
+function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }: { note: Note, onNoteSelect: (id: string) => void, onAddInside: (parentId: string) => void, activeId: string | null, overId: string | null }) {
     const { 
         activeNoteId, 
         getSubNotes, 
@@ -104,10 +104,19 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside }: { note: Note, onN
                 return null;
         }
     }
+
+    const isOverFolder = note.type === 'folder' && overId === note.id && activeId !== note.id;
     
     return (
         <Collapsible open={isExpanded} onOpenChange={setIsExpanded} className="relative w-full">
-            <div ref={setNodeRef} style={style} className="group flex items-center w-full my-1 rounded-md bg-card/80 hover:bg-accent/80 pr-1">
+            <div 
+                ref={setNodeRef} 
+                style={style} 
+                className={cn(
+                    "group flex items-center w-full my-1 rounded-md bg-card/80 hover:bg-accent/80 pr-1 transition-all duration-150",
+                    isOverFolder && "ring-2 ring-primary bg-primary/10"
+                )}
+            >
                 <div 
                     {...attributes} 
                     {...listeners} 
@@ -168,7 +177,7 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside }: { note: Note, onN
                     <div className="pl-6">
                         <SortableContext items={subNotes.map(n => n.id)} strategy={verticalListSortingStrategy}>
                            {subNotes.map(subNote => (
-                               <SortableNoteItem key={subNote.id} note={subNote} onNoteSelect={onNoteSelect} onAddInside={onAddInside} />
+                               <SortableNoteItem key={subNote.id} note={subNote} onNoteSelect={onNoteSelect} onAddInside={onAddInside} activeId={activeId} overId={overId} />
                            ))}
                         </SortableContext>
                     </div>
@@ -235,6 +244,8 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
     const [pendingNoteId, setPendingNoteId] = useState<string | null>(null);
     const [isUnsavedDialogOpen, setIsUnsavedDialogOpen] = useState(false);
     const [activeDragId, setActiveDragId] = useState<string | null>(null);
+    const [overId, setOverId] = useState<string | null>(null);
+
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -319,13 +330,17 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
         setActiveDragId(null);
+        setOverId(null);
+        
         if (over && active.id !== over.id) {
            handleNoteDrop(active.id as string, over?.id as string | null);
         } else if (!over) {
             handleNoteDrop(active.id as string, null);
         }
     };
+    
      const handleDragOver = (event: DragOverEvent) => {
+        setOverId(event.over?.id as string | null);
     };
 
     const topLevelNotes = useMemo(() => {
@@ -415,7 +430,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                              >
                                  <SortableContext items={notes.map(n => n.id)} strategy={verticalListSortingStrategy}>
                                      {topLevelNotes.map(note => (
-                                        <SortableNoteItem key={note.id} note={note} onNoteSelect={handleNoteSelection} onAddInside={handleAddInside} />
+                                        <SortableNoteItem key={note.id} note={note} onNoteSelect={handleNoteSelection} onAddInside={handleAddInside} activeId={activeDragId} overId={overId} />
                                     ))}
                                  </SortableContext>
                              </DndContext>
@@ -527,3 +542,5 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         </>
     );
 }
+
+    
