@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
@@ -38,16 +39,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!auth || !firestore) {
-        setLoading(false);
-        return;
+      setLoading(false);
+      return;
     }
-
-    // This handles the result of the redirect after the user signs in with Google
+  
     getRedirectResult(auth)
       .then(async (result) => {
         if (result && result.user) {
           const user = result.user;
-          // User signed in via redirect, now create their document if it doesn't exist
           const userRef = doc(firestore, 'users', user.uid);
           const userSnap = await getDoc(userRef);
           if (!userSnap.exists()) {
@@ -63,48 +62,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch(error => {
-        // This can happen if the user closes the popup or on other errors.
-        // It's generally safe to ignore this during initialization.
         console.warn("getRedirectResult error:", error.message);
       })
       .finally(() => {
-        // We still need the onAuthStateChanged listener to set the final state,
-        // but handling the redirect here ensures the user document is created promptly.
+        // After handling redirect, the onAuthStateChanged listener will correctly set the user.
       });
-
-
+  
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // User is signed in, see if we need to create a user document
         const userRef = doc(firestore, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         if (!userSnap.exists()) {
-          // New user, create a document for them.
-          // This handles email signups and acts as a fallback for getRedirectResult.
           await setDoc(userRef, {
             id: user.uid,
-            displayName: user.displayName || user.email, // Fallback for email signup
+            displayName: user.displayName || user.email,
             email: user.email,
             photoURL: user.photoURL,
             createdAt: serverTimestamp(),
             lastLogin: serverTimestamp(),
           });
         } else {
-          // Existing user, update last login time
           await setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true });
         }
       }
       setUser(user);
       setLoading(false);
     });
-
+  
     return () => unsubscribe();
   }, [auth, firestore]);
 
   const loginWithGoogle = async () => {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
-    setLoading(true); // Set loading state before redirect
+    setLoading(true);
     try {
       await signInWithRedirect(auth, provider);
     } catch (error) {
@@ -120,7 +111,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      // No need to set loading to false, onAuthStateChanged will handle it
       return true;
     } catch (error) {
       setLoading(false);
@@ -139,11 +129,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // No need to set loading to false, onAuthStateChanged will handle it
       return true;
     } catch (error) {
       setLoading(false);
-      const authError = error as AuthError;
       toast({
         variant: 'destructive',
         title: 'Sign In Failed',
