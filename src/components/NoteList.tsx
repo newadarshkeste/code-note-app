@@ -53,6 +53,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { useToast } from '@/hooks/use-toast';
 
 function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }: { note: Note, onNoteSelect: (id: string) => void, onAddInside: (parentId: string) => void, activeId: string | null, overId: string | null }) {
     const { 
@@ -73,7 +74,7 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }:
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: note.id });
+    } = useSortable({ id: note.id, disabled: note.parentId ? getSubNotes(note.parentId).some(n => n.type === 'folder') && note.type === 'folder' : false });
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -229,15 +230,19 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         addNote,
         isDirty,
         setIsDirty,
+        activeNote,
+        activeNoteId,
         setActiveNoteId,
         saveActiveNote,
         handleNoteDrop,
         getSubNotes,
     } = useNotes();
+    const { toast } = useToast();
 
     const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
     const [newNoteTitle, setNewNoteTitle] = useState('');
     const [newNoteType, setNewNoteType] = useState<'code' | 'text' | 'folder'>('code');
+    const [allowedNoteTypes, setAllowedNoteTypes] = useState<Array<'code' | 'text' | 'folder'>>(['code', 'text', 'folder']);
     const [newNoteLanguage, setNewNoteLanguage] = useState('javascript');
     const [noteSearch, setNoteSearch] = useState('');
     const [newNoteParentId, setNewNoteParentId] = useState<string | null>(null);
@@ -256,24 +261,47 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
     
     const handleNoteSelection = (noteId: string) => {
         const note = notes.find(n => n.id === noteId);
-        if (note && note.type === 'folder') {
-            return;
-        }
-
+        
+        // Always allow selecting folders or notes.
+        // The action of selecting a folder is just to change the activeNoteId,
+        // which then affects where new items are added. The NoteDisplay will handle
+        // showing the folder content screen.
         if (isDirty) {
             setPendingNoteId(noteId);
             setIsUnsavedDialogOpen(true);
         } else {
             setActiveNoteId(noteId);
-            if (isMobile && onNoteSelect) {
+            if (isMobile && onNoteSelect && note?.type !== 'folder') {
                 onNoteSelect();
             }
         }
     };
 
     const handleAddInside = (parentId: string) => {
+        handleOpenNewItemDialog(parentId);
+    };
+
+    const handleOpenNewItemDialog = (parentId: string | null) => {
+        const parentNote = parentId ? notes.find(n => n.id === parentId) : null;
+        
+        let allowedTypes: Array<'code' | 'text' | 'folder'> = ['code', 'text', 'folder'];
+        let defaultType: 'code' | 'text' | 'folder' = 'code';
+        
+        if (parentNote?.type === 'code') {
+            allowedTypes = ['text'];
+            defaultType = 'text';
+        } else if (parentNote?.type === 'text') {
+            toast({
+                variant: 'destructive',
+                title: "Cannot Add Item",
+                description: "You cannot add a nested item to a text note.",
+            });
+            return;
+        }
+
+        setAllowedNoteTypes(allowedTypes);
         setNewNoteParentId(parentId);
-        setNewNoteType('code'); // Default to code
+        setNewNoteType(defaultType);
         setNewNoteTitle('');
         setIsNoteDialogOpen(true);
     };
@@ -335,8 +363,6 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         if (over && active.id !== over.id) {
            handleNoteDrop(active.id as string, over?.id as string | null);
         } else if (!over) {
-            // This case handles dropping into an empty space to make it a top-level item.
-            // Check if the item is not already a top-level item.
             const activeNote = notes.find(n => n.id === active.id);
             if(activeNote && activeNote.parentId) {
                 handleNoteDrop(active.id as string, null);
@@ -351,15 +377,12 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
     const displayedNotes = useMemo(() => {
         const lowerCaseSearch = noteSearch.toLowerCase();
         if (!noteSearch) {
-            // If not searching, return only top-level notes for the initial render.
-            // The recursive SortableNoteItem will render children.
             return getSubNotes(null);
         }
-        
-        // If searching, return a flat list of all notes that match.
         return notes.filter(note => note.title.toLowerCase().includes(lowerCaseSearch));
     }, [notes, noteSearch, getSubNotes]);
 
+    const isAddItemDisabled = activeNote?.type === 'text';
 
     if (!activeTopic) {
         return (
@@ -370,11 +393,17 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
     }
     
     const getDialogDescription = () => {
+        let parentName = activeTopic.name;
+        let location = "topic";
+        
         if (newNoteParentId) {
-            const parentFolder = notes.find(n => n.id === newNoteParentId);
-            return `This item will be created inside the folder "${parentFolder?.title}".`;
+            const parentNote = notes.find(n => n.id === newNoteParentId);
+            if(parentNote) {
+                parentName = parentNote.title;
+                location = parentNote.type;
+            }
         }
-        return `This item will be created in the topic "${activeTopic.name}".`;
+        return `This item will be created inside the ${location} "${parentName}".`;
     };
 
 
@@ -406,12 +435,9 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                     </div>
                      <Button
                         className="w-full justify-center gap-2"
-                        onClick={() => {
-                            setNewNoteParentId(null);
-                            setNewNoteType('code');
-                            setNewNoteTitle('');
-                            setIsNoteDialogOpen(true);
-                        }}
+                        onClick={() => handleOpenNewItemDialog(activeNoteId)}
+                        disabled={isAddItemDisabled}
+                        title={isAddItemDisabled ? "Cannot add item to a text note" : "Add a new item"}
                     >
                         <FilePlus2 className="h-4 w-4" />
                         <span>Add Item</span>
@@ -495,18 +521,24 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                             value={newNoteType}
                             onValueChange={(value: 'code' | 'text' | 'folder') => setNewNoteType(value)}
                         >
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="code" id="r1" />
-                                <Label htmlFor="r1" className="font-normal flex items-center gap-2"><Code className="h-4 w-4"/> Code Snippet</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="text" id="r2" />
-                                <Label htmlFor="r2" className="font-normal flex items-center gap-2"><Type className="h-4 w-4"/> Text Note</Label>
-                            </div>
-                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="folder" id="r3" />
-                                <Label htmlFor="r3" className="font-normal flex items-center gap-2"><Folder className="h-4 w-4"/> Folder</Label>
-                            </div>
+                            {allowedNoteTypes.includes('code') && (
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="code" id="r1" />
+                                    <Label htmlFor="r1" className="font-normal flex items-center gap-2"><Code className="h-4 w-4"/> Code Snippet</Label>
+                                </div>
+                            )}
+                            {allowedNoteTypes.includes('text') && (
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="text" id="r2" />
+                                    <Label htmlFor="r2" className="font-normal flex items-center gap-2"><Type className="h-4 w-4"/> Text Note</Label>
+                                </div>
+                            )}
+                            {allowedNoteTypes.includes('folder') && (
+                                 <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="folder" id="r3" />
+                                    <Label htmlFor="r3" className="font-normal flex items-center gap-2"><Folder className="h-4 w-4"/> Folder</Label>
+                                </div>
+                            )}
                         </RadioGroup>
                     </div>
                     {newNoteType === 'code' && (

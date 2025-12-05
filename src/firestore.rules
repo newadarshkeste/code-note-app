@@ -1,3 +1,4 @@
+
 /**
  * This ruleset enforces a strict user-ownership security model for a multi-user
  * note-taking application. It is designed for rapid prototyping, prioritizing
@@ -100,7 +101,7 @@ service cloud.firestore {
       return data.topicId == topicId
           && data.title is string
           && data.content is string
-          && data.type is string && (data.type == 'text' || data.type == 'code')
+          && data.type is string && (data.type == 'text' || data.type == 'code' || data.type == 'folder')
           && ('parentId' in data) // parentId can be null or a string
           && data.order is number;
     }
@@ -114,7 +115,7 @@ service cloud.firestore {
        let existingData = resource.data;
        
        return (!('topicId' in incomingData) || incomingData.topicId == existingData.topicId)
-          && (!('type' in incomingData) || incomingData.type == existingData.type)
+          && (!('type' in incomingData) || (incomingData.type == existingData.type && (incomingData.type == 'text' || incomingData.type == 'code' || incomingData.type == 'folder')))
           && (!('createdAt' in incomingData) || incomingData.createdAt == existingData.createdAt);
           // parentId and order can be updated
     }
