@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNotes } from '@/context/NotesContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,32 +26,57 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
-import { File, FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight, ChevronRight, ChevronLeft } from 'lucide-react';
+import { FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight, GripVertical } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Note } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+    DragStartEvent,
+    DragOverEvent,
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
-interface NoteItemProps {
-    note: Note;
-    level?: number;
-    onNoteSelect: (noteId: string) => void;
-    isMobile?: boolean;
-}
-
-function NoteItem({ note, level = 0, onNoteSelect, isMobile }: NoteItemProps) {
+function SortableNoteItem({ note, level = 0, onNoteSelect }: { note: Note, level?: number, isMobile?: boolean, onNoteSelect: (id: string) => void }) {
     const { 
         activeNoteId, 
         getSubNotes, 
         deleteNote,
         updateNote
     } = useNotes();
-    
     const [renameNote, setRenameNote] = useState<Note | null>(null);
     const [renamingTitle, setRenamingTitle] = useState('');
+    
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: note.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
     const subNotes = getSubNotes(note.id);
     const hasSubNotes = subNotes.length > 0;
 
@@ -63,80 +88,63 @@ function NoteItem({ note, level = 0, onNoteSelect, isMobile }: NoteItemProps) {
         }
     };
     
-    const renderNoteContent = () => (
-      <div className="group flex items-center justify-between w-full h-10 pr-1">
-          <Button
-              variant="ghost"
-              onClick={() => onNoteSelect(note.id)}
-              className={cn(
-                  "w-full justify-start gap-2 h-full text-sm",
-                  activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent'
-              )}
-              style={{ paddingLeft: `${(level * 1.5) + (hasSubNotes ? 0.25 : 2)}rem` }}
-          >
-              {note.type === 'code' ? (
-                  <Code className="h-4 w-4 flex-shrink-0" />
-              ) : (
-                  <Type className="h-4 w-4 flex-shrink-0" />
-              )}
-              <span className="truncate flex-grow text-left">{note.title}</span>
-          </Button>
-          <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setRenameNote(note); setRenamingTitle(note.title); }}>
-                  <Pencil className="h-4 w-4 text-muted-foreground" />
-              </Button>
-              <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => e.stopPropagation()}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                      <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                              This will permanently delete "{note.title}" and all its sub-notes. This action cannot be undone.
-                          </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteNote(note.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                      </AlertDialogFooter>
-                  </AlertDialogContent>
-              </AlertDialog>
-          </div>
-      </div>
-    );
-
-    if (hasSubNotes) {
-        return (
-            <AccordionItem value={note.id} className="border-b-0">
-                <div className={cn("flex items-center w-full rounded-md", activeNoteId === note.id && 'bg-primary/10')}>
-                    <AccordionTrigger
-                        className={cn(
-                            "p-0 rounded-sm hover:bg-accent/50 [&[data-state=open]>svg]:rotate-90",
-                            "w-8 h-10 flex items-center justify-center"
-                        )}
-                         style={{ marginLeft: `${level * 1.5}rem` }}
-                    >
-                         <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200" />
-                    </AccordionTrigger>
-                    <div className="flex-grow">
-                      {renderNoteContent()}
-                    </div>
-                </div>
-                <AccordionContent className="p-0">
-                     {subNotes.map(subNote => (
-                        <NoteItem key={subNote.id} note={subNote} level={level + 1} onNoteSelect={onNoteSelect} isMobile={isMobile} />
-                    ))}
-                </AccordionContent>
-            </AccordionItem>
-        )
-    }
-
     return (
-        <div className="py-1 flex items-center w-full">
-            {renderNoteContent()}
+        <div ref={setNodeRef} style={style} className="relative">
+            <div className="group flex items-center justify-between w-full h-10 pr-1 my-1 rounded-md bg-card/80 hover:bg-accent/80">
+                <Button
+                    variant="ghost"
+                    onClick={() => onNoteSelect(note.id)}
+                    className={cn(
+                        "w-full justify-start gap-2 h-full text-sm",
+                        activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : ''
+                    )}
+                    style={{ paddingLeft: `${(level * 1.5) + 1}rem` }}
+                >
+                    <div {...attributes} {...listeners} className="cursor-grab p-2 -ml-2">
+                        <GripVertical className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    {note.type === 'code' ? (
+                        <Code className="h-4 w-4 flex-shrink-0" />
+                    ) : (
+                        <Type className="h-4 w-4 flex-shrink-0" />
+                    )}
+                    <span className="truncate flex-grow text-left">{note.title}</span>
+                </Button>
+                <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setRenameNote(note); setRenamingTitle(note.title); }}>
+                        <Pencil className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => e.stopPropagation()}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete "{note.title}" and all its sub-notes. This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteNote(note.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            </div>
+
+            {hasSubNotes && (
+                <div className="pl-6">
+                    <SortableContext items={subNotes.map(n => n.id)} strategy={verticalListSortingStrategy}>
+                       {subNotes.map(subNote => (
+                           <SortableNoteItem key={subNote.id} note={subNote} level={level + 1} onNoteSelect={onNoteSelect} />
+                       ))}
+                    </SortableContext>
+                </div>
+            )}
         </div>
     );
 }
@@ -153,12 +161,12 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         notes,
         notesLoading,
         addNote,
-        updateNote,
         activeNote,
         isDirty,
         setIsDirty,
         setActiveNoteId,
         saveActiveNote,
+        handleNoteDrop,
     } = useNotes();
 
     const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
@@ -166,11 +174,17 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
     const [newNoteType, setNewNoteType] = useState<'code' | 'text'>('code');
     const [newNoteLanguage, setNewNoteLanguage] = useState('javascript');
     const [noteSearch, setNoteSearch] = useState('');
-    const [renameNote, setRenameNote] = useState<Note | null>(null);
-    const [renamingTitle, setRenamingTitle] = useState('');
     const [isSubNote, setIsSubNote] = useState(false);
     const [pendingNoteId, setPendingNoteId] = useState<string | null>(null);
     const [isUnsavedDialogOpen, setIsUnsavedDialogOpen] = useState(false);
+    const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
     
     const handleNoteSelection = (noteId: string) => {
         if (isDirty) {
@@ -228,14 +242,41 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
             setIsSubNote(false);
         }
     };
-
-    const handleRenameNote = async () => {
-        if (renameNote && renamingTitle.trim()) {
-            await updateNote(renameNote.id, { title: renamingTitle.trim() });
-            setRenameNote(null);
-            setRenamingTitle('');
+    
+    const handleDragStart = (event: DragStartEvent) => {
+        setActiveDragId(event.active.id as string);
+    };
+    
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActiveDragId(null);
+        if (active.id !== over?.id) {
+           handleNoteDrop(active.id as string, over?.id as string | null);
         }
     };
+     const handleDragOver = (event: DragOverEvent) => {
+        const { active, over } = event;
+        const activeId = active.id as string;
+        const overId = over?.id as string | null;
+
+        if (!overId || activeId === overId) return;
+
+        const activeNote = notes.find(n => n.id === activeId);
+        const overNote = notes.find(n => n.id === overId);
+
+        if (!activeNote || !overNote) return;
+
+        // Logic to handle dropping over a note (making it a subnote)
+        // This is a simplified version. A full implementation would need more complex state updates.
+        // For now, we only handle reordering.
+    };
+
+    const topLevelNotes = useMemo(() => {
+        const lowerCaseSearch = noteSearch.toLowerCase();
+        const filtered = notes.filter(note => note.title.toLowerCase().includes(lowerCaseSearch));
+        return filtered.filter(note => !note.parentId);
+    }, [notes, noteSearch]);
+
 
     if (!activeTopic) {
         return (
@@ -244,17 +285,21 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
             </div>
         );
     }
-    
-    const filteredNotes = notes.filter(note =>
-        note.title.toLowerCase().includes(noteSearch.toLowerCase()) && !note.parentId
-    );
 
     return (
         <>
             <div className="h-full w-full flex flex-col bg-card border-r">
                 <header className="flex-shrink-0 p-4 flex items-center justify-between border-b h-[65px]">
-                    <h2 className="text-lg font-headline font-semibold truncate" title={activeTopic.name}>{activeTopic.name}</h2>
-                    <div/>
+                    <div className="flex items-center gap-2 min-w-0">
+                        {isMobile && onBack && (
+                            <Button variant="ghost" size="icon" onClick={onBack} className="mr-2">
+                                <CornerDownRight className="h-4 w-4" />
+                            </Button>
+                        )}
+                        <h2 className="text-lg font-headline font-semibold truncate" title={activeTopic.name}>
+                            {activeTopic.name}
+                        </h2>
+                    </div>
                 </header>
                 
                 <div className="p-4 flex-shrink-0 space-y-4">
@@ -301,11 +346,19 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                                 <Skeleton className="h-10 w-full" />
                             </div>
                         ) : (
-                            <Accordion type="multiple" className="w-full">
-                                {filteredNotes.map((note) => (
-                                    <NoteItem key={note.id} note={note} onNoteSelect={handleNoteSelection} isMobile={isMobile} />
-                                ))}
-                            </Accordion>
+                             <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragStart={handleDragStart}
+                                onDragEnd={handleDragEnd}
+                                onDragOver={handleDragOver}
+                             >
+                                 <SortableContext items={notes.map(n => n.id)} strategy={verticalListSortingStrategy}>
+                                     {topLevelNotes.map(note => (
+                                        <SortableNoteItem key={note.id} note={note} onNoteSelect={handleNoteSelection} isMobile={isMobile} />
+                                    ))}
+                                 </SortableContext>
+                             </DndContext>
                         )}
                          {notes.length === 0 && !notesLoading && (
                              <p className="text-sm text-center text-muted-foreground pt-4">No notes in this topic.</p>
@@ -409,34 +462,6 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                     <Button type="button" variant="secondary">Cancel</Button>
                     </DialogClose>
                     <Button onClick={handleAddNote} className="bg-primary hover:bg-primary/90 text-primary-foreground">Create</Button>
-                </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={!!renameNote} onOpenChange={(isOpen) => !isOpen && setRenameNote(null)}>
-                <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Rename Note</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="rename-note-title" className="text-right">
-                        New Title
-                    </Label>
-                    <Input
-                        id="rename-note-title"
-                        value={renamingTitle}
-                        onChange={(e) => setRenamingTitle(e.target.value)}
-                        className="col-span-3 font-body"
-                        onKeyDown={(e) => e.key === 'Enter' && handleRenameNote()}
-                    />
-                    </div>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                    <Button type="button" variant="secondary" onClick={() => setRenameNote(null)}>Cancel</Button>
-                    </DialogClose>
-                    <Button onClick={handleRenameNote} className="bg-primary hover:bg-primary/90 text-primary-foreground">Rename</Button>
                 </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -46,6 +46,7 @@ interface NotesContextType {
   addNote: (note: NoteCreate) => Promise<void>;
   deleteNote: (noteId: string) => Promise<void>;
   updateNote: (noteId: string, data: NoteUpdate) => Promise<void>;
+  handleNoteDrop: (activeId: string, overId: string | null) => Promise<void>;
   activeNote: Note | null;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
@@ -152,7 +153,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         return;
     }
     setNotesLoading(true);
-    const q = query(notesCollectionRef, orderBy('createdAt', 'desc'));
+    const q = query(notesCollectionRef, orderBy('order', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedNotes = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Note));
       setNotes(fetchedNotes);
@@ -233,6 +234,10 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     if (!notesCollectionRef || !user || !activeTopicId) return;
     const content = note.type === 'code' ? `// Start writing your ${note.title} note here...` : `<p>Start writing your ${note.title} note here...</p>`;
     
+    // Get the highest order number for the current parent level
+    const siblings = notes.filter(n => n.parentId === (note.parentId || null));
+    const maxOrder = siblings.reduce((max, n) => Math.max(max, n.order), -1);
+
     const newNoteData: any = { 
         title: note.title,
         type: note.type,
@@ -242,6 +247,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         parentId: note.parentId || null,
+        order: maxOrder + 1,
     };
 
     if (note.type === 'code') {
@@ -291,6 +297,68 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const handleNoteDrop = useCallback(async (activeId: string, overId: string | null) => {
+    if (!notesCollectionRef) return;
+
+    const activeNote = notes.find(n => n.id === activeId);
+    if (!activeNote) return;
+
+    const overNote = overId ? notes.find(n => n.id === overId) : null;
+    
+    // Scenario 1: Dropped into a new parent
+    if (overId && activeNote.id !== overId) {
+        const newParentId = overId;
+        const siblings = notes.filter(n => n.parentId === newParentId).sort((a,b) => a.order - b.order);
+        const newOrder = siblings.length > 0 ? siblings[siblings.length - 1].order + 1 : 0;
+        
+        const batch = writeBatch(firestore);
+        const noteRef = doc(notesCollectionRef, activeNote.id);
+        batch.update(noteRef, { parentId: newParentId, order: newOrder });
+
+        // Re-order old siblings
+        const oldSiblings = notes
+            .filter(n => n.parentId === activeNote.parentId && n.id !== activeNote.id)
+            .sort((a, b) => a.order - b.order);
+        
+        oldSiblings.forEach((sibling, index) => {
+            if (sibling.order !== index) {
+                const siblingRef = doc(notesCollectionRef, sibling.id);
+                batch.update(siblingRef, { order: index });
+            }
+        });
+
+        await batch.commit();
+        return;
+    }
+
+    // Scenario 2: Reordering within the same list
+    const activeIndex = notes.findIndex(n => n.id === activeId);
+    const overIndex = overId ? notes.findIndex(n => n.id === overId) : notes.length;
+    
+    if (activeIndex === -1 || activeIndex === overIndex) return;
+    
+    let newItems = [...notes];
+    const [movedItem] = newItems.splice(activeIndex, 1);
+    newItems.splice(overIndex, 0, movedItem);
+
+    const batch = writeBatch(firestore);
+
+    newItems.forEach((note, index) => {
+        if (note.order !== index) {
+             const noteRef = doc(notesCollectionRef, note.id);
+             batch.update(noteRef, { order: index, parentId: null });
+        }
+    });
+
+    try {
+        await batch.commit();
+    } catch (e) {
+        console.error("Failed to reorder notes:", e);
+        toast({ variant: 'destructive', title: "Error", description: "Could not save new note order." });
+    }
+
+  }, [notes, notesCollectionRef, firestore]);
+
   const activeNote = useMemo(() => {
     return notes.find(note => note.id === activeNoteId) || null;
   }, [activeNoteId, notes]);
@@ -300,7 +368,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   }, [activeTopicId, topics]);
   
   const getSubNotes = useCallback((parentId: string) => {
-    return notes.filter(note => note.parentId === parentId).sort((a,b) => a.createdAt > b.createdAt ? 1 : -1);
+    return notes.filter(note => note.parentId === parentId).sort((a,b) => a.order - b.order);
   }, [notes]);
 
   const getAllNotes = async (): Promise<Note[]> => {
@@ -368,6 +436,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     addNote,
     deleteNote,
     updateNote,
+    handleNoteDrop,
     activeNote,
     searchTerm,
     setSearchTerm,
@@ -392,5 +461,3 @@ export function useNotes() {
   }
   return context;
 }
-
-    

@@ -92,8 +92,8 @@ service cloud.firestore {
     }
 
     /**
-     * On create, validates that the note document's internal `topicId` field
-     * matches the `topicId` from the path.
+     * On create, validates that the note document has all required fields
+     * and that the parentId and topicId are consistent.
      */
     function hasValidNoteFieldsOnCreate(topicId) {
       let data = request.resource.data;
@@ -101,18 +101,22 @@ service cloud.firestore {
           && data.title is string
           && data.content is string
           && data.type is string && (data.type == 'text' || data.type == 'code')
-          && ('parentId' in data); // parentId can be null or a string
+          && ('parentId' in data) // parentId can be null or a string
+          && data.order is number;
     }
 
     /**
      * On update, ensures key note fields are immutable.
+     * Allows `order` and `parentId` to be changed for reordering.
      */
     function hasImmutableNoteFields() {
-       let data = request.resource.data;
-       return data.topicId == resource.data.topicId
-          && data.type == resource.data.type
-          && data.createdAt == resource.data.createdAt
-          && data.parentId == resource.data.parentId;
+       let incomingData = request.resource.data;
+       let existingData = resource.data;
+       
+       return (!('topicId' in incomingData) || incomingData.topicId == existingData.topicId)
+          && (!('type' in incomingData) || incomingData.type == existingData.type)
+          && (!('createdAt' in incomingData) || incomingData.createdAt == existingData.createdAt);
+          // parentId and order can be updated
     }
 
     //-------------------------------------------------------------------------

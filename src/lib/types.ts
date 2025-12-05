@@ -11,6 +11,7 @@ export interface Note {
   // This can be optionally added when fetching notes for export
   topicName?: string; 
   parentId?: string | null;
+  order: number;
 }
 
 export type NoteCreate = { 
@@ -19,7 +20,7 @@ export type NoteCreate = {
   parentId?: string | null,
   language?: string,
 };
-export type NoteUpdate = Partial<Pick<Note, 'title' | 'content' | 'language'>>;
+export type NoteUpdate = Partial<Pick<Note, 'title' | 'content' | 'language' | 'order' | 'parentId'>>;
 
 export interface Topic {
   id: string;
