@@ -227,12 +227,12 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         notes,
         notesLoading,
         addNote,
-        activeNote,
         isDirty,
         setIsDirty,
         setActiveNoteId,
         saveActiveNote,
         handleNoteDrop,
+        getSubNotes,
     } = useNotes();
 
     const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
@@ -335,7 +335,12 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         if (over && active.id !== over.id) {
            handleNoteDrop(active.id as string, over?.id as string | null);
         } else if (!over) {
-            handleNoteDrop(active.id as string, null);
+            // This case handles dropping into an empty space to make it a top-level item.
+            // Check if the item is not already a top-level item.
+            const activeNote = notes.find(n => n.id === active.id);
+            if(activeNote && activeNote.parentId) {
+                handleNoteDrop(active.id as string, null);
+            }
         }
     };
     
@@ -343,16 +348,17 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         setOverId(event.over?.id as string | null);
     };
 
-    const topLevelNotes = useMemo(() => {
+    const displayedNotes = useMemo(() => {
         const lowerCaseSearch = noteSearch.toLowerCase();
-        const allFilteredNotes = notes.filter(note => note.title.toLowerCase().includes(lowerCaseSearch));
-        
         if (!noteSearch) {
-             return allFilteredNotes.filter(note => !note.parentId);
+            // If not searching, return only top-level notes for the initial render.
+            // The recursive SortableNoteItem will render children.
+            return getSubNotes(null);
         }
         
-        return allFilteredNotes;
-    }, [notes, noteSearch]);
+        // If searching, return a flat list of all notes that match.
+        return notes.filter(note => note.title.toLowerCase().includes(lowerCaseSearch));
+    }, [notes, noteSearch, getSubNotes]);
 
 
     if (!activeTopic) {
@@ -429,7 +435,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                                 onDragOver={handleDragOver}
                              >
                                  <SortableContext items={notes.map(n => n.id)} strategy={verticalListSortingStrategy}>
-                                     {topLevelNotes.map(note => (
+                                     {displayedNotes.map(note => (
                                         <SortableNoteItem key={note.id} note={note} onNoteSelect={handleNoteSelection} onAddInside={handleAddInside} activeId={activeDragId} overId={overId} />
                                     ))}
                                  </SortableContext>
@@ -542,5 +548,3 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         </>
     );
 }
-
-    
