@@ -114,7 +114,7 @@ service cloud.firestore {
        let existingData = resource.data;
        
        return (!('topicId' in incomingData) || incomingData.topicId == existingData.topicId)
-          && (!('type' in incomingData) || incomingData.type == existingData.type)
+          && (!('type' in incomingData) || (incomingData.type == existingData.type && (incomingData.type == 'text' || incomingData.type == 'code' || incomingData.type == 'folder')))
           && (!('createdAt' in incomingData) || incomingData.createdAt == existingData.createdAt);
           // parentId and order can be updated
     }
