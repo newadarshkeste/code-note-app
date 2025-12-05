@@ -159,7 +159,7 @@ function SortableNoteItem({ note, onNoteSelect }: { note: Note, onNoteSelect: (i
                     </div>
                 )}
             </CollapsibleContent>
-             <AlertDialog open={!!renameNote} onOpenChange={(isOpen) => !isOpen && setRenameNote(null)}>
+             <Dialog open={!!renameNote} onOpenChange={(isOpen) => !isOpen && setRenameNote(null)}>
                 <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Rename Note</DialogTitle>
@@ -185,7 +185,7 @@ function SortableNoteItem({ note, onNoteSelect }: { note: Note, onNoteSelect: (i
                     <Button onClick={handleRenameNote}>Rename</Button>
                 </DialogFooter>
                 </DialogContent>
-            </AlertDialog>
+            </Dialog>
         </Collapsible>
     );
 }
@@ -334,7 +334,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                     <div className="flex items-center gap-2 min-w-0">
                         {isMobile && onBack && (
                             <Button variant="ghost" size="icon" onClick={onBack} className="mr-2">
-                                <CornerDownRight className="h-4 w-4" />
+                                <CornerDownRight className="h-4 w-4 rotate-180" />
                             </Button>
                         )}
                         <h2 className="text-lg font-headline font-semibold truncate" title={activeTopic.name}>
@@ -509,5 +509,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         </>
     );
 }
+
+    
 
     
