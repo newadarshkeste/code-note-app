@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Label } from './ui/label';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { Separator } from './ui/separator';
 
 // Function to convert HSL string to Hex color
 function hslToHex(hslStr: string): string {
@@ -76,22 +77,36 @@ function hexToHsl(hex: string): string {
 
 
 export function ThemeCustomizer() {
-    // Default HSL value from globals.css
+    // Default HSL values from globals.css
     const defaultPrimaryHsl = '221 83% 53%';
+    const defaultDarkBackgroundHsl = '222 47% 9%';
     
     const [primaryHsl, setPrimaryHsl] = useLocalStorage('theme-primary-hsl', defaultPrimaryHsl);
-    
-    const [color, setColor] = useState(() => hslToHex(primaryHsl));
+    const [backgroundHsl, setBackgroundHsl] = useLocalStorage('theme-background-hsl', defaultDarkBackgroundHsl);
+
+    const [primaryColor, setPrimaryColor] = useState(() => hslToHex(primaryHsl));
+    const [backgroundColor, setBackgroundColor] = useState(() => hslToHex(backgroundHsl));
 
     useEffect(() => {
         document.documentElement.style.setProperty('--primary', primaryHsl);
     }, [primaryHsl]);
 
-    const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    useEffect(() => {
+        document.documentElement.style.setProperty('--background', backgroundHsl);
+    }, [backgroundHsl]);
+
+    const handlePrimaryColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newHex = e.target.value;
-        setColor(newHex);
+        setPrimaryColor(newHex);
         const newHsl = hexToHsl(newHex);
         setPrimaryHsl(newHsl);
+    };
+
+    const handleBackgroundColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newHex = e.target.value;
+        setBackgroundColor(newHex);
+        const newHsl = hexToHsl(newHex);
+        setBackgroundHsl(newHsl);
     };
 
     return (
@@ -103,16 +118,32 @@ export function ThemeCustomizer() {
             </PopoverTrigger>
             <PopoverContent align="end" className="w-auto p-4">
                 <div className="flex flex-col gap-4">
-                    <Label htmlFor="primary-color" className="font-semibold">Primary Color</Label>
-                    <div className="flex items-center gap-2">
-                         <input
-                            id="primary-color"
-                            type="color"
-                            value={color}
-                            onChange={handleColorChange}
-                            className="h-8 w-8 rounded-md border-none cursor-pointer"
-                        />
-                        <span className="text-sm text-muted-foreground font-mono">{color.toUpperCase()}</span>
+                    <div>
+                        <Label htmlFor="primary-color" className="font-semibold">Primary Color</Label>
+                        <div className="flex items-center gap-2 mt-2">
+                            <input
+                                id="primary-color"
+                                type="color"
+                                value={primaryColor}
+                                onChange={handlePrimaryColorChange}
+                                className="h-8 w-8 rounded-md border-none cursor-pointer"
+                            />
+                            <span className="text-sm text-muted-foreground font-mono">{primaryColor.toUpperCase()}</span>
+                        </div>
+                    </div>
+                    <Separator />
+                     <div>
+                        <Label htmlFor="background-color" className="font-semibold">Background Color</Label>
+                        <div className="flex items-center gap-2 mt-2">
+                            <input
+                                id="background-color"
+                                type="color"
+                                value={backgroundColor}
+                                onChange={handleBackgroundColorChange}
+                                className="h-8 w-8 rounded-md border-none cursor-pointer"
+                            />
+                            <span className="text-sm text-muted-foreground font-mono">{backgroundColor.toUpperCase()}</span>
+                        </div>
                     </div>
                 </div>
             </PopoverContent>
