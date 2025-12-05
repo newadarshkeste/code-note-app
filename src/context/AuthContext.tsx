@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
@@ -13,10 +12,9 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
-  Auth,
 } from 'firebase/auth';
 import { useFirebase } from '@/firebase/provider';
-import { doc, setDoc, serverTimestamp, getDoc, Firestore } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
@@ -36,23 +34,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
-  // Defer getting firebase services until client-side
-  const [firebaseServices, setFirebaseServices] = useState<{auth: Auth, firestore: Firestore} | null>(null);
-  const firebase = useFirebase();
+  // This now safely gets the memoized services from the parent provider.
+  const { auth, firestore } = useFirebase();
 
   useEffect(() => {
-    if (firebase.auth && firebase.firestore) {
-      setFirebaseServices({ auth: firebase.auth, firestore: firebase.firestore });
-    }
-  }, [firebase]);
-
-  useEffect(() => {
-    if (!firebaseServices) {
-      setLoading(true);
+    if (!auth || !firestore) {
+      // This case should not happen if the provider order is correct,
+      // but it's a safe guard.
+      setLoading(false);
       return;
     };
-    
-    const { auth, firestore } = firebaseServices;
     
     getRedirectResult(auth)
       .then(async (result) => {
@@ -101,14 +92,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   
     return () => unsubscribe();
-  }, [firebaseServices]);
+  }, [auth, firestore]);
 
   const loginWithGoogle = async () => {
-    if (!firebaseServices) return;
+    if (!auth) return;
     const provider = new GoogleAuthProvider();
     setLoading(true);
     try {
-      await signInWithRedirect(firebaseServices.auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (error) {
       setLoading(false);
       if ((error as AuthError).code !== 'auth/popup-closed-by-user') {
@@ -118,10 +109,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUpWithEmail = async (email: string, password: string): Promise<boolean> => {
-    if (!firebaseServices) return false;
+    if (!auth) return false;
     setLoading(true);
     try {
-      await createUserWithEmailAndPassword(firebaseServices.auth, email, password);
+      await createUserWithEmailAndPassword(auth, email, password);
       // The onAuthStateChanged listener will handle the rest.
       return true;
     } catch (error) {
@@ -137,10 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
-    if (!firebaseServices) return false;
+    if (!auth) return false;
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(firebaseServices.auth, email, password);
+      await signInWithEmailAndPassword(auth, email, password);
       // The onAuthStateChanged listener will handle the rest.
       return true;
     } catch (error) {
@@ -155,9 +146,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const sendPasswordReset = async (email: string): Promise<boolean> => {
-    if (!firebaseServices) return false;
+    if (!auth) return false;
     try {
-      await sendPasswordResetEmail(firebaseServices.auth, email);
+      await sendPasswordResetEmail(auth, email);
       toast({
         title: 'Password Reset Email Sent',
         description: `An email has been sent to ${email}. If you don't see it, please check your spam folder.`,
@@ -175,9 +166,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    if (!firebaseServices) return;
+    if (!auth) return;
     try {
-      await signOut(firebaseServices.auth);
+      await signOut(auth);
       // The onAuthStateChanged listener will set user to null.
     } catch (error) {
       console.error("Error signing out:", error);

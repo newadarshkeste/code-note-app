@@ -1,34 +1,42 @@
-
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FirebaseProvider } from "@/firebase/provider";
 import { AuthProvider } from "@/context/AuthContext";
 import { NotesProvider } from "@/context/NotesContext";
 
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getAuth, Auth } from "firebase/auth";
 import { firebaseConfig } from "@/firebase/config";
 
-// This function now runs only on the client
-function getFirebaseServices() {
-  const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-  const firestore = getFirestore(firebaseApp);
-  const auth = getAuth(firebaseApp);
-  return { firebaseApp, firestore, auth };
+interface FirebaseServices {
+  firebaseApp: FirebaseApp;
+  firestore: Firestore;
+  auth: Auth;
 }
 
-
 export function ClientProviders({ children }: { children: React.ReactNode }) {
-  // getFirebaseServices is called inside the client component, ensuring it only runs in the browser.
-  const { firebaseApp, firestore, auth } = getFirebaseServices();
+  const [services, setServices] = useState<FirebaseServices | null>(null);
+
+  useEffect(() => {
+    // This effect runs once on the client after initial mount.
+    const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    const firestore = getFirestore(firebaseApp);
+    const auth = getAuth(firebaseApp);
+    setServices({ firebaseApp, firestore, auth });
+  }, []); // The empty dependency array ensures this runs only once.
+
+  // Render nothing or a loading spinner until Firebase is initialized.
+  if (!services) {
+    return null; 
+  }
 
   return (
     <FirebaseProvider
-      firebaseApp={firebaseApp}
-      firestore={firestore}
-      auth={auth}
+      firebaseApp={services.firebaseApp}
+      firestore={services.firestore}
+      auth={services.auth}
     >
       <AuthProvider>
         <NotesProvider>
