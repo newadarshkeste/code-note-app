@@ -31,7 +31,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // CORRECT: Get services from useFirebase hook inside the component, which ensures context is available.
+  // CORRECT: Get services from useFirebase hook inside the component body.
   const { auth, firestore } = useFirebase(); 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);

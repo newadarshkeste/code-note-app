@@ -154,7 +154,11 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         return;
     }
     setNotesLoading(true);
+    
+    // Sort by 'order' which was added for drag-and-drop.
+    // We will handle legacy notes without 'order' in the getSubNotes function.
     const q = query(notesCollectionRef, orderBy('order', 'asc'));
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedNotes = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Note));
       setNotes(fetchedNotes);
@@ -248,7 +252,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     }
     
     const siblings = notes.filter(n => n.parentId === (note.parentId || null));
-    const maxOrder = siblings.reduce((max, n) => Math.max(max, n.order), -1);
+    const maxOrder = siblings.reduce((max, n) => Math.max(max, n.order || 0), -1);
 
     const newNoteData: any = { 
         title: note.title,
@@ -332,7 +336,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         // Re-order the old siblings
         const oldSiblings = notes
             .filter(n => n.parentId === activeNote.parentId && n.id !== activeNote.id)
-            .sort((a, b) => a.order - b.order);
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
 
         oldSiblings.forEach((note, index) => {
             if (note.order !== index) {
@@ -354,7 +358,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             // Re-order old siblings
             const oldSiblings = notes
                 .filter(n => n.parentId === activeNote.parentId && n.id !== activeNote.id)
-                .sort((a,b) => a.order - b.order);
+                .sort((a,b) => (a.order || 0)- (b.order || 0));
             oldSiblings.forEach((note, index) => {
                 if (note.order !== index) {
                     const noteRef = doc(notesCollectionRef, note.id);
@@ -363,7 +367,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             });
         }
         
-        const localItems = notes.filter(n => n.parentId === (overNote ? overNote.parentId : null));
+        const localItems = notes.filter(n => (n.parentId || null) === (overNote ? (overNote.parentId || null) : null));
         const localActiveIndex = localItems.findIndex(i => i.id === activeId);
         const localOverIndex = overId ? localItems.findIndex(i => i.id === overId) : localItems.length;
         
@@ -379,7 +383,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         localItems.forEach((note, index) => {
             if (note.order !== index || note.id === activeId) { // always update moved item
                 const noteRef = doc(notesCollectionRef, note.id);
-                batch.update(noteRef, { order: index, parentId: newParentId });
+                batch.update(noteRef, { order: index, parentId: newParentId || null });
             }
         });
     }
@@ -405,8 +409,12 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   }, [activeTopicId, topics]);
   
   const getSubNotes = useCallback((parentId: string | null) => {
-    return notes.filter(note => note.parentId === parentId).sort((a,b) => a.order - b.order);
+    return notes
+      .filter(note => (note.parentId || null) === (parentId || null))
+      // FIX: Gracefully handle notes without an 'order' field by treating it as 0.
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   }, [notes]);
+
 
   const getAllNotes = async (): Promise<Note[]> => {
     if (!user) return [];
@@ -498,5 +506,7 @@ export function useNotes() {
   }
   return context;
 }
+
+    
 
     
