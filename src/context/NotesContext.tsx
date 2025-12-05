@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
@@ -334,8 +335,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const batch = writeBatch(firestore);
     const activeNoteRef = doc(notesCollectionRef, activeId);
 
-    // Case 1: Dropping a note INTO a folder
-    if (overNote && overNote.type === 'folder' && activeNote.parentId !== overNote.id) {
+    // Case 1: Dropping a non-folder item INTO a folder
+    if (overNote && overNote.type === 'folder' && activeNote.type !== 'folder' && activeNote.parentId !== overNote.id) {
         const newSiblings = notes.filter(n => n.parentId === overNote.id);
         const newOrder = newSiblings.length;
         
@@ -352,7 +353,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
                 batch.update(noteRef, { order: index });
             }
         });
-    } else { // Case 2: Reordering notes
+    } else { // Case 2: Reordering notes (including folders among themselves)
         const newParentId = overNote ? overNote.parentId : null;
         let newItems = notes.filter(n => n.parentId === newParentId);
 
