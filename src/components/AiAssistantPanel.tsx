@@ -142,11 +142,6 @@ export function AiAssistantPanel() {
   
   return (
     <div className="h-full flex flex-col bg-card/50 min-h-0 overflow-hidden">
-      <header className="flex-shrink-0 p-4 flex items-center gap-2 border-b h-[65px]">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-headline font-semibold">AI Assistant</h2>
-      </header>
-
       <div className="flex-1 flex flex-col min-h-0">
           <div className="flex flex-col h-full min-h-0">
             <ScrollArea className="flex-grow min-h-0" ref={scrollAreaRef}>
@@ -250,3 +245,5 @@ export function AiAssistantPanel() {
     </div>
   );
 }
+
+    

@@ -20,7 +20,7 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { PracticeModeModal } from './PracticeModeModal';
-import { Sheet, SheetTrigger, SheetContent } from './ui/sheet';
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { AiAssistantPanel } from './AiAssistantPanel';
 
@@ -452,3 +452,5 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
     </>
   );
 }
+
+    
