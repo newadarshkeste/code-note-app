@@ -7,7 +7,7 @@ import { useNotes } from '@/context/NotesContext';
 import { useToast } from '@/hooks/use-toast';
 import type { PracticeModeOutput } from '@/ai/flows/ai-assistant-flow';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Loader2, Sparkles, Trophy, ListChecks, Lightbulb, Repeat, Columns, Dumbbell } from 'lucide-react';
@@ -109,6 +109,9 @@ export function PracticeModeModal({ isOpen, onClose, originalCode, language, not
           <DialogTitle className="text-2xl font-headline flex items-center gap-3">
              <Dumbbell className="h-6 w-6 text-primary" /> Practice Mode
           </DialogTitle>
+          <DialogDescription>
+            Re-type the code from memory to test your knowledge. The AI will evaluate your attempt.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-grow min-h-0 px-6 pb-6 flex flex-col gap-4">
