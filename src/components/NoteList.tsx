@@ -178,7 +178,7 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside }: { note: Note, onN
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Rename Note</DialogTitle>
-                        <DialogDescription>Enter a new name for the note "{renameNote?.title}".</DialogDescription>
+                        <DialogDescription>Enter a new name for the item "{renameNote?.title}".</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -449,9 +449,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
             }}>
                 <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>
-                         Create New Item
-                    </DialogTitle>
+                    <DialogTitle>Create New Item</DialogTitle>
                      <DialogDescription>
                         {getDialogDescription()}
                     </DialogDescription>
