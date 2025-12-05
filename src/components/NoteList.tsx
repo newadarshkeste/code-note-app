@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -175,29 +176,30 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside }: { note: Note, onN
             </CollapsibleContent>
              <Dialog open={!!renameNote} onOpenChange={(isOpen) => !isOpen && setRenameNote(null)}>
                 <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Rename Note</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="rename-note-name" className="text-right">
-                        New Name
-                    </Label>
-                    <Input
-                        id="rename-note-name"
-                        value={renamingTitle}
-                        onChange={(e) => setRenamingTitle(e.target.value)}
-                        className="col-span-3 font-body"
-                        onKeyDown={(e) => e.key === 'Enter' && handleRenameNote()}
-                    />
+                    <DialogHeader>
+                        <DialogTitle>Rename Note</DialogTitle>
+                        <DialogDescription>Enter a new name for the note "{renameNote?.title}".</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="rename-note-name" className="text-right">
+                            New Name
+                        </Label>
+                        <Input
+                            id="rename-note-name"
+                            value={renamingTitle}
+                            onChange={(e) => setRenamingTitle(e.target.value)}
+                            className="col-span-3 font-body"
+                            onKeyDown={(e) => e.key === 'Enter' && handleRenameNote()}
+                        />
+                        </div>
                     </div>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button type="button" variant="secondary" onClick={() => setRenameNote(null)}>Cancel</Button>
-                    </DialogClose>
-                    <Button onClick={handleRenameNote}>Rename</Button>
-                </DialogFooter>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary" onClick={() => setRenameNote(null)}>Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={handleRenameNote}>Rename</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </Collapsible>
@@ -349,7 +351,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
     const getDialogDescription = () => {
         if (newNoteParentId) {
             const parentFolder = notes.find(n => n.id === newNoteParentId);
-            return `This item will be created in the folder "${parentFolder?.title}".`;
+            return `This item will be created inside the folder "${parentFolder?.title}".`;
         }
         return `This item will be created in the topic "${activeTopic.name}".`;
     };
@@ -386,6 +388,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                         onClick={() => {
                             setNewNoteParentId(null);
                             setNewNoteType('code');
+                            setNewNoteTitle('');
                             setIsNoteDialogOpen(true);
                         }}
                     >
@@ -526,5 +529,3 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         </>
     );
 }
-
-    

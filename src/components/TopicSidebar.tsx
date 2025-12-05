@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState } from 'react';
@@ -11,6 +12,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
@@ -217,6 +219,7 @@ export function TopicSidebar({ isMobile = false, onTopicSelect }: TopicSidebarPr
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Topic</DialogTitle>
+            <DialogDescription>A topic is a great way to organize your notes.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
@@ -246,6 +249,7 @@ export function TopicSidebar({ isMobile = false, onTopicSelect }: TopicSidebarPr
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rename Topic</DialogTitle>
+             <DialogDescription>Enter a new name for the topic "{renameTopic?.name}".</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
