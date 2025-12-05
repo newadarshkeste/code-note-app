@@ -1,12 +1,12 @@
+
 'use client';
 
-import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { NotesProvider } from '@/context/NotesContext';
+import { useAuth } from '@/context/AuthContext';
 import { AppLayout } from '@/components/AppLayout';
 import { LoginPage } from '@/components/LoginPage';
 import { Loader2 } from 'lucide-react';
 
-function App() {
+export default function Home() {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -21,17 +21,5 @@ function App() {
     return <LoginPage />;
   }
 
-  return (
-    <NotesProvider>
-      <AppLayout />
-    </NotesProvider>
-  );
-}
-
-export default function Home() {
-  return (
-    <AuthProvider>
-      <App />
-    </AuthProvider>
-  );
+  return <AppLayout />;
 }

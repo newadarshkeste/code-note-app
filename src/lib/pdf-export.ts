@@ -181,17 +181,28 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
 
       const canvas = await html2canvas(container, { scale: 2, width: CONTENT_WIDTH, windowWidth: CONTENT_WIDTH });
       const imgData = canvas.toDataURL("image/png");
-      const imgProps = doc.getImageProperties(imgData);
-      const pdfImgWidth = CONTENT_WIDTH;
-      const pdfImgHeight = (imgProps.height * pdfImgWidth) / imgProps.width;
+      
+      // FIX: Check if image data is valid before adding
+      if (imgData && imgData !== 'data:,') {
+        const imgProps = doc.getImageProperties(imgData);
+        const pdfImgWidth = CONTENT_WIDTH;
+        const pdfImgHeight = (imgProps.height * pdfImgWidth) / imgProps.width;
 
-      if (yPos + pdfImgHeight > PAGE_HEIGHT - PAGE_MARGIN) {
-        doc.addPage();
-        yPos = PAGE_MARGIN;
+        if (yPos + pdfImgHeight > PAGE_HEIGHT - PAGE_MARGIN) {
+          doc.addPage();
+          yPos = PAGE_MARGIN;
+        }
+
+        doc.addImage(imgData, "PNG", PAGE_MARGIN, yPos, pdfImgWidth, pdfImgHeight, undefined, 'FAST');
+        yPos += pdfImgHeight + 15; // Spacing after note
+      } else {
+        // If canvas is empty, maybe add a fallback text
+        doc.setFont("Helvetica", "italic");
+        doc.setFontSize(8);
+        doc.setTextColor("#888");
+        doc.text("[Note content could not be rendered]", PAGE_MARGIN, yPos);
+        yPos += 20;
       }
-
-      doc.addImage(imgData, "PNG", PAGE_MARGIN, yPos, pdfImgWidth, pdfImgHeight, undefined, 'FAST');
-      yPos += pdfImgHeight + 15; // Spacing after note
     }
   }
 

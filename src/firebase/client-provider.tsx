@@ -14,11 +14,16 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
     return initializeFirebase();
   }, []); // Empty dependency array ensures this runs only once on mount
 
+  // We can't render the provider on the server because the services are null.
+  if (!firebaseServices.firebaseApp) {
+    return <>{children}</>;
+  }
+
   return (
     <FirebaseProvider
       firebaseApp={firebaseServices.firebaseApp}
-      auth={firebaseServices.auth}
-      firestore={firebaseServices.firestore}
+      auth={firebaseServices.auth!}
+      firestore={firebaseServices.firestore!}
     >
       {children}
     </FirebaseProvider>

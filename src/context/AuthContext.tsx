@@ -14,7 +14,7 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
@@ -31,18 +31,14 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const auth = useFirebaseAuth();
-  const firestore = useFirestore();
+  // CORRECT: Get services from useFirebase hook, which ensures context is available.
+  const { auth, firestore } = useFirebase(); 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!auth || !firestore) {
-      setLoading(false);
-      return;
-    }
-  
+    // We can now safely assume auth and firestore are available due to the provider nesting.
     getRedirectResult(auth)
       .then(async (result) => {
         if (result && result.user) {
@@ -93,7 +89,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [auth, firestore]);
 
   const loginWithGoogle = async () => {
-    if (!auth) return;
     const provider = new GoogleAuthProvider();
     setLoading(true);
     try {
@@ -107,7 +102,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUpWithEmail = async (email: string, password: string): Promise<boolean> => {
-    if (!auth) return false;
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
@@ -125,7 +119,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
-    if (!auth) return false;
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -142,7 +135,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const sendPasswordReset = async (email: string): Promise<boolean> => {
-    if (!auth) return false;
     try {
       await sendPasswordResetEmail(auth, email);
       toast({
@@ -162,7 +154,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    if (!auth) return;
     try {
       await signOut(auth);
     } catch (error) {
