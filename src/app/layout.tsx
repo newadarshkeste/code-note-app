@@ -4,8 +4,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
-import { AuthProvider } from '@/context/AuthContext';
-import { NotesProvider } from '@/context/NotesContext';
+import { ClientProviders } from '@/components/ClientProviders';
 
 export const metadata: Metadata = {
   title: 'CodeNote',
@@ -26,18 +25,16 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <FirebaseClientProvider>
-          <AuthProvider>
-            <NotesProvider>
-              <ThemeProvider
-                attribute="class"
-                defaultTheme="system"
-                enableSystem
-              >
-                {children}
-                <Toaster />
-              </ThemeProvider>
-            </NotesProvider>
-          </AuthProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+          >
+            <ClientProviders>
+              {children}
+            </ClientProviders>
+            <Toaster />
+          </ThemeProvider>
         </FirebaseClientProvider>
       </body>
     </html>
