@@ -1,3 +1,4 @@
+
 'use server';
 
 import { z } from 'zod';
@@ -13,9 +14,13 @@ const SubmissionResponseSchema = z.object({
   token: z.string(),
 });
 
+// This schema now allows all fields to be nullable, which is the key fix.
+// Judge0 returns null for fields like stdout when there is a compilation error.
 const SubmissionResultSchema = z.object({
   stdout: z.string().nullable(),
   stderr: z.string().nullable(),
+  compile_output: z.string().nullable(),
+  message: z.string().nullable(),
   status: z.object({
     id: z.number(),
     description: z.string(),
@@ -53,7 +58,7 @@ async function createSubmission(body: SubmissionRequest): Promise<string> {
 }
 
 async function getResult(token: string): Promise<Judge0Result> {
-    const response = await fetch(`https://${API_HOST}/submissions/${token}?base64_encoded=true`, {
+    const response = await fetch(`https://${API_HOST}/submissions/${token}?base64_encoded=true&fields=*`, {
         method: 'GET',
         headers: {
             'X-RapidAPI-Host': API_HOST,
@@ -68,12 +73,20 @@ async function getResult(token: string): Promise<Judge0Result> {
     
     const jsonResult = await response.json();
 
+    // The key fix is here: decode all relevant fields, even on error.
     const decodedStdout = jsonResult.stdout ? Buffer.from(jsonResult.stdout, 'base64').toString('utf-8') : null;
     const decodedStderr = jsonResult.stderr ? Buffer.from(jsonResult.stderr, 'base64').toString('utf-8') : null;
+    const decodedCompileOutput = jsonResult.compile_output ? Buffer.from(jsonResult.compile_output, 'base64').toString('utf-8') : null;
+    const decodedMessage = jsonResult.message ? Buffer.from(jsonResult.message, 'base64').toString('utf-8') : null;
+
+    // Use compile_output or stderr as the primary source of error.
+    const finalStderr = decodedCompileOutput || decodedStderr;
 
     const finalResult = {
       stdout: decodedStdout,
-      stderr: decodedStderr,
+      stderr: finalStderr,
+      compile_output: decodedCompileOutput,
+      message: decodedMessage,
       status: jsonResult.status,
     };
     
@@ -91,17 +104,22 @@ export async function runCode(languageId: number, code: string, input?: string):
         source_code: Buffer.from(code).toString('base64'),
         stdin: input ? Buffer.from(input).toString('base64') : undefined,
     };
-    
-    console.log("SUBMITTED languageId:", languageId);
-    console.log("SUBMITTED base64:", submissionBody.source_code);
 
     const token = await createSubmission(submissionBody);
 
-    while (true) {
+    let attempts = 0;
+    const maxAttempts = 10; // Wait for a maximum of 10 seconds.
+
+    while (attempts < maxAttempts) {
         const result = await getResult(token);
-        if (result.status.id > 2) {
+        // Status ID > 2 means processing is finished (e.g., Accepted, Wrong Answer, Compilation Error, etc.)
+        if (result.status.id > 2) { 
             return result;
         }
+        attempts++;
         await wait(1000);
     }
+
+    // If the loop finishes, something went wrong, return the last known status.
+    return await getResult(token);
 }

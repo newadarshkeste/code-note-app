@@ -193,13 +193,15 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
       const cleanCode = safeClean(dirtyNoteContent.content);
       const result = await runCode(languageId, cleanCode);
 
-      // Prioritize stderr for displaying compilation/runtime errors
+      // This is the updated, more robust logic.
       if (result.stderr) {
-        setOutput(`Error:\n------\n${result.stderr}`);
+          setOutput(`Error (${result.status.description}):\n------------------------------------\n${result.stderr}`);
+      } else if (result.compile_output) {
+          setOutput(`Compilation Error:\n--------------------\n${result.compile_output}`);
       } else if (result.stdout) {
-        setOutput(`Output:\n-------\n${result.stdout}`);
+          setOutput(`Output:\n-------\n${result.stdout}`);
       } else {
-        setOutput(result.status.description);
+          setOutput(result.status.description);
       }
 
     } catch (error) {
