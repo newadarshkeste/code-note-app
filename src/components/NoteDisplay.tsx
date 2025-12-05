@@ -190,8 +190,8 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
         return;
       }
 
-      const cleanCode = safeClean(dirtyNoteContent.content);
-      const result = await runCode(languageId, cleanCode);
+      const codeToRun = dirtyNoteContent.content;
+      const result = await runCode(languageId, codeToRun);
 
       // This is the updated, more robust logic.
       if (result.stderr) {
@@ -457,5 +457,7 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
     </>
   );
 }
+
+    
 
     
