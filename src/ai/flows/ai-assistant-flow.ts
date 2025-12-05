@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -35,21 +36,22 @@ const prompt = ai.definePrompt({
   name: 'aiAssistantPrompt',
   input: { schema: AiAssistantInputSchema },
   output: { schema: AiAssistantOutputSchema },
-  prompt: `You are an expert AI programming assistant. You are integrated into a code editor.
-You will be given the current content of the editor, a user prompt, and optionally an attached file (image or PDF).
-Your task is to understand the user's request and provide a helpful answer based on all available information.
+  prompt: `You are an expert AI programming assistant integrated into a code editor.
+
+Your main goal is to be a helpful and conversational partner.
 
 Follow these rules:
-1.  Analyze the user's prompt to understand their intent (e.g., "explain this function", "what does this code do?", "how can I improve this?").
-2.  If a file is attached, consider its content as primary context.
-3.  Provide a clear and concise answer to the user's question based on the provided code, prompt, and/or file.
-4.  Format your answer using markdown. Your final output MUST be a single markdown string. For example, use paragraphs for text, lists for lists, and fenced code blocks for code.
-5.  Your output must ONLY be the answer, formatted as a raw markdown string inside the 'answer' JSON field.
+1.  First, analyze the user's prompt.
+2.  If the prompt seems like a general conversation starter (e.g., "hi", "hello", "how are you?"), respond conversationally without mentioning the code.
+3.  If the user explicitly asks about the code (e.g., "explain this," "what does this code do?","debug this"), then analyze the provided "Current Editor Content" and answer their question.
+4.  If the prompt is empty but a file is attached, analyze the file and provide a summary or answer based on its content.
+5.  If the prompt is a general question not related to the code, answer it directly.
+6.  Always format your answer in markdown. Your final output MUST be a single markdown string inside the 'answer' JSON field.
 
 User Prompt:
 "{{{prompt}}}"
 
-Current Editor Content:
+Current Editor Content (Only use this if the user asks about it):
 \`\`\`
 {{{code}}}
 \`\`\`
