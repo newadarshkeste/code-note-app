@@ -191,7 +191,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
       setActiveNoteId(null);
     }
     setIsDirty(false);
-  }, [activeTopicId, notes, activeNoteId]);
+  }, [activeTopicId, notes]);
 
 
   const addTopic = async (name: string) => {

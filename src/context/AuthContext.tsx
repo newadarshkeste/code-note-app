@@ -12,10 +12,11 @@ import {
   getRedirectResult,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  Auth,
 } from 'firebase/auth';
 import { useFirebase } from '@/firebase/provider';
-import { doc, setDoc, serverTimestamp, getDoc, Firestore, Auth } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDoc, Firestore } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
@@ -35,18 +36,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
-  // This hook can ONLY be called here if FirebaseProvider is a parent.
-  const firebaseServices = useFirebase();
+  // Defer getting firebase services until client-side
+  const [firebaseServices, setFirebaseServices] = useState<{auth: Auth, firestore: Firestore} | null>(null);
+  const firebase = useFirebase();
 
   useEffect(() => {
-    // This effect handles the auth logic and now depends on the client-safe auth/firestore state.
-    if (!firebaseServices.auth || !firebaseServices.firestore) {
-        setLoading(true);
-        return;
-    };
+    if (firebase.auth && firebase.firestore) {
+      setFirebaseServices({ auth: firebase.auth, firestore: firebase.firestore });
+    }
+  }, [firebase]);
 
-    const auth = firebaseServices.auth;
-    const firestore = firebaseServices.firestore;
+  useEffect(() => {
+    if (!firebaseServices) {
+      setLoading(true);
+      return;
+    };
+    
+    const { auth, firestore } = firebaseServices;
     
     getRedirectResult(auth)
       .then(async (result) => {
@@ -95,10 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   
     return () => unsubscribe();
-  }, [firebaseServices.auth, firebaseServices.firestore]);
+  }, [firebaseServices]);
 
   const loginWithGoogle = async () => {
-    if (!firebaseServices.auth) return;
+    if (!firebaseServices) return;
     const provider = new GoogleAuthProvider();
     setLoading(true);
     try {
@@ -112,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUpWithEmail = async (email: string, password: string): Promise<boolean> => {
-    if (!firebaseServices.auth) return false;
+    if (!firebaseServices) return false;
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(firebaseServices.auth, email, password);
@@ -131,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
-    if (!firebaseServices.auth) return false;
+    if (!firebaseServices) return false;
     setLoading(true);
     try {
       await signInWithEmailAndPassword(firebaseServices.auth, email, password);
@@ -149,7 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const sendPasswordReset = async (email: string): Promise<boolean> => {
-    if (!firebaseServices.auth) return false;
+    if (!firebaseServices) return false;
     try {
       await sendPasswordResetEmail(firebaseServices.auth, email);
       toast({
@@ -169,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    if (!firebaseServices.auth) return;
+    if (!firebaseServices) return;
     try {
       await signOut(firebaseServices.auth);
       // The onAuthStateChanged listener will set user to null.
