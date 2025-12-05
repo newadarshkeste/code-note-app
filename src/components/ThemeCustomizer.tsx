@@ -1,0 +1,121 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Palette } from 'lucide-react';
+import { Button } from './ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Label } from './ui/label';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+
+// Function to convert HSL string to Hex color
+function hslToHex(hslStr: string): string {
+    const [h, s, l] = hslStr.split(' ').map(val => parseFloat(val.replace('%', '')));
+    const sDecimal = s / 100;
+    const lDecimal = l / 100;
+
+    const c = (1 - Math.abs(2 * lDecimal - 1)) * sDecimal;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = lDecimal - c / 2;
+    let r = 0, g = 0, b = 0;
+
+    if (h >= 0 && h < 60) {
+        [r, g, b] = [c, x, 0];
+    } else if (h >= 60 && h < 120) {
+        [r, g, b] = [x, c, 0];
+    } else if (h >= 120 && h < 180) {
+        [r, g, b] = [0, c, x];
+    } else if (h >= 180 && h < 240) {
+        [r, g, b] = [0, x, c];
+    } else if (h >= 240 && h < 300) {
+        [r, g, b] = [x, 0, c];
+    } else if (h >= 300 && h < 360) {
+        [r, g, b] = [c, 0, x];
+    }
+
+    r = Math.round((r + m) * 255);
+    g = Math.round((g + m) * 255);
+    b = Math.round((b + m) * 255);
+
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+// Function to convert Hex color to HSL string
+function hexToHsl(hex: string): string {
+    let r = 0, g = 0, b = 0;
+    if (hex.length === 4) {
+        r = parseInt(hex[1] + hex[1], 16);
+        g = parseInt(hex[2] + hex[2], 16);
+        b = parseInt(hex[3] + hex[3], 16);
+    } else if (hex.length === 7) {
+        r = parseInt(hex.substring(1, 3), 16);
+        g = parseInt(hex.substring(3, 5), 16);
+        b = parseInt(hex.substring(5, 7), 16);
+    }
+
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0, l = (max + min) / 2;
+
+    if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+
+    const hue = Math.round(h * 360);
+    const saturation = Math.round(s * 100);
+    const lightness = Math.round(l * 100);
+
+    return `${hue} ${saturation}% ${lightness}%`;
+}
+
+
+export function ThemeCustomizer() {
+    // Default HSL value from globals.css
+    const defaultPrimaryHsl = '221 83% 53%';
+    
+    const [primaryHsl, setPrimaryHsl] = useLocalStorage('theme-primary-hsl', defaultPrimaryHsl);
+    
+    const [color, setColor] = useState(() => hslToHex(primaryHsl));
+
+    useEffect(() => {
+        document.documentElement.style.setProperty('--primary', primaryHsl);
+    }, [primaryHsl]);
+
+    const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newHex = e.target.value;
+        setColor(newHex);
+        const newHsl = hexToHsl(newHex);
+        setPrimaryHsl(newHsl);
+    };
+
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7">
+                    <Palette className="h-4 w-4" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-auto p-4">
+                <div className="flex flex-col gap-4">
+                    <Label htmlFor="primary-color" className="font-semibold">Primary Color</Label>
+                    <div className="flex items-center gap-2">
+                         <input
+                            id="primary-color"
+                            type="color"
+                            value={color}
+                            onChange={handleColorChange}
+                            className="h-8 w-8 rounded-md border-none cursor-pointer"
+                        />
+                        <span className="text-sm text-muted-foreground font-mono">{color.toUpperCase()}</span>
+                    </div>
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+}

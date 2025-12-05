@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { Skeleton } from './ui/skeleton';
+import { ThemeCustomizer } from './ThemeCustomizer';
 
 interface TopicSidebarProps {
   isMobile?: boolean;
@@ -99,6 +100,7 @@ export function TopicSidebar({ isMobile = false, onTopicSelect }: TopicSidebarPr
       <header className="flex-shrink-0 p-4 flex items-center justify-between border-b h-[65px]">
           <CodeNoteLogo />
           <div className="flex items-center gap-2">
+              <ThemeCustomizer />
               <ThemeToggle />
               <DropdownMenu>
                   <DropdownMenuTrigger asChild>
