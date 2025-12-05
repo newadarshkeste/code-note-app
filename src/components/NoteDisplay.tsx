@@ -193,15 +193,14 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
       const cleanCode = safeClean(dirtyNoteContent.content);
       const result = await runCode(languageId, cleanCode);
 
-      let outputText = "";
-      if (result.stdout && result.stdout.trim() !== "") {
-        outputText = result.stdout;
-      } else if (result.stderr && result.stderr.trim() !== "") {
-        outputText = result.stderr;
+      // Prioritize stderr for displaying compilation/runtime errors
+      if (result.stderr) {
+        setOutput(`Error:\n------\n${result.stderr}`);
+      } else if (result.stdout) {
+        setOutput(`Output:\n-------\n${result.stdout}`);
       } else {
-        outputText = result.status.description;
+        setOutput(result.status.description);
       }
-      setOutput(outputText);
 
     } catch (error) {
       console.error("Code Execution Error:", error);
@@ -209,7 +208,7 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
       if (errorMessage.includes("429") && (errorMessage.includes("quota") || errorMessage.includes("Quota"))) {
         errorMessage = "You have exceeded the daily limit for code execution. Please try again tomorrow.";
       }
-      setOutput(errorMessage);
+      setOutput(`Execution failed:\n-----------------\n${errorMessage}`);
     } finally {
       setIsRunning(false);
     }
