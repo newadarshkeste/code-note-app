@@ -54,7 +54,7 @@ interface NotesContextType {
   setIsDirty: (dirty: boolean) => void;
   isSaving: boolean;
   getAllNotes: () => Promise<Note[]>;
-  getSubNotes: (parentId: string) => Note[];
+  getSubNotes: (parentId: string | null) => Note[];
   dirtyNoteContent: DirtyNoteContent | null;
   setDirtyNoteContent: React.Dispatch<React.SetStateAction<DirtyNoteContent | null>>;
   saveActiveNote: () => Promise<void>;
@@ -145,7 +145,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [topicsRef]);
+  }, [topicsRef, activeTopicId]);
 
   useEffect(() => {
     if (!notesCollectionRef) {
@@ -179,7 +179,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
       setActiveNoteId(null);
     }
     setIsDirty(false);
-  }, [activeTopicId, notes]);
+  }, [activeTopicId, notes, activeNoteId]);
 
 
   const addTopic = async (name: string) => {
@@ -315,38 +315,74 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     if (!notesCollectionRef) return;
 
     const activeNote = notes.find(n => n.id === activeId);
-    if (!activeNote) return;
-
     const overNote = overId ? notes.find(n => n.id === overId) : null;
-    
-    // This is a placeholder for a more complex drop logic.
-    // For now, let's assume we are reordering items within the same parent context.
-    const parentId = activeNote.parentId;
-    
-    const itemsInSameContext = notes.filter(n => n.parentId === parentId).sort((a,b) => a.order - b.order);
-    const activeIndex = itemsInSameContext.findIndex(i => i.id === activeId);
-    let overIndex;
 
-    if (overId) {
-        overIndex = itemsInSameContext.findIndex(i => i.id === overId);
-    } else {
-        // If dropping at the end of a list (overId is null)
-        overIndex = itemsInSameContext.length;
-    }
-
-    if (activeIndex === -1 || activeIndex === overIndex) return;
-
-    const newItems = [...itemsInSameContext];
-    const [movedItem] = newItems.splice(activeIndex, 1);
-    newItems.splice(overIndex > activeIndex ? overIndex -1 : overIndex, 0, movedItem);
+    if (!activeNote || activeNote.id === overId) return;
 
     const batch = writeBatch(firestore);
-    newItems.forEach((note, index) => {
-        if (note.order !== index) {
-            const noteRef = doc(notesCollectionRef, note.id);
-            batch.update(noteRef, { order: index });
+    const activeNoteRef = doc(notesCollectionRef, activeId);
+
+    // Case 1: Dropping a note INTO a folder
+    if (overNote && overNote.type === 'folder' && activeNote.parentId !== overNote.id) {
+        const newSiblings = notes.filter(n => n.parentId === overNote.id);
+        const newOrder = newSiblings.length;
+        
+        batch.update(activeNoteRef, { parentId: overNote.id, order: newOrder });
+
+        // Re-order the old siblings
+        const oldSiblings = notes
+            .filter(n => n.parentId === activeNote.parentId && n.id !== activeNote.id)
+            .sort((a, b) => a.order - b.order);
+
+        oldSiblings.forEach((note, index) => {
+            if (note.order !== index) {
+                const noteRef = doc(notesCollectionRef, note.id);
+                batch.update(noteRef, { order: index });
+            }
+        });
+    } else { // Case 2: Reordering notes
+        const newParentId = overNote ? overNote.parentId : null;
+        let newItems = notes.filter(n => n.parentId === newParentId);
+
+        const activeIndex = notes.findIndex(n => n.id === activeId);
+        const overIndex = overId ? notes.findIndex(n => n.id === overId) : newItems.length;
+
+        // If changing parent
+        if (activeNote.parentId !== newParentId) {
+            batch.update(activeNoteRef, { parentId: newParentId });
+            
+            // Re-order old siblings
+            const oldSiblings = notes
+                .filter(n => n.parentId === activeNote.parentId && n.id !== activeNote.id)
+                .sort((a,b) => a.order - b.order);
+            oldSiblings.forEach((note, index) => {
+                if (note.order !== index) {
+                    const noteRef = doc(notesCollectionRef, note.id);
+                    batch.update(noteRef, { order: index });
+                }
+            });
         }
-    });
+        
+        const localItems = notes.filter(n => n.parentId === (overNote ? overNote.parentId : null));
+        const localActiveIndex = localItems.findIndex(i => i.id === activeId);
+        const localOverIndex = overId ? localItems.findIndex(i => i.id === overId) : localItems.length;
+        
+        if(localActiveIndex !== -1){
+            const [movedItem] = localItems.splice(localActiveIndex, 1);
+            localItems.splice(localOverIndex > localActiveIndex ? localOverIndex -1 : localOverIndex, 0, movedItem);
+        } else {
+             // Item is new to this context
+            localItems.splice(localOverIndex, 0, {...activeNote, parentId: newParentId});
+        }
+
+
+        localItems.forEach((note, index) => {
+            if (note.order !== index || note.id === activeId) { // always update moved item
+                const noteRef = doc(notesCollectionRef, note.id);
+                batch.update(noteRef, { order: index, parentId: newParentId });
+            }
+        });
+    }
 
     try {
         await batch.commit();
@@ -358,15 +394,17 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   }, [notes, notesCollectionRef, firestore, toast]);
 
   const activeNote = useMemo(() => {
-    const note = notes.find(note => note.id === activeNoteId) || null;
+    if (!activeNoteId) return null;
+    const note = notes.find(note => note.id === activeNoteId);
     return note && note.type !== 'folder' ? note : null;
   }, [activeNoteId, notes]);
+  
 
   const activeTopic = useMemo(() => {
     return topics.find(topic => topic.id === activeTopicId) || null;
   }, [activeTopicId, topics]);
   
-  const getSubNotes = useCallback((parentId: string) => {
+  const getSubNotes = useCallback((parentId: string | null) => {
     return notes.filter(note => note.parentId === parentId).sort((a,b) => a.order - b.order);
   }, [notes]);
 
@@ -460,3 +498,5 @@ export function useNotes() {
   }
   return context;
 }
+
+    
