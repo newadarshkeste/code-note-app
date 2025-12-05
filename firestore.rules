@@ -100,7 +100,7 @@ service cloud.firestore {
       return data.topicId == topicId
           && data.title is string
           && data.content is string
-          && data.type is string && (data.type == 'text' || data.type == 'code')
+          && data.type is string && (data.type == 'text' || data.type == 'code' || data.type == 'folder')
           && ('parentId' in data) // parentId can be null or a string
           && data.order is number;
     }

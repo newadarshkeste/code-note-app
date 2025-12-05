@@ -27,7 +27,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
-import { FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight, GripVertical, ChevronRight, ChevronDown } from 'lucide-react';
+import { FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight, GripVertical, ChevronRight, ChevronDown, Folder } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Note } from '@/lib/types';
@@ -91,6 +91,19 @@ function SortableNoteItem({ note, onNoteSelect }: { note: Note, onNoteSelect: (i
         }
     };
     
+    const getNoteIcon = (noteType: Note['type']) => {
+        switch (noteType) {
+            case 'code':
+                return <Code className="h-4 w-4 flex-shrink-0" />;
+            case 'text':
+                return <Type className="h-4 w-4 flex-shrink-0" />;
+            case 'folder':
+                return <Folder className="h-4 w-4 flex-shrink-0 text-amber-500" />;
+            default:
+                return null;
+        }
+    }
+    
     return (
         <Collapsible open={isExpanded} onOpenChange={setIsExpanded} className="relative w-full">
             <div ref={setNodeRef} style={style} className="group flex items-center w-full my-1 rounded-md bg-card/80 hover:bg-accent/80 pr-1">
@@ -115,11 +128,7 @@ function SortableNoteItem({ note, onNoteSelect }: { note: Note, onNoteSelect: (i
                         activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : ''
                     )}
                 >
-                    {note.type === 'code' ? (
-                        <Code className="h-4 w-4 flex-shrink-0" />
-                    ) : (
-                        <Type className="h-4 w-4 flex-shrink-0" />
-                    )}
+                    {getNoteIcon(note.type)}
                     <span className="truncate flex-grow text-left">{note.title}</span>
                 </Button>
                 <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -212,7 +221,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
 
     const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
     const [newNoteTitle, setNewNoteTitle] = useState('');
-    const [newNoteType, setNewNoteType] = useState<'code' | 'text'>('code');
+    const [newNoteType, setNewNoteType] = useState<'code' | 'text' | 'folder'>('code');
     const [newNoteLanguage, setNewNoteLanguage] = useState('javascript');
     const [noteSearch, setNoteSearch] = useState('');
     const [isSubNote, setIsSubNote] = useState(false);
@@ -228,6 +237,11 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
     );
     
     const handleNoteSelection = (noteId: string) => {
+        const note = notes.find(n => n.id === noteId);
+        if (note && note.type === 'folder') {
+            return; // Don't select folders as active notes for editing
+        }
+
         if (isDirty) {
             setPendingNoteId(noteId);
             setIsUnsavedDialogOpen(true);
@@ -357,25 +371,13 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                         className="w-full justify-center gap-2"
                         onClick={() => {
                             setIsSubNote(false);
+                            setNewNoteType('code');
                             setIsNoteDialogOpen(true);
                         }}
                     >
                         <FilePlus2 className="h-4 w-4" />
-                        <span>Add Note</span>
+                        <span>Add Item</span>
                     </Button>
-                    {activeNote && (
-                         <Button
-                            className="w-full justify-center gap-2"
-                            variant="secondary"
-                            onClick={() => {
-                                setIsSubNote(true);
-                                setIsNoteDialogOpen(true);
-                            }}
-                        >
-                            <CornerDownRight className="h-4 w-4" />
-                            <span>Add Sub-Note</span>
-                        </Button>
-                    )}
                 </div>
 
                 <ScrollArea className="flex-grow min-h-0 border-t">
@@ -431,13 +433,10 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                 <DialogContent>
                 <DialogHeader>
                     <DialogTitle>
-                         {isSubNote ? 'Create Sub-Note' : 'Create New Note'}
+                         Create New Item
                     </DialogTitle>
                      <DialogDescription>
-                        {isSubNote && activeNote 
-                            ? `This note will be created under "${activeNote.title}".`
-                            : `This note will be created in the topic "${activeTopic.name}".`
-                        }
+                        This item will be created in the topic "{activeTopic.name}". You can drag it into a folder later.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -458,7 +457,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                         <RadioGroup
                             className="col-span-3 flex flex-col space-y-2 pt-1"
                             value={newNoteType}
-                            onValueChange={(value: 'code' | 'text') => setNewNoteType(value)}
+                            onValueChange={(value: 'code' | 'text' | 'folder') => setNewNoteType(value)}
                         >
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="code" id="r1" />
@@ -467,6 +466,10 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="text" id="r2" />
                                 <Label htmlFor="r2" className="font-normal flex items-center gap-2"><Type className="h-4 w-4"/> Text Note</Label>
+                            </div>
+                             <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="folder" id="r3" />
+                                <Label htmlFor="r3" className="font-normal flex items-center gap-2"><Folder className="h-4 w-4"/> Folder</Label>
                             </div>
                         </RadioGroup>
                     </div>
@@ -509,7 +512,3 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         </>
     );
 }
-
-    
-
-    

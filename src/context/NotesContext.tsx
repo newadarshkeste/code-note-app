@@ -172,9 +172,15 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   }, [notesCollectionRef]);
 
   useEffect(() => {
-    setActiveNoteId(null);
-    setIsDirty(false); // Reset dirty state when topic changes
-  }, [activeTopicId]);
+    const noteToSelect = notes.find(n => n.type !== 'folder');
+    if (!activeNoteId && noteToSelect && notes.length > 0) {
+      // setActiveNoteId(noteToSelect.id);
+    } else if (notes.length === 0 || !notes.some(n => n.type !== 'folder')) {
+      setActiveNoteId(null);
+    }
+    setIsDirty(false);
+  }, [activeTopicId, notes]);
+
 
   const addTopic = async (name: string) => {
     if (!topicsRef || !user) return;
@@ -233,9 +239,14 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
   const addNote = async (note: NoteCreate) => {
     if (!notesCollectionRef || !user || !activeTopicId) return;
-    const content = note.type === 'code' ? `// Start writing your ${note.title} note here...` : `<p>Start writing your ${note.title} note here...</p>`;
     
-    // Get the highest order number for the current parent level
+    let content = '';
+    if (note.type === 'code') {
+      content = `// Start writing your ${note.title} note here...`;
+    } else if (note.type === 'text') {
+      content = `<p>Start writing your ${note.title} note here...</p>`;
+    }
+    
     const siblings = notes.filter(n => n.parentId === (note.parentId || null));
     const maxOrder = siblings.reduce((max, n) => Math.max(max, n.order), -1);
 
@@ -257,7 +268,9 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
     addDoc(notesCollectionRef, newNoteData)
         .then(docRef => {
-            setActiveNoteId(docRef.id);
+            if (newNoteData.type !== 'folder') {
+                setActiveNoteId(docRef.id);
+            }
         })
         .catch(() => {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -345,7 +358,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   }, [notes, notesCollectionRef, firestore, toast]);
 
   const activeNote = useMemo(() => {
-    return notes.find(note => note.id === activeNoteId) || null;
+    const note = notes.find(note => note.id === activeNoteId) || null;
+    return note && note.type !== 'folder' ? note : null;
   }, [activeNoteId, notes]);
 
   const activeTopic = useMemo(() => {
@@ -446,5 +460,3 @@ export function useNotes() {
   }
   return context;
 }
-
-    

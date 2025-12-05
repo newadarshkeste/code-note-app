@@ -11,7 +11,7 @@ import { getLanguageId } from '@/lib/language-mapping';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Save, Loader2, Type, Download, Play, Dumbbell, Menu, ChevronDown, ChevronUp } from 'lucide-react';
+import { Save, Loader2, Type, Download, Play, Dumbbell, Menu, ChevronDown, ChevronUp, Folder } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Skeleton } from './ui/skeleton';
@@ -46,6 +46,18 @@ function WelcomeScreen() {
       </p>
     </div>
   );
+}
+
+function FolderScreen() {
+    return (
+        <div className="flex flex-col items-center justify-center h-full text-center p-8">
+            <Folder className="w-24 h-24 text-muted-foreground/50 mb-4" />
+            <h2 className="text-2xl font-headline font-semibold text-foreground">This is a folder</h2>
+            <p className="mt-2 text-muted-foreground">
+                You can drag and drop notes into this folder in the list on the left.
+            </p>
+        </div>
+    );
 }
 
 type ExportType = 'note' | 'topic' | 'all';
@@ -117,11 +129,15 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
 
   useEffect(() => {
     if (activeNote) {
-      setDirtyNoteContent({
-        title: activeNote.title,
-        content: activeNote.content,
-        language: activeNote.language || 'plaintext'
-      });
+      if (activeNote.type !== 'folder') {
+        setDirtyNoteContent({
+          title: activeNote.title,
+          content: activeNote.content,
+          language: activeNote.language || 'plaintext'
+        });
+      } else {
+        setDirtyNoteContent(null);
+      }
       setIsDirty(false);
       setOutput(null);
       setIsOutputOpen(false);
@@ -243,6 +259,7 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
 
 
   if (!activeNote || !dirtyNoteContent) {
+    const isFolder = activeNote?.type === 'folder';
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-background/80">
         {isMobile && (
@@ -252,7 +269,7 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
            </header>
         )}
         <div className="flex-grow w-full">
-            <WelcomeScreen />
+            {isFolder ? <FolderScreen /> : <WelcomeScreen />}
         </div>
       </div>
     );

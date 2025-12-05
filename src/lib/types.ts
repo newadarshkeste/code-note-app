@@ -3,7 +3,7 @@ export interface Note {
   id: string;
   topicId: string;
   title: string;
-  type: 'code' | 'text';
+  type: 'code' | 'text' | 'folder';
   content: string;
   language?: string;
   createdAt: any; // Firestore Timestamp
@@ -16,7 +16,7 @@ export interface Note {
 
 export type NoteCreate = { 
   title: string, 
-  type: 'code' | 'text',
+  type: 'code' | 'text' | 'folder',
   parentId?: string | null,
   language?: string,
 };
