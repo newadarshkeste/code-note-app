@@ -29,7 +29,7 @@ function AiAssistantWelcome() {
       <Sparkles className="w-16 h-16 text-muted-foreground/50 mb-4" />
       <h2 className="text-xl font-headline font-semibold text-foreground">AI Assistant</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        Select a note and I can help you write, debug, or explain your code.
+        I can help you write, debug, or explain your code. You can also ask me general questions.
       </p>
     </div>
   );
@@ -68,7 +68,7 @@ MessageContent.displayName = 'MessageContent';
 
 
 export function AiAssistantPanel() {
-  const { activeNote } = useNotes();
+  const { activeNote, dirtyNoteContent } = useNotes();
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -111,7 +111,7 @@ export function AiAssistantPanel() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeNote || (!prompt.trim() && !attachment) || isLoading) return;
+    if ((!prompt.trim() && !attachment) || isLoading) return;
 
     const userMessageContent = prompt.trim() + (attachment ? `\n\n[Attached: ${attachment.name}]` : '');
     const userMessage: ChatMessage = { role: 'user', content: userMessageContent };
@@ -119,7 +119,9 @@ export function AiAssistantPanel() {
     setPrompt('');
     setIsLoading(true);
 
-    const response = await getAiAssistantResponse(activeNote.content, prompt, attachment?.dataUri);
+    const currentCode = activeNote && dirtyNoteContent ? dirtyNoteContent.content : '';
+
+    const response = await getAiAssistantResponse(currentCode, prompt, attachment?.dataUri);
 
     setAttachment(null);
 
@@ -139,23 +141,26 @@ export function AiAssistantPanel() {
   };
   
   return (
-    <div className="h-full flex flex-col bg-card/50 min-h-0 overflow-hidden xl:border-l">
+    <div className="h-full flex flex-col bg-card/50 min-h-0 overflow-hidden">
       <header className="flex-shrink-0 p-4 flex items-center gap-2 border-b h-[65px]">
           <Sparkles className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-headline font-semibold">AI Assistant</h2>
       </header>
 
       <div className="flex-1 flex flex-col min-h-0">
-        {!activeNote ? (
-          <AiAssistantWelcome />
-        ) : (
           <div className="flex flex-col h-full min-h-0">
             <ScrollArea className="flex-grow min-h-0" ref={scrollAreaRef}>
               <div className="px-4 py-6 space-y-6">
                   {messages.length === 0 && (
-                     <p className="text-sm text-muted-foreground">
-                        I have access to <span className="font-semibold text-foreground">{activeNote.title}</span>. Ask me to explain, debug, or modify it. You can also attach a file.
-                     </p>
+                     <>
+                        {activeNote ? (
+                             <p className="text-sm text-muted-foreground">
+                                I have access to <span className="font-semibold text-foreground">{activeNote.title}</span>. Ask me to explain, debug, or modify it. You can also ask general questions.
+                             </p>
+                        ) : (
+                            <AiAssistantWelcome />
+                        )}
+                     </>
                   )}
                   {messages.map((message, index) => (
                     <div key={index} className={cn('flex items-start gap-3 w-full', message.role === 'user' ? 'justify-end' : 'justify-start')}>
@@ -241,7 +246,6 @@ export function AiAssistantPanel() {
                 </form>
             </div>
           </div>
-        )}
       </div>
     </div>
   );

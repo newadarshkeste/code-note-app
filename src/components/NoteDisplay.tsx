@@ -11,7 +11,7 @@ import { getLanguageId } from '@/lib/language-mapping';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Save, Loader2, Type, Download, Play, Dumbbell, Menu, ChevronDown, ChevronUp, Folder } from 'lucide-react';
+import { Save, Loader2, Type, Download, Play, Dumbbell, Menu, ChevronDown, ChevronUp, Folder, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Skeleton } from './ui/skeleton';
@@ -20,8 +20,9 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { PracticeModeModal } from './PracticeModeModal';
-import { SheetTrigger } from './ui/sheet';
+import { Sheet, SheetTrigger, SheetContent } from './ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { AiAssistantPanel } from './AiAssistantPanel';
 
 
 const RichTextEditor = dynamic(() => import('@/components/RichTextEditor').then(mod => mod.RichTextEditor), {
@@ -340,6 +341,18 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
             {isExporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Download className="h-4 w-4" />}
             <span className="ml-2 hidden md:inline">PDF</span>
           </Button>
+          
+          <Sheet>
+            <SheetTrigger asChild>
+                <Button size={isMobile ? 'icon' : 'sm'} variant="outline">
+                    <Sparkles className="h-4 w-4" />
+                    <span className="ml-2 hidden md:inline">AI Assistant</span>
+                </Button>
+            </SheetTrigger>
+            <SheetContent className="w-[400px] sm:w-[540px] sm:max-w-none p-0 flex flex-col">
+              <AiAssistantPanel />
+            </SheetContent>
+          </Sheet>
         </div>
       </header>
   );

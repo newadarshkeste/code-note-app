@@ -4,8 +4,7 @@
 import { TopicSidebar } from '@/components/TopicSidebar';
 import { NoteList } from '@/components/NoteList';
 import { NoteDisplay } from '@/components/NoteDisplay';
-import { AiAssistantPanel } from '@/components/AiAssistantPanel';
-import { StudyToolsPanel } from '@/components/StudyToolsPanel';
+import { StudyToolsPanel }from '@/components/StudyToolsPanel';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -34,15 +33,7 @@ function DesktopLayout() {
       </ResizablePanel>
       <ResizableHandle withHandle className="hidden md:flex" />
       <ResizablePanel defaultSize={58} minSize={30}>
-          <ResizablePanelGroup direction="horizontal">
-              <ResizablePanel defaultSize={65} minSize={40}>
-                  <NoteDisplay isMobile={false} />
-              </ResizablePanel>
-              <ResizableHandle withHandle className="hidden xl:flex" />
-              <ResizablePanel defaultSize={35} minSize={25} maxSize={40} className="hidden xl:block">
-                  <AiAssistantPanel />
-              </ResizablePanel>
-          </ResizablePanelGroup>
+          <NoteDisplay isMobile={false} />
       </ResizablePanel>
     </ResizablePanelGroup>
   );
