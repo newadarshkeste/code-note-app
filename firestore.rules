@@ -159,5 +159,14 @@ service cloud.firestore {
         allow delete: if false; // Stats should not be deletable by the user.
       }
     }
+    
+    // Rules for the temporary focus session for QR code syncing
+    match /focusSessions/{sessionId} {
+      // Anyone can read a session document if they have the ID (from the QR code)
+      allow get: if true;
+      
+      // Only the owner can create, update, or delete their session
+      allow create, update, delete: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
   }
 }
