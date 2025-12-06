@@ -11,7 +11,7 @@ import { getLanguageId } from '@/lib/language-mapping';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Save, Loader2, Type, Download, Play, Dumbbell, Menu, ChevronDown, ChevronUp, Folder, Sparkles } from 'lucide-react';
+import { Save, Loader2, Type, Download, Play, Dumbbell, Menu, ChevronDown, ChevronUp, Folder, Sparkles, BrainCircuit, Timer, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Skeleton } from './ui/skeleton';
@@ -24,6 +24,8 @@ import { Sheet, SheetTrigger, SheetContent } from './ui/sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { AiAssistantPanel } from './AiAssistantPanel';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { CodeNoteLogo } from './CodeNoteLogo';
+import { Card, CardHeader, CardTitle, CardDescription } from './ui/card';
 
 
 const RichTextEditor = dynamic(() => import('@/components/RichTextEditor').then(mod => mod.RichTextEditor), {
@@ -34,18 +36,48 @@ const RichTextEditor = dynamic(() => import('@/components/RichTextEditor').then(
 
 function WelcomeScreen() {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center p-8">
-      <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/50 mb-4">
-          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <line x1="10" y1="9" x2="8" y2="9"/>
-      </svg>
-      <h2 className="text-2xl font-headline font-semibold text-foreground">Welcome to CodeNote</h2>
-      <p className="mt-2 text-muted-foreground">
-        Select a note from the list to start editing, or create a new topic and note.
-      </p>
+    <div className="flex flex-col items-center justify-center h-full p-4 md:p-8 overflow-y-auto">
+        <CodeNoteLogo />
+        <h2 className="text-2xl md:text-3xl font-headline font-semibold text-foreground mt-4">Welcome to Your Study Hub</h2>
+        <p className="mt-2 text-muted-foreground text-center max-w-xl">
+            Organize your notes, test your knowledge, and stay focused. Create a topic on the left to get started.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10 w-full max-w-4xl">
+            <Card className="bg-card/50">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                        <FileText className="h-6 w-6 text-primary"/>
+                        Organize Notes
+                    </CardTitle>
+                    <CardDescription>
+                        Create notes for code snippets or rich text. Organize everything into topics and nested folders for easy access.
+                    </CardDescription>
+                </CardHeader>
+            </Card>
+            <Card className="bg-card/50">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                        <Timer className="h-6 w-6 text-primary"/>
+                        Stay Focused
+                    </CardTitle>
+                    <CardDescription>
+                        Use the built-in Pomodoro timer and Focus Lock QR code to eliminate distractions on your phone and track your study streaks.
+                    </CardDescription>
+                </CardHeader>
+            </Card>
+             <Card className="bg-card/50">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                        <BrainCircuit className="h-6 w-6 text-primary"/>
+                        AI-Powered Learning
+                    </CardTitle>
+                    <CardDescription>
+                       Generate quizzes from your notes, PDFs, or any topic. Use the AI Assistant to explain, debug, and write code.
+                    </CardDescription>
+                </CardHeader>
+            </Card>
+        </div>
     </div>
   );
 }
@@ -457,6 +489,7 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
     </>
   );
 }
+    
 
     
 
