@@ -64,6 +64,7 @@ export const useStudyStats = () => {
     const [timeLeft, setTimeLeft] = useLocalStorage('study:timeLeft', focusDuration * 60);
     const [pomodoroCycleCount, setPomodoroCycleCount] = useLocalStorage('study:pomodoroCycleCount', 0);
     const [sessionMinutes, setSessionMinutes] = useState(0);
+    const [focusSessionId, setFocusSessionId] = useState<string | null>(null);
 
     const onPomodoroComplete = useCallback(async () => {
         if (!user || !statsRef) return;
@@ -103,40 +104,6 @@ export const useStudyStats = () => {
         }
 
     }, [user, firestore, statsRef, stats, focusDuration]);
-
-    useEffect(() => {
-        let interval: NodeJS.Timeout | null = null;
-        if (isActive && timeLeft > 0) {
-            interval = setInterval(() => {
-                setTimeLeft(time => time - 1);
-                if(mode === 'focus') {
-                    setSessionMinutes(s => s + (1/60));
-                }
-            }, 1000);
-        } else if (isActive && timeLeft === 0) {
-            if (mode === 'focus') {
-                onPomodoroComplete();
-                const newCycleCount = pomodoroCycleCount + 1;
-                setPomodoroCycleCount(newCycleCount);
-
-                if (newCycleCount % pomodorosPerCycle === 0) {
-                    setMode('longBreak');
-                    setTimeLeft(longBreakDuration * 60);
-                } else {
-                    setMode('break');
-                    setTimeLeft(breakDuration * 60);
-                }
-            } else { 
-                setMode('focus');
-                setTimeLeft(focusDuration * 60);
-                setSessionMinutes(0);
-            }
-        }
-
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [isActive, timeLeft, mode, pomodoroCycleCount, focusDuration, breakDuration, longBreakDuration, pomodorosPerCycle, setMode, setTimeLeft, setPomodoroCycleCount, onPomodoroComplete]);
 
     const toggleTimer = () => setIsActive(!isActive);
 
@@ -251,8 +218,11 @@ export const useStudyStats = () => {
         return {
             pomodoro: {
                 mode,
+                setMode,
                 timeLeft,
+                setTimeLeft,
                 isActive,
+                setIsActive,
                 toggleTimer,
                 resetTimer,
                 duration: getTimerDuration(),
@@ -261,8 +231,13 @@ export const useStudyStats = () => {
                 longBreakDuration,
                 pomodorosPerCycle,
                 pomodoroCycleCount,
+                setPomodoroCycleCount,
                 updateDurations,
-                sessionMinutes
+                sessionMinutes,
+                setSessionMinutes,
+                onPomodoroComplete,
+                focusSessionId,
+                setFocusSessionId
             },
             dailyStats: {
                 minutesToday: stats?.dailyMinutes?.[todayStr] || 0,
@@ -282,8 +257,9 @@ export const useStudyStats = () => {
         };
     }, [
         stats,
-        mode, timeLeft, isActive, toggleTimer, resetTimer, 
+        mode, setMode, timeLeft, setTimeLeft, isActive, setIsActive, toggleTimer, resetTimer, 
         focusDuration, breakDuration, longBreakDuration, pomodorosPerCycle, 
-        pomodoroCycleCount, updateDurations, sessionMinutes, updateStudyStatsOnNoteSave, recordPracticeSession
+        pomodoroCycleCount, setPomodoroCycleCount, updateDurations, sessionMinutes, setSessionMinutes, 
+        onPomodoroComplete, updateStudyStatsOnNoteSave, recordPracticeSession, focusSessionId, setFocusSessionId
     ]);
 };

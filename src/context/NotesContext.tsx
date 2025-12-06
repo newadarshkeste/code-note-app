@@ -19,6 +19,7 @@ import {
   writeBatch,
   getDocs,
   where,
+  Timestamp,
 } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -82,6 +83,59 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   const studyStats = useStudyStats();
+
+  const { pomodoro } = studyStats;
+
+  // This is the core timer logic, now living in the provider that never unmounts.
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (pomodoro.isActive && pomodoro.timeLeft > 0) {
+      interval = setInterval(() => {
+        pomodoro.setTimeLeft(time => time - 1);
+        if (pomodoro.mode === 'focus') {
+          pomodoro.setSessionMinutes(s => s + 1 / 60);
+        }
+      }, 1000);
+    } else if (pomodoro.isActive && pomodoro.timeLeft === 0) {
+      if (pomodoro.mode === 'focus') {
+        pomodoro.onPomodoroComplete();
+        const newCycleCount = pomodoro.pomodoroCycleCount + 1;
+        pomodoro.setPomodoroCycleCount(newCycleCount);
+
+        if (newCycleCount % pomodoro.pomodorosPerCycle === 0) {
+          pomodoro.setMode('longBreak');
+          pomodoro.setTimeLeft(pomodoro.longBreakDuration * 60);
+        } else {
+          pomodoro.setMode('break');
+          pomodoro.setTimeLeft(pomodoro.breakDuration * 60);
+        }
+      } else {
+        pomodoro.setMode('focus');
+        pomodoro.setTimeLeft(pomodoro.focusDuration * 60);
+        pomodoro.setSessionMinutes(0);
+      }
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [pomodoro]);
+
+
+  // Firestore Sync for Focus Session
+  useEffect(() => {
+      if (pomodoro.focusSessionId && user) {
+          const sessionRef = doc(firestore, 'focusSessions', pomodoro.focusSessionId);
+          const data = {
+              userId: user.uid,
+              mode: pomodoro.mode,
+              timeLeft: pomodoro.timeLeft,
+              isActive: pomodoro.isActive,
+              expiresAt: Timestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+          };
+          setDoc(sessionRef, data, { merge: true });
+      }
+  }, [pomodoro.focusSessionId, user, firestore, pomodoro.mode, pomodoro.timeLeft, pomodoro.isActive]);
+
 
   const topicsRef = useMemo(() => user ? collection(firestore, 'users', user.uid, 'topics') : null, [user, firestore]);
   

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useNotes } from '@/context/NotesContext';
 import { useAuth } from '@/context/AuthContext';
 import { useFirestore } from '@/firebase';
-import { doc, setDoc, Timestamp, collection } from 'firebase/firestore';
+import { doc, collection } from 'firebase/firestore';
 import QRCode from 'qrcode.react';
 
 import {
@@ -180,35 +180,28 @@ export function Pomodoro() {
         pomodorosPerCycle,
         pomodoroCycleCount,
         updateDurations,
+        setFocusSessionId,
     } = pomodoro;
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isFocusLockOpen, setIsFocusLockOpen] = useState(false);
-    const [focusSessionId, setFocusSessionId] = useState<string | null>(null);
-
-    // Sync with Firestore for focus session
-    useEffect(() => {
-        if (focusSessionId && user) {
-            const sessionRef = doc(firestore, 'focusSessions', focusSessionId);
-            const data = {
-                userId: user.uid,
-                mode,
-                timeLeft,
-                isActive,
-                // Session expires in 2 hours
-                expiresAt: Timestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
-            };
-            setDoc(sessionRef, data, { merge: true });
-        }
-    }, [focusSessionId, user, firestore, mode, timeLeft, isActive]);
+    
+    // We only need to manage the dialog's view state here
+    const [localFocusSessionId, setLocalFocusSessionId] = useState<string | null>(null);
 
     const handleOpenFocusLock = () => {
         if (user) {
             const newSessionId = doc(collection(firestore, 'focusSessions')).id;
-            setFocusSessionId(newSessionId);
+            setFocusSessionId(newSessionId); // Set in global context
+            setLocalFocusSessionId(newSessionId); // Set for this dialog instance
             setIsFocusLockOpen(true);
         }
     };
 
+    const handleCloseFocusLock = () => {
+        setIsFocusLockOpen(false);
+        // Optional: clear the global session ID if you want a new one each time
+        // setFocusSessionId(null); 
+    };
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -288,8 +281,8 @@ export function Pomodoro() {
              />
              <FocusLockDialog
                 isOpen={isFocusLockOpen}
-                onOpenChange={setIsFocusLockOpen}
-                sessionId={focusSessionId}
+                onOpenChange={handleCloseFocusLock}
+                sessionId={localFocusSessionId}
              />
         </Card>
     );
