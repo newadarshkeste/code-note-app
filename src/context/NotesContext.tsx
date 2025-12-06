@@ -20,6 +20,7 @@ import {
   getDocs,
   where,
   Timestamp,
+  setDoc,
 } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
