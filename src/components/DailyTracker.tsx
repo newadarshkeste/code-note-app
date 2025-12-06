@@ -17,7 +17,13 @@ const StatItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label
 
 export function DailyTracker() {
     const { studyStats } = useNotes();
-    const { dailyStats, overallStats } = studyStats;
+    const { dailyStats, overallStats, pomodoro } = studyStats;
+
+    // This is the fix: combine saved daily minutes with live session minutes.
+    // We only add session minutes during an active 'focus' session.
+    const liveMinutesToday = Math.floor(
+        dailyStats.minutesToday + (pomodoro.isActive && pomodoro.mode === 'focus' ? pomodoro.sessionMinutes : 0)
+    );
     
     return (
         <Card>
@@ -28,7 +34,7 @@ export function DailyTracker() {
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-                <StatItem icon={Clock} label="Focus Time" value={`${dailyStats.minutesToday} min`} />
+                <StatItem icon={Clock} label="Focus Time" value={`${liveMinutesToday} min`} />
                 <CardTitle className="text-base font-semibold flex items-center gap-2 pt-2">
                     <BarChart2 className="h-5 w-5" />
                     <span>Lifetime Stats</span>
@@ -39,5 +45,3 @@ export function DailyTracker() {
         </Card>
     );
 }
-
-    
