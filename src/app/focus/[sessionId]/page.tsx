@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -49,7 +50,8 @@ const getModeStyles = (mode: FocusSession['mode']) => {
 
 export default function FocusSessionPage({ params }: { params: { sessionId: string } }) {
     const { firestore } = useFirebase();
-    const sessionRef = useMemoFirebase(() => doc(firestore, 'focusSessions', params.sessionId), [firestore, params.sessionId]);
+    const sessionId = params.sessionId;
+    const sessionRef = useMemoFirebase(() => doc(firestore, 'focusSessions', sessionId), [firestore, sessionId]);
     const { data: session, isLoading } = useDoc<FocusSession>(sessionRef);
     const [isTabFocused, setIsTabFocused] = useState(true);
 
