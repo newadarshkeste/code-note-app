@@ -207,7 +207,7 @@ export function TopicSidebar({ isMobile = false, onTopicSelect }: TopicSidebarPr
 
         <footer className="p-4 border-t flex-shrink-0">
           <Button
-            className="w-full justify-center gap-2"
+            className="w-full justify-center gap-2 new-topic-button"
             onClick={() => setIsTopicDialogOpen(true)}
           >
             <Plus className="h-4 w-4" />

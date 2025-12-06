@@ -1,9 +1,11 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { FirebaseProvider } from "@/firebase/provider";
 import { AuthProvider } from "@/context/AuthContext";
 import { NotesProvider } from "@/context/NotesContext";
+import { UIProvider } from "@/context/UIContext";
 
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getFirestore, Firestore } from "firebase/firestore";
@@ -39,9 +41,11 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
       auth={services.auth}
     >
       <AuthProvider>
-        <NotesProvider>
-          {children}
-        </NotesProvider>
+        <UIProvider>
+            <NotesProvider>
+            {children}
+            </NotesProvider>
+        </UIProvider>
       </AuthProvider>
     </FirebaseProvider>
   );

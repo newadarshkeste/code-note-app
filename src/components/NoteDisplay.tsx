@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { generatePdf } from '@/lib/pdf-export';
 import { runCode } from '@/lib/judge0';
 import { getLanguageId } from '@/lib/language-mapping';
+import { useUI } from '@/context/UIContext';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +36,7 @@ const RichTextEditor = dynamic(() => import('@/components/RichTextEditor').then(
 
 
 function WelcomeScreen() {
+  const { showStudyTools, showQuizGenerator } = useUI();
   return (
     <div className="flex flex-col items-center justify-center h-full p-4 md:p-8 overflow-y-auto">
         <CodeNoteLogo />
@@ -44,7 +46,11 @@ function WelcomeScreen() {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10 w-full max-w-4xl">
-            <Card className="bg-card/50">
+            <Card className="bg-card/50 hover:bg-card hover:shadow-lg transition-all cursor-pointer" onClick={() => {
+              // This is a placeholder action, as creating a topic is handled in the sidebar.
+              // We can add a more direct "Create Topic" flow later if needed.
+              document.querySelector<HTMLButtonElement>('.new-topic-button')?.click();
+            }}>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
                         <FileText className="h-6 w-6 text-primary"/>
@@ -55,7 +61,7 @@ function WelcomeScreen() {
                     </CardDescription>
                 </CardHeader>
             </Card>
-            <Card className="bg-card/50">
+            <Card className="bg-card/50 hover:bg-card hover:shadow-lg transition-all cursor-pointer" onClick={showStudyTools}>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
                         <Timer className="h-6 w-6 text-primary"/>
@@ -66,7 +72,7 @@ function WelcomeScreen() {
                     </CardDescription>
                 </CardHeader>
             </Card>
-             <Card className="bg-card/50">
+             <Card className="bg-card/50 hover:bg-card hover:shadow-lg transition-all cursor-pointer" onClick={showQuizGenerator}>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3">
                         <BrainCircuit className="h-6 w-6 text-primary"/>
@@ -489,8 +495,3 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
     </>
   );
 }
-    
-
-    
-
-    

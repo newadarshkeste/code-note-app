@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/resizable";
 import { CodeNoteLogo } from './CodeNoteLogo';
 import { useNotes } from '@/context/NotesContext';
-import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
 
 
@@ -161,9 +160,7 @@ export function AppLayout() {
   return (
     <div className="h-dvh w-screen flex text-foreground bg-background font-body overflow-hidden min-h-0">
       {isMobile ? <MobileLayout /> : <DesktopLayout />}
-      {!isMobile && <StudyToolsPanel />}
+      <StudyToolsPanel />
     </div>
   );
 }
-
-    
