@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useNotes } from '@/context/NotesContext';
 import { useAuth } from '@/context/AuthContext';
 import { useFirestore } from '@/firebase';
-import { doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, Timestamp, collection } from 'firebase/firestore';
 import QRCode from 'qrcode.react';
 
 import {
