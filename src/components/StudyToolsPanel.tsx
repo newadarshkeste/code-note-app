@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { Button } from './ui/button';
-import { Timer } from 'lucide-react';
+import { Timer, BrainCircuit } from 'lucide-react';
 import { Pomodoro } from './Pomodoro';
 import { DailyTracker } from './DailyTracker';
 import { StreakCounter } from './StreakCounter';
@@ -12,6 +12,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { useNotes } from '@/context/NotesContext';
 import { cn } from '@/lib/utils';
+import { AiQuizGenerator } from './AiQuizGenerator';
 
 const TimerProgressButton = ({ onClick }: { onClick: () => void }) => {
     const { studyStats } = useNotes();
@@ -72,28 +73,48 @@ const TimerProgressButton = ({ onClick }: { onClick: () => void }) => {
 
 export function StudyToolsPanel() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isQuizOpen, setIsQuizOpen] = useState(false);
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <TimerProgressButton onClick={() => setIsOpen(true)} />
-      </SheetTrigger>
-      <SheetContent className="w-[320px] sm:w-[320px] sm:max-w-none p-0 flex flex-col">
-        <SheetHeader className="p-4 border-b">
-          <SheetTitle className="flex items-center gap-2">
-            <Timer className="h-5 w-5" />
-            <span>Study Tools</span>
-          </SheetTitle>
-        </SheetHeader>
-        <ScrollArea className="flex-grow">
-            <div className="p-4 space-y-6">
-                <Pomodoro />
-                <Separator />
-                <StreakCounter />
-                <DailyTracker />
-            </div>
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
+    <>
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetTrigger asChild>
+          <TimerProgressButton onClick={() => setIsOpen(true)} />
+        </SheetTrigger>
+        <SheetContent className="w-[320px] sm:w-[320px] sm:max-w-none p-0 flex flex-col">
+          <SheetHeader className="p-4 border-b">
+            <SheetTitle className="flex items-center gap-2">
+              <Timer className="h-5 w-5" />
+              <span>Study Tools</span>
+            </SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="flex-grow">
+              <div className="p-4 space-y-6">
+                  <Pomodoro />
+                  <Separator />
+                  <Button variant="outline" className="w-full" onClick={() => { setIsOpen(false); setIsQuizOpen(true); }}>
+                      <BrainCircuit className="h-4 w-4 mr-2" />
+                      AI Quiz Generator
+                  </Button>
+                  <Separator />
+                  <StreakCounter />
+                  <DailyTracker />
+              </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+      
+      <Sheet open={isQuizOpen} onOpenChange={setIsQuizOpen}>
+          <SheetContent className="w-full max-w-2xl p-0 flex flex-col">
+              <SheetHeader className="p-6 pb-2 border-b">
+                <SheetTitle className="flex items-center gap-3 text-xl">
+                    <BrainCircuit className="h-6 w-6 text-primary" />
+                    AI Quiz Generator
+                </SheetTitle>
+              </SheetHeader>
+              <AiQuizGenerator />
+          </SheetContent>
+      </Sheet>
+    </>
   );
 }
