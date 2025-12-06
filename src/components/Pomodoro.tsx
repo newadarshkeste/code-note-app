@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -23,7 +24,7 @@ import {
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 
-function TimerSettingsDialog({
+export function TimerSettingsDialog({
     isOpen,
     setIsOpen,
     currentSettings,
@@ -43,6 +44,14 @@ function TimerSettingsDialog({
     const [breakTime, setBreakTime] = useState(currentSettings.break);
     const [longBreak, setLongBreak] = useState(currentSettings.longBreak);
     const [cycle, setCycle] = useState(currentSettings.cycle);
+
+
+    useEffect(() => {
+        setFocus(currentSettings.focus);
+        setBreakTime(currentSettings.break);
+        setLongBreak(currentSettings.longBreak);
+        setCycle(currentSettings.cycle);
+    }, [isOpen, currentSettings]);
 
 
     const handleSave = () => {

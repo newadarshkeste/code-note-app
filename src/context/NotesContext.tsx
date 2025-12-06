@@ -97,7 +97,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
           pomodoro.setSessionMinutes(s => s + 1 / 60);
         }
       }, 1000);
-    } else if (pomodoro.isActive && pomodoro.timeLeft === 0) {
+    } else if (pomodoro.isActive && pomodoro.timeLeft <= 0) {
       if (pomodoro.mode === 'focus') {
         pomodoro.onPomodoroComplete();
         const newCycleCount = pomodoro.pomodoroCycleCount + 1;
@@ -124,18 +124,24 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
   // Firestore Sync for Focus Session
   useEffect(() => {
-      if (pomodoro.focusSessionId && user) {
+      if (pomodoro.focusSessionId && user && firestore) {
           const sessionRef = doc(firestore, 'focusSessions', pomodoro.focusSessionId);
+          
+          // Data to sync to Firestore
           const data = {
               userId: user.uid,
               mode: pomodoro.mode,
               timeLeft: pomodoro.timeLeft,
               isActive: pomodoro.isActive,
-              expiresAt: Timestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+              expiresAt: Timestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
+              focusDuration: pomodoro.focusDuration,
+              breakDuration: pomodoro.breakDuration,
+              longBreakDuration: pomodoro.longBreakDuration,
+              pomodorosPerCycle: pomodoro.pomodorosPerCycle,
           };
           setDoc(sessionRef, data, { merge: true });
       }
-  }, [pomodoro.focusSessionId, user, firestore, pomodoro.mode, pomodoro.timeLeft, pomodoro.isActive]);
+  }, [pomodoro, user, firestore]);
 
 
   const topicsRef = useMemo(() => user ? collection(firestore, 'users', user.uid, 'topics') : null, [user, firestore]);

@@ -4,12 +4,20 @@
 import React, { useEffect, useState } from 'react';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Loader2, Skull, Eye } from 'lucide-react';
+import { Loader2, Skull, Eye, Play, Pause, RefreshCw, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toggleTimer, resetTimer, updateSettings } from './actions';
+import { TimerSettingsDialog } from '@/components/Pomodoro';
+
 
 interface FocusSession {
     mode: 'focus' | 'break' | 'longBreak';
     timeLeft: number;
     isActive: boolean;
+    focusDuration: number;
+    breakDuration: number;
+    longBreakDuration: number;
+    pomodorosPerCycle: number;
 }
 
 const formatTime = (seconds: number) => {
@@ -52,10 +60,10 @@ export default function FocusSessionPage({ params }: { params: { sessionId: stri
     const { firestore } = useFirebase();
     const { sessionId } = React.use(params);
     
-    // Key for forcing a re-sync on visibility change
     const [syncKey, setSyncKey] = useState(0);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-    const sessionRef = useMemoFirebase(() => doc(firestore, 'focusSessions', sessionId), [firestore, sessionId, syncKey]);
+    const sessionRef = useMemoFirebase(() => sessionId ? doc(firestore, 'focusSessions', sessionId) : null, [firestore, sessionId, syncKey]);
     const { data: session, isLoading } = useDoc<FocusSession>(sessionRef);
     const [isTabFocused, setIsTabFocused] = useState(true);
 
@@ -64,7 +72,6 @@ export default function FocusSessionPage({ params }: { params: { sessionId: stri
             const isVisible = document.visibilityState === 'visible';
             setIsTabFocused(isVisible);
             
-            // When the tab becomes visible again, force a re-sync.
             if (isVisible) {
                 setSyncKey(prevKey => prevKey + 1);
             }
@@ -72,13 +79,27 @@ export default function FocusSessionPage({ params }: { params: { sessionId: stri
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
         
-        // Initial check
         handleVisibilityChange();
 
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, []);
+
+    const handleToggle = () => {
+        if (!session || !sessionId) return;
+        toggleTimer(sessionId, !session.isActive);
+    };
+
+    const handleReset = () => {
+        if (!sessionId) return;
+        resetTimer(sessionId);
+    };
+
+    const handleSaveSettings = (focus: number, breakTime: number, longBreak: number, cycle: number) => {
+        if (!sessionId) return;
+        updateSettings(sessionId, { focus, break: breakTime, longBreak, cycle });
+    };
 
     if (isLoading && !session) {
         return (
@@ -102,24 +123,50 @@ export default function FocusSessionPage({ params }: { params: { sessionId: stri
     const styles = getModeStyles(session.mode);
 
     return (
-        <main className={`h-dvh w-screen flex flex-col items-center justify-center transition-colors duration-500 ${styles.bg} ${styles.text}`}>
-            {!isTabFocused && (
-                <div className="absolute inset-0 bg-black/80 z-10 flex flex-col items-center justify-center text-center p-8 backdrop-blur-sm">
-                    <Skull className="h-24 w-24 text-red-500 animate-pulse" />
-                    <h1 className="mt-6 text-4xl font-extrabold text-red-400">FOCUS LOST</h1>
-                    <p className="mt-2 text-xl text-red-200">Return to this tab immediately to continue your session.</p>
+        <>
+            <main className={`h-dvh w-screen flex flex-col items-center justify-center transition-colors duration-500 ${styles.bg} ${styles.text}`}>
+                {!isTabFocused && (
+                    <div className="absolute inset-0 bg-black/80 z-10 flex flex-col items-center justify-center text-center p-8 backdrop-blur-sm">
+                        <Skull className="h-24 w-24 text-red-500 animate-pulse" />
+                        <h1 className="mt-6 text-4xl font-extrabold text-red-400">FOCUS LOST</h1>
+                        <p className="mt-2 text-xl text-red-200">Return to this tab immediately to continue your session.</p>
+                    </div>
+                )}
+                <div className="text-center">
+                    <p className="text-2xl font-semibold tracking-wider uppercase opacity-80">{styles.message}</p>
+                    <h1 className="text-8xl md:text-9xl font-bold font-mono tracking-tighter my-4">
+                        {formatTime(session.timeLeft)}
+                    </h1>
+                    <div className="flex items-center justify-center gap-3 text-lg opacity-70">
+                        <Eye className="h-6 w-6"/>
+                        <span>{session.isActive ? "SESSION IN PROGRESS" : "SESSION PAUSED"}</span>
+                    </div>
                 </div>
-            )}
-            <div className="text-center">
-                <p className="text-2xl font-semibold tracking-wider uppercase opacity-80">{styles.message}</p>
-                <h1 className="text-8xl md:text-9xl font-bold font-mono tracking-tighter my-4">
-                    {formatTime(session.timeLeft)}
-                </h1>
-                <div className="flex items-center justify-center gap-3 text-lg opacity-70">
-                    <Eye className="h-6 w-6"/>
-                    <span>{session.isActive ? "SESSION IN PROGRESS" : "SESSION PAUSED"}</span>
+
+                <div className="absolute bottom-10 flex items-center justify-center gap-4">
+                     <Button onClick={handleToggle} variant="ghost" size="icon" className="h-16 w-16 rounded-full bg-white/10 hover:bg-white/20">
+                        {session.isActive ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8" />}
+                    </Button>
+                     <Button onClick={handleReset} variant="ghost" size="icon" className="h-16 w-16 rounded-full bg-white/10 hover:bg-white/20">
+                        <RefreshCw className="h-7 w-7" />
+                    </Button>
+                     <Button onClick={() => setIsSettingsOpen(true)} variant="ghost" size="icon" className="h-16 w-16 rounded-full bg-white/10 hover:bg-white/20">
+                        <Settings className="h-7 w-7" />
+                    </Button>
                 </div>
-            </div>
-        </main>
+            </main>
+             <TimerSettingsDialog
+                isOpen={isSettingsOpen}
+                setIsOpen={setIsSettingsOpen}
+                currentSettings={{
+                    focus: session.focusDuration,
+                    break: session.breakDuration,
+                    longBreak: session.longBreakDuration,
+                    cycle: session.pomodorosPerCycle,
+                }}
+                onSave={handleSaveSettings}
+             />
+        </>
     );
 }
+
