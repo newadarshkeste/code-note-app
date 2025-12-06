@@ -51,23 +51,36 @@ const getModeStyles = (mode: FocusSession['mode']) => {
 export default function FocusSessionPage({ params }: { params: { sessionId: string } }) {
     const { firestore } = useFirebase();
     const { sessionId } = React.use(params);
-    const sessionRef = useMemoFirebase(() => doc(firestore, 'focusSessions', sessionId), [firestore, sessionId]);
+    
+    // Key for forcing a re-sync on visibility change
+    const [syncKey, setSyncKey] = useState(0);
+
+    const sessionRef = useMemoFirebase(() => doc(firestore, 'focusSessions', sessionId), [firestore, sessionId, syncKey]);
     const { data: session, isLoading } = useDoc<FocusSession>(sessionRef);
     const [isTabFocused, setIsTabFocused] = useState(true);
 
     useEffect(() => {
         const handleVisibilityChange = () => {
-            setIsTabFocused(document.visibilityState === 'visible');
+            const isVisible = document.visibilityState === 'visible';
+            setIsTabFocused(isVisible);
+            
+            // When the tab becomes visible again, force a re-sync.
+            if (isVisible) {
+                setSyncKey(prevKey => prevKey + 1);
+            }
         };
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
+        
+        // Initial check
+        handleVisibilityChange();
 
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, []);
 
-    if (isLoading) {
+    if (isLoading && !session) {
         return (
             <div className="flex h-dvh w-screen items-center justify-center bg-gray-900 text-white">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
