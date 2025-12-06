@@ -13,54 +13,60 @@ import { Separator } from './ui/separator';
 import { useNotes } from '@/context/NotesContext';
 import { cn } from '@/lib/utils';
 
-const TimerIconWithProgress = () => {
+const TimerProgressButton = ({ onClick }: { onClick: () => void }) => {
     const { studyStats } = useNotes();
     const { isActive, timeLeft, duration } = studyStats.pomodoro;
 
-    if (!isActive || duration === 0) {
-        return <Timer className="h-5 w-5" />;
-    }
-
-    const progress = (timeLeft / duration);
-    const radius = 14;
+    const progress = (isActive && duration > 0) ? (timeLeft / duration) : 1;
+    const radius = 20;
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference * (1 - progress);
 
     return (
-        <div className="relative h-7 w-7">
+        <button
+            onClick={onClick}
+            className={cn(
+                "fixed top-1/2 right-0 -translate-y-1/2 z-50 flex items-center justify-center",
+                "h-12 w-12 rounded-full bg-background shadow-lg border transition-all hover:scale-110",
+                isActive ? "border-transparent" : "border-border"
+            )}
+            aria-label="Open study tools"
+        >
             <svg
-                width="28"
-                height="28"
-                viewBox="0 0 28 28"
-                className="-rotate-90"
+                width="48"
+                height="48"
+                viewBox="0 0 48 48"
+                className="absolute inset-0"
             >
+                {/* Background Circle */}
                 <circle
-                    cx="14"
-                    cy="14"
+                    cx="24"
+                    cy="24"
                     r={radius}
                     stroke="hsl(var(--border))"
                     strokeWidth="2"
                     fill="transparent"
-                    className="text-muted"
+                    className="opacity-50"
                 />
-                <circle
-                    cx="14"
-                    cy="14"
-                    r={radius}
-                    stroke="hsl(var(--primary))"
-                    strokeWidth="2"
-                    fill="transparent"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={strokeDashoffset}
-                    strokeLinecap="round"
-                    className="transition-all duration-1000 linear"
-                />
+                {/* Progress Circle */}
+                {isActive && (
+                     <circle
+                        cx="24"
+                        cy="24"
+                        r={radius}
+                        stroke="hsl(var(--primary))"
+                        strokeWidth="3"
+                        fill="transparent"
+                        strokeDasharray={circumference}
+                        strokeDashoffset={strokeDashoffset}
+                        strokeLinecap="round"
+                        className="transform -rotate-90 origin-center transition-all duration-1000 linear"
+                    />
+                )}
             </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-                 <Timer className="h-5 w-5" />
-            </div>
-        </div>
-    )
+            <Timer className="h-5 w-5 z-10" />
+        </button>
+    );
 }
 
 
@@ -70,16 +76,7 @@ export function StudyToolsPanel() {
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className={cn(
-            "fixed top-1/2 right-0 -translate-y-1/2 z-50 rounded-r-none",
-            "h-11 w-11 p-0"
-          )}
-        >
-          <TimerIconWithProgress />
-        </Button>
+        <TimerProgressButton onClick={() => setIsOpen(true)} />
       </SheetTrigger>
       <SheetContent className="w-[320px] sm:w-[320px] sm:max-w-none p-0 flex flex-col">
         <SheetHeader className="p-4 border-b">
