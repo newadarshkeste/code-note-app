@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Loader2, Skull, Eye } from 'lucide-react';
@@ -50,7 +50,7 @@ const getModeStyles = (mode: FocusSession['mode']) => {
 
 export default function FocusSessionPage({ params }: { params: { sessionId: string } }) {
     const { firestore } = useFirebase();
-    const { sessionId } = params;
+    const { sessionId } = React.use(params);
     const sessionRef = useMemoFirebase(() => doc(firestore, 'focusSessions', sessionId), [firestore, sessionId]);
     const { data: session, isLoading } = useDoc<FocusSession>(sessionRef);
     const [isTabFocused, setIsTabFocused] = useState(true);
