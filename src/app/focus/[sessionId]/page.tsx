@@ -6,7 +6,7 @@ import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Loader2, Skull, Eye, Play, Pause, RefreshCw, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { toggleTimer, resetTimer, updateSettings } from './actions';
+import { toggleTimer, resetTimer, updateSettings } from '../actions';
 import { TimerSettingsDialog } from '@/components/Pomodoro';
 
 
@@ -58,7 +58,7 @@ const getModeStyles = (mode: FocusSession['mode']) => {
 
 export default function FocusSessionPage({ params }: { params: { sessionId: string } }) {
     const { firestore } = useFirebase();
-    const { sessionId } = React.use(params);
+    const sessionId = params.sessionId;
     
     const [syncKey, setSyncKey] = useState(0);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -169,4 +169,3 @@ export default function FocusSessionPage({ params }: { params: { sessionId: stri
         </>
     );
 }
-
