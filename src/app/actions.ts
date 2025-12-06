@@ -1,3 +1,4 @@
+
 'use server';
 
 import { aiAssistant, practiceMode } from '@/ai/flows/ai-assistant-flow';
@@ -49,7 +50,7 @@ export async function getPracticeModeFeedback(originalCode: string, userAttempt:
 
 const quizInputSchema = z.object({
     topic: z.string().min(3, "Topic must be at least 3 characters long."),
-    numQuestions: z.number().min(1).max(20),
+    numQuestions: z.number().min(1).max(50),
     fileDataUri: z.string().optional(),
 });
 

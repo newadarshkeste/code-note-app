@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -19,7 +20,7 @@ const QuestionSchema = z.object({
 
 const GenerateQuizInputSchema = z.object({
   topic: z.string().describe('The subject or topic for the quiz. e.g., "Core Java" or "React Hooks".'),
-  numQuestions: z.number().min(1).max(20).describe('The number of questions to generate.'),
+  numQuestions: z.number().min(1).max(50).describe('The number of questions to generate.'),
   fileDataUri: z.string().optional().describe(
     "An optional file (e.g., PDF) to use as context for the quiz questions. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
   ),

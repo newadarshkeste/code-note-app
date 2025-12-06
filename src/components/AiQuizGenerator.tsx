@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -39,7 +40,7 @@ const QuizConfigView = ({ onStartQuiz }: { onStartQuiz: (topic: string, numQuest
 
       <div className="space-y-3">
         <Label>Number of Questions: {numQuestions}</Label>
-        <Slider defaultValue={[5]} min={1} max={20} step={1} onValueChange={(value) => setNumQuestions(value[0])} />
+        <Slider defaultValue={[5]} min={1} max={50} step={1} onValueChange={(value) => setNumQuestions(value[0])} />
       </div>
 
       <div className="space-y-3">
