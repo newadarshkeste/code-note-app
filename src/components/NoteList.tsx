@@ -262,10 +262,6 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
     const handleNoteSelection = (noteId: string) => {
         const note = notes.find(n => n.id === noteId);
         
-        // Always allow selecting folders or notes.
-        // The action of selecting a folder is just to change the activeNoteId,
-        // which then affects where new items are added. The NoteDisplay will handle
-        // showing the folder content screen.
         if (isDirty) {
             setPendingNoteId(noteId);
             setIsUnsavedDialogOpen(true);
@@ -287,16 +283,13 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         let allowedTypes: Array<'code' | 'text' | 'folder'> = ['code', 'text', 'folder'];
         let defaultType: 'code' | 'text' | 'folder' = 'code';
         
+        // This logic is now only for restricting sub-item types, not for blocking creation.
         if (parentNote?.type === 'code') {
             allowedTypes = ['text'];
             defaultType = 'text';
         } else if (parentNote?.type === 'text') {
-            toast({
-                variant: 'destructive',
-                title: "Cannot Add Item",
-                description: "You cannot add a nested item to a text note.",
-            });
-            return;
+             // This case is now handled by changing the parentId, but we can still toast for clarity if needed.
+             // We won't block the dialog from opening.
         }
 
         setAllowedNoteTypes(allowedTypes);
@@ -304,6 +297,23 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         setNewNoteType(defaultType);
         setNewNoteTitle('');
         setIsNoteDialogOpen(true);
+    };
+
+    const handleAddItemClick = () => {
+        let parentId: string | null = null;
+
+        if (activeNote) {
+            // If active note is a folder, new item goes inside it.
+            if (activeNote.type === 'folder') {
+                parentId = activeNote.id;
+            } else {
+                // If active note is text/code, new item is its sibling.
+                parentId = activeNote.parentId || null;
+            }
+        }
+        // If no active note, parentId remains null (top-level).
+        
+        handleOpenNewItemDialog(parentId);
     };
     
     const handleSaveAndSwitch = async () => {
@@ -382,8 +392,6 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         return notes.filter(note => note.title.toLowerCase().includes(lowerCaseSearch));
     }, [notes, noteSearch, getSubNotes]);
 
-    const isAddItemDisabled = activeNote?.type === 'text';
-
     if (!activeTopic) {
         return (
             <div className="h-full w-full flex items-center justify-center text-center p-4 bg-card">
@@ -435,9 +443,7 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                     </div>
                      <Button
                         className="w-full justify-center gap-2"
-                        onClick={() => handleOpenNewItemDialog(activeNoteId)}
-                        disabled={isAddItemDisabled}
-                        title={isAddItemDisabled ? "Cannot add item to a text note" : "Add a new item"}
+                        onClick={handleAddItemClick}
                     >
                         <FilePlus2 className="h-4 w-4" />
                         <span>Add Item</span>
