@@ -3,6 +3,7 @@
 
 import { aiAssistant, practiceMode } from '@/ai/flows/ai-assistant-flow';
 import { generateQuiz } from '@/ai/flows/quiz-generator-flow';
+import { generateQuote } from '@/ai/flows/quote-flow';
 import { z } from 'zod';
 
 const assistantInputSchema = z.object({
@@ -64,6 +65,24 @@ export async function generateAiQuiz(topic: string, numQuestions: number, fileDa
         const errorMessage = error instanceof z.ZodError 
             ? error.errors.map(e => e.message).join(', ') 
             : 'An unexpected error occurred while generating the quiz.';
+        return { success: false, error: errorMessage };
+    }
+}
+
+const quoteInputSchema = z.object({
+    topic: z.string().min(3, "Topic must be at least 3 characters long."),
+});
+
+export async function getDailyQuote(topic: string) {
+    try {
+        const validatedInput = quoteInputSchema.parse({ topic });
+        const result = await generateQuote(validatedInput);
+        return { success: true, quote: result };
+    } catch (error) {
+        console.error('Error generating quote:', error);
+        const errorMessage = error instanceof z.ZodError 
+            ? error.errors.map(e => e.message).join(', ') 
+            : 'An unexpected error occurred while generating the quote.';
         return { success: false, error: errorMessage };
     }
 }

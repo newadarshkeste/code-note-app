@@ -4,7 +4,7 @@
 import { TopicSidebar } from '@/components/TopicSidebar';
 import { NoteList } from '@/components/NoteList';
 import { NoteDisplay } from '@/components/NoteDisplay';
-import { StudyToolsPanel }from '@/components/StudyToolsPanel';
+import { StudyToolsPanel } from '@/components/StudyToolsPanel';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -18,6 +18,7 @@ import {
 import { CodeNoteLogo } from './CodeNoteLogo';
 import { useNotes } from '@/context/NotesContext';
 import { Input } from './ui/input';
+import { DailyQuoteModal } from './DailyQuoteModal';
 
 
 function DesktopLayout() {
@@ -161,6 +162,7 @@ export function AppLayout() {
     <div className="h-dvh w-screen flex text-foreground bg-background font-body overflow-hidden min-h-0">
       {isMobile ? <MobileLayout /> : <DesktopLayout />}
       <StudyToolsPanel />
+      <DailyQuoteModal />
     </div>
   );
 }

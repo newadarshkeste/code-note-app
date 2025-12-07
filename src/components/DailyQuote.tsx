@@ -13,6 +13,7 @@ export function DailyQuote() {
     return Math.floor(diff / oneDay);
   };
 
+  // This component is now only used on the login page as a fallback.
   const dayOfYear = getDayOfYear();
   const quoteIndex = dayOfYear % quotes.length;
   const { quote, author } = quotes[quoteIndex];
