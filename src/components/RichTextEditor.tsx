@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useCallback } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import React, { useCallback } from 'react';
+import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
@@ -23,14 +23,13 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { Toggle } from './ui/toggle';
-import { Button } from './ui/button';
 
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
 }
 
-const EditorToolbar = ({ editor }: { editor: any }) => {
+const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
   if (!editor) {
     return null;
   }
@@ -179,10 +178,8 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         autolink: true,
       }),
       Image.configure({
-        inline: false, // Allows images to be on their own line
-        HTMLAttributes: {
-          class: 'max-w-full h-auto rounded-md my-4',
-        },
+        inline: true,
+        allowBase64: true,
       }),
     ],
     content: value,
@@ -190,16 +187,46 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
       attributes: {
         class: 'ProseMirror',
       },
+      handlePaste: (view, event, slice) => {
+        const items = Array.from(event.clipboardData?.items || []);
+        for (const item of items) {
+          if (item.type.startsWith('image/')) {
+            const file = item.getAsFile();
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (readerEvent) => {
+                const url = readerEvent.target?.result;
+                if (url) {
+                  view.dispatch(
+                    view.state.tr.replaceSelectionWith(
+                      view.state.schema.nodes.image.create({
+                        src: url,
+                      })
+                    )
+                  );
+                }
+              };
+              reader.readAsDataURL(file);
+            }
+            return true; // We've handled the paste
+          }
+        }
+        return false; // Let Tiptap handle other paste events
+      },
     },
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
   });
-
-  useEffect(() => {
+  
+  // This effect is important to prevent an infinite loop.
+  // It checks if the external `value` is different from the editor's current content.
+  // If it is, it updates the editor, but importantly, it doesn't trigger the `onUpdate` callback while doing so.
+  React.useEffect(() => {
     if (editor) {
       const isSame = editor.getHTML() === value;
       if (!isSame) {
+        // The `false` here tells Tiptap not to emit an update event, breaking the loop.
         editor.commands.setContent(value, false);
       }
     }
