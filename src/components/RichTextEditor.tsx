@@ -8,6 +8,9 @@ import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import CodeBlock from '@tiptap/extension-code-block';
 import TiptapImage from '@tiptap/extension-image';
+import { ReactNodeViewRenderer } from '@tiptap/react';
+import { ResizableImageNodeView } from './ResizableImage';
+
 import {
   Bold,
   Italic,
@@ -24,24 +27,29 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { Toggle } from './ui/toggle';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
 
-// Extend the default Image extension to add resizing attributes
-const ResizableImage = TiptapImage.extend({
+// Extend the default Image extension to use our React component
+const ResizableImageExtension = TiptapImage.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
       width: {
         default: null,
-      },
-      height: {
-        default: null,
+        parseHTML: element => element.getAttribute('width'),
+        renderHTML: attributes => {
+          if (!attributes.width) {
+            return {};
+          }
+          return { width: attributes.width };
+        },
       },
        style: {
         default: 'cursor: pointer;',
       },
     };
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(ResizableImageNodeView)
   },
 });
 
@@ -188,6 +196,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     extensions: [
       StarterKit.configure({
         codeBlock: false,
+        image: false, // Disable the default image extension
       }),
       CodeBlock.configure({
         HTMLAttributes: {
@@ -199,7 +208,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         openOnClick: false,
         autolink: true,
       }),
-      ResizableImage.configure({
+      ResizableImageExtension.configure({
         inline: true,
         allowBase64: true,
       }),
@@ -259,5 +268,3 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     </div>
   );
 }
-
-    
