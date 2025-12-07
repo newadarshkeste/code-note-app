@@ -1,12 +1,13 @@
+
 'use client';
 
 import React, { useCallback } from 'react';
-import { useEditor, EditorContent, Editor } from '@tiptap/react';
+import { useEditor, EditorContent, Editor, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import CodeBlock from '@tiptap/extension-code-block';
-import Image from '@tiptap/extension-image';
+import TiptapImage from '@tiptap/extension-image';
 import {
   Bold,
   Italic,
@@ -23,6 +24,24 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { Toggle } from './ui/toggle';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+
+// Extend the default Image extension to add resizing attributes
+const ResizableImage = TiptapImage.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+      },
+      height: {
+        default: null,
+      },
+    };
+  },
+});
+
 
 interface RichTextEditorProps {
   value: string;
@@ -161,6 +180,42 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
   );
 };
 
+const ImageResizeBubbleMenu = ({ editor }: { editor: Editor }) => {
+    const [width, setWidth] = React.useState(editor.getAttributes('image').width || '');
+    
+    React.useEffect(() => {
+        setWidth(editor.getAttributes('image').width || '');
+    }, [editor, editor.getAttributes('image').width]);
+
+    const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newWidth = e.target.value;
+        setWidth(newWidth);
+        const finalWidth = newWidth ? parseInt(newWidth, 10) : null;
+        if (finalWidth !== null && isNaN(finalWidth)) return;
+        
+        editor.chain().focus().setImage({ ...editor.getAttributes('image'), width: finalWidth, height: null }).run();
+    };
+
+    return (
+        <BubbleMenu
+            editor={editor}
+            tippyOptions={{ duration: 100 }}
+            shouldShow={({ editor }) => editor.isActive('image')}
+        >
+            <div className="p-2 bg-background border shadow-lg rounded-md flex items-center gap-2">
+                <Input 
+                    type="number" 
+                    value={width}
+                    onChange={handleWidthChange}
+                    className="h-8 w-24"
+                    placeholder="Width"
+                />
+                 <Button variant="ghost" onClick={() => editor.chain().focus().setImage({ ...editor.getAttributes('image'), width: null, height: null }).run()}>Auto</Button>
+            </div>
+        </BubbleMenu>
+    );
+};
+
 export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -177,7 +232,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         openOnClick: false,
         autolink: true,
       }),
-      Image.configure({
+      ResizableImage.configure({
         inline: true,
         allowBase64: true,
       }),
@@ -219,23 +274,24 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     },
   });
   
-  // This effect is important to prevent an infinite loop.
-  // It checks if the external `value` is different from the editor's current content.
-  // If it is, it updates the editor, but importantly, it doesn't trigger the `onUpdate` callback while doing so.
   React.useEffect(() => {
     if (editor) {
       const isSame = editor.getHTML() === value;
       if (!isSame) {
-        // The `false` here tells Tiptap not to emit an update event, breaking the loop.
         editor.commands.setContent(value, false);
       }
     }
   }, [value, editor]);
 
+  if (!editor) return null;
+
   return (
     <div className="h-full w-full flex flex-col">
       <EditorToolbar editor={editor} />
+      <ImageResizeBubbleMenu editor={editor} />
       <EditorContent editor={editor} className="flex-grow overflow-y-auto" />
     </div>
   );
 }
+
+    
