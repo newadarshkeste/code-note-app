@@ -12,6 +12,7 @@ import { ReactNodeViewRenderer } from '@tiptap/react';
 import { ResizableImageNodeView } from './ResizableImage';
 import TextStyle from '@tiptap/extension-text-style';
 import { FontSize } from '@/lib/tiptap-font-size';
+import { LineHeight } from '@/lib/tiptap-line-height';
 
 
 import {
@@ -29,6 +30,7 @@ import {
   Link as LinkIcon,
   ImageIcon,
   ChevronDown,
+  Baseline,
 } from 'lucide-react';
 import { Toggle } from './ui/toggle';
 import {
@@ -108,6 +110,14 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
 
   const fontSizes = ['12px', '14px', '16px', '18px', '24px', '30px', '36px'];
   const currentFontSize = editor.getAttributes('textStyle').fontSize || '16px';
+  
+  const lineHeights = [
+    { label: 'Single', value: '1' },
+    { label: '1.15', value: '1.15' },
+    { label: '1.5', value: '1.5' },
+    { label: 'Double', value: '2' },
+  ];
+  const currentLineHeight = editor.getAttributes('paragraph').lineHeight || '1';
 
   return (
     <div className="border-b p-2 flex flex-wrap items-center gap-1">
@@ -130,6 +140,24 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
+       <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Baseline className="h-5 w-5" />
+            </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+            {lineHeights.map(({ label, value }) => (
+                <DropdownMenuItem
+                    key={value}
+                    onClick={() => editor.chain().focus().setLineHeight(value).run()}
+                    className={editor.isActive({ lineHeight: value }) ? 'is-active' : ''}
+                >
+                    {label}
+                </DropdownMenuItem>
+            ))}
+        </DropdownMenuContent>
+       </DropdownMenu>
       <Toggle
         size="sm"
         pressed={editor.isActive('bold')}
@@ -230,10 +258,18 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
       StarterKit.configure({
         codeBlock: false,
         image: false,
+        paragraph: {
+            HTMLAttributes: {
+                style: `line-height: 1`, // Set a default line height
+            },
+        },
       }),
       TextStyle,
       FontSize.configure({
           types: ['textStyle'],
+      }),
+      LineHeight.configure({
+          types: ['paragraph', 'heading'],
       }),
       CodeBlock.configure({
         HTMLAttributes: {
