@@ -11,7 +11,7 @@ import TiptapImage from '@tiptap/extension-image';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { ResizableImageNodeView } from './ResizableImage';
 import TextStyle from '@tiptap/extension-text-style';
-import { FontSize } from '@tiptap/extension-font-size';
+import { FontSize } from '@/lib/tiptap-font-size';
 
 
 import {
@@ -229,8 +229,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     extensions: [
       StarterKit.configure({
         codeBlock: false,
-        image: false, // Disable the default image extension
-        textStyle: false, // We'll configure it manually
+        image: false,
       }),
       TextStyle,
       FontSize.configure({
@@ -303,6 +302,31 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     <div className="h-full w-full flex flex-col">
       <EditorToolbar editor={editor} />
       <EditorContent editor={editor} className="flex-grow overflow-y-auto" />
+      <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
+        <div className="bg-background border rounded-md shadow-md p-1 flex gap-1">
+           <Toggle
+                size="sm"
+                pressed={editor.isActive('bold')}
+                onPressedChange={() => editor.chain().focus().toggleBold().run()}
+            >
+                <Bold className="h-4 w-4" />
+            </Toggle>
+            <Toggle
+                size="sm"
+                pressed={editor.isActive('italic')}
+                onPressedChange={() => editor.chain().focus().toggleItalic().run()}
+            >
+                <Italic className="h-4 w-4" />
+            </Toggle>
+            <Toggle
+                size="sm"
+                pressed={editor.isActive('strike')}
+                onPressedChange={() => editor.chain().focus().toggleStrike().run()}
+            >
+                <Strikethrough className="h-4 w-4" />
+            </Toggle>
+        </div>
+      </BubbleMenu>
     </div>
   );
 }
