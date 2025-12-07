@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -18,6 +19,9 @@ import {
   DialogFooter,
   DialogClose,
 } from './ui/dialog';
+import { DailyQuote } from './DailyQuote';
+import { Separator } from './ui/separator';
+
 
 const GoogleIcon = (props: React.ComponentProps<'svg'>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}>
@@ -175,7 +179,11 @@ export function LoginPage() {
                         Your intelligent partner for learning and development.
                     </p>
                 </div>
-                
+
+                <div className="py-2">
+                  <DailyQuote />
+                </div>
+
                 <Tabs defaultValue="signin" className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="signin">Sign In</TabsTrigger>
