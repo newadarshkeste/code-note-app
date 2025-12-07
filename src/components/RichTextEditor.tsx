@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import CodeBlock from '@tiptap/extension-code-block';
+import Image from '@tiptap/extension-image';
 import {
   Bold,
   Italic,
@@ -19,8 +20,10 @@ import {
   Quote,
   Code as CodeIcon,
   Link as LinkIcon,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { Toggle } from './ui/toggle';
+import { Button } from './ui/button';
 
 interface RichTextEditorProps {
   value: string;
@@ -32,7 +35,7 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
     return null;
   }
 
-  const setLink = () => {
+  const setLink = useCallback(() => {
     const previousUrl = editor.getAttributes('link').href;
     const url = window.prompt('URL', previousUrl);
     if (url === null) return;
@@ -41,7 +44,27 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
         return;
     }
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-  };
+  }, [editor]);
+
+  const addImage = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (readerEvent) => {
+                const url = readerEvent.target?.result;
+                if (url) {
+                    editor.chain().focus().setImage({ src: url as string }).run();
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+    input.click();
+  }, [editor]);
 
   return (
     <div className="border-b p-2 flex flex-wrap items-center gap-1">
@@ -129,6 +152,12 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
       >
         <LinkIcon className="h-4 w-4" />
       </Toggle>
+       <Toggle
+        size="sm"
+        onPressedChange={addImage}
+      >
+        <ImageIcon className="h-4 w-4" />
+      </Toggle>
     </div>
   );
 };
@@ -137,10 +166,8 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        // The Lowlight based codeBlock is disabled here
         codeBlock: false,
       }),
-      // We re-add the codeBlock extension without any highlighting.
       CodeBlock.configure({
         HTMLAttributes: {
             class: 'font-code'
@@ -151,12 +178,16 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         openOnClick: false,
         autolink: true,
       }),
+      Image.configure({
+        inline: false, // Allows images to be on their own line
+        HTMLAttributes: {
+          class: 'max-w-full h-auto rounded-md my-4',
+        },
+      }),
     ],
     content: value,
     editorProps: {
       attributes: {
-        // This is the important change. We are now applying the .ProseMirror class
-        // which contains all the necessary styling from globals.css.
         class: 'ProseMirror',
       },
     },
@@ -165,16 +196,10 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     },
   });
 
-  // Synchronize the editor content with the `value` prop from outside.
   useEffect(() => {
     if (editor) {
-      // Check if the content is actually different before setting it.
-      // This prevents the cursor from jumping.
       const isSame = editor.getHTML() === value;
       if (!isSame) {
-        // `setContent` will trigger `onUpdate`, so we don't need to call `onChange` here.
-        // The `false` second argument prevents `onUpdate` from firing, which we want here to avoid loops.
-        // We let the user's typing trigger the onChange.
         editor.commands.setContent(value, false);
       }
     }

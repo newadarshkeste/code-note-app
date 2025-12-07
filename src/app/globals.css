@@ -144,6 +144,10 @@
     @apply border-t border-border my-4;
   }
 
+  .ProseMirror img {
+    @apply max-w-full h-auto rounded-md my-4;
+  }
+
   .ProseMirror:focus {
     @apply outline-none;
   }
