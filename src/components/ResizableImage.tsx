@@ -13,37 +13,21 @@ export const ResizableImageNodeView = ({ node, updateAttributes, selected }: Nod
     handle: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'
   ) => {
     event.preventDefault();
+    event.stopPropagation(); // <-- THIS IS THE CRITICAL FIX
+    
     const startX = event.clientX;
     const startY = event.clientY;
     const startWidth = imgRef.current?.offsetWidth || 0;
-    const startHeight = imgRef.current?.offsetHeight || 0;
     
     const handleMouseMove = (e: MouseEvent) => {
       let newWidth = startWidth;
-      let newHeight = startHeight;
       const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
 
       if (handle.includes('right')) {
         newWidth = startWidth + dx;
       }
       if (handle.includes('left')) {
         newWidth = startWidth - dx;
-      }
-      if (handle.includes('bottom')) {
-        newHeight = startHeight + dy;
-      }
-      if (handle.includes('top')) {
-        newHeight = startHeight - dy;
-      }
-
-      // Maintain aspect ratio
-      if (newWidth !== startWidth) {
-        const aspectRatio = startHeight / startWidth;
-        newHeight = newWidth * aspectRatio;
-      } else if (newHeight !== startHeight) {
-        const aspectRatio = startWidth / startHeight;
-        newWidth = newHeight * aspectRatio;
       }
       
       updateAttributes({ width: Math.max(50, newWidth) });
@@ -66,7 +50,7 @@ export const ResizableImageNodeView = ({ node, updateAttributes, selected }: Nod
           src={node.attrs.src}
           alt={node.attrs.alt}
           title={node.attrs.title}
-          width={node.attrs.width}
+          style={{ width: node.attrs.width }}
           className="w-full h-auto"
         />
         {selected && (
