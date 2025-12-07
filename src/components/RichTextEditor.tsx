@@ -10,6 +10,9 @@ import CodeBlock from '@tiptap/extension-code-block';
 import TiptapImage from '@tiptap/extension-image';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { ResizableImageNodeView } from './ResizableImage';
+import TextStyle from '@tiptap/extension-text-style';
+import { FontSize } from '@tiptap/extension-font-size';
+
 
 import {
   Bold,
@@ -24,9 +27,17 @@ import {
   Quote,
   Code as CodeIcon,
   Link as LinkIcon,
-  Image as ImageIcon,
+  ImageIcon,
+  ChevronDown,
 } from 'lucide-react';
 import { Toggle } from './ui/toggle';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from './ui/button';
 
 // Extend the default Image extension to use our React component
 const ResizableImageExtension = TiptapImage.extend({
@@ -95,8 +106,30 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
     input.click();
   }, [editor]);
 
+  const fontSizes = ['12px', '14px', '16px', '18px', '24px', '30px', '36px'];
+  const currentFontSize = editor.getAttributes('textStyle').fontSize || '16px';
+
   return (
     <div className="border-b p-2 flex flex-wrap items-center gap-1">
+       <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-9 px-2.5">
+            {parseInt(currentFontSize)}
+            <ChevronDown className="h-4 w-4 ml-1" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {fontSizes.map(size => (
+            <DropdownMenuItem
+              key={size}
+              onClick={() => editor.chain().focus().setFontSize(size).run()}
+              className={editor.isActive('textStyle', { fontSize: size }) ? 'is-active' : ''}
+            >
+              {parseInt(size)}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
       <Toggle
         size="sm"
         pressed={editor.isActive('bold')}
@@ -197,6 +230,11 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
       StarterKit.configure({
         codeBlock: false,
         image: false, // Disable the default image extension
+        textStyle: false, // We'll configure it manually
+      }),
+      TextStyle,
+      FontSize.configure({
+          types: ['textStyle'],
       }),
       CodeBlock.configure({
         HTMLAttributes: {

@@ -88,6 +88,10 @@
   .ProseMirror p {
     @apply mb-4;
   }
+  
+  .ProseMirror p[style*="font-size"] {
+    margin-bottom: 0;
+  }
 
   .ProseMirror h1,
   .ProseMirror h2,
