@@ -258,13 +258,24 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
       StarterKit.configure({
         codeBlock: false,
         image: false,
+        textStyle: false, // We'll configure TextStyle separately now
         paragraph: {
             HTMLAttributes: {
                 style: `line-height: 1`, // Set a default line height
             },
         },
+        // This is the key fix: it tells Tiptap to keep the marks (like font size)
+        // when creating a new line or splitting a block.
+        history: {
+          depth: 100,
+        },
       }),
-      TextStyle,
+      TextStyle.configure({
+        // This ensures TextStyle can be used by other extensions that need it.
+        HTMLAttributes: {
+          class: null,
+        },
+      }),
       FontSize.configure({
           types: ['textStyle'],
       }),
@@ -366,3 +377,5 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     </div>
   );
 }
+
+  
