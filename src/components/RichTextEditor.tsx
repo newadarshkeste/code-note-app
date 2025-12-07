@@ -38,6 +38,9 @@ const ResizableImage = TiptapImage.extend({
       height: {
         default: null,
       },
+       style: {
+        default: 'cursor: pointer;',
+      },
     };
   },
 });
@@ -180,42 +183,6 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
   );
 };
 
-const ImageResizeBubbleMenu = ({ editor }: { editor: Editor }) => {
-    const [width, setWidth] = React.useState(editor.getAttributes('image').width || '');
-    
-    React.useEffect(() => {
-        setWidth(editor.getAttributes('image').width || '');
-    }, [editor, editor.getAttributes('image').width]);
-
-    const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newWidth = e.target.value;
-        setWidth(newWidth);
-        const finalWidth = newWidth ? parseInt(newWidth, 10) : null;
-        if (finalWidth !== null && isNaN(finalWidth)) return;
-        
-        editor.chain().focus().setImage({ ...editor.getAttributes('image'), width: finalWidth, height: null }).run();
-    };
-
-    return (
-        <BubbleMenu
-            editor={editor}
-            tippyOptions={{ duration: 100 }}
-            shouldShow={({ editor }) => editor.isActive('image')}
-        >
-            <div className="p-2 bg-background border shadow-lg rounded-md flex items-center gap-2">
-                <Input 
-                    type="number" 
-                    value={width}
-                    onChange={handleWidthChange}
-                    className="h-8 w-24"
-                    placeholder="Width"
-                />
-                 <Button variant="ghost" onClick={() => editor.chain().focus().setImage({ ...editor.getAttributes('image'), width: null, height: null }).run()}>Auto</Button>
-            </div>
-        </BubbleMenu>
-    );
-};
-
 export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -288,7 +255,6 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   return (
     <div className="h-full w-full flex flex-col">
       <EditorToolbar editor={editor} />
-      <ImageResizeBubbleMenu editor={editor} />
       <EditorContent editor={editor} className="flex-grow overflow-y-auto" />
     </div>
   );
