@@ -16,6 +16,7 @@
  *     - /notes/{noteId}
  *   - /todos/{todoId}
  *   - /studyStats/{userId}
+ *   - /recursionBoards/{boardId}
  * This hierarchical structure is the primary mechanism for enforcing security,
  * as ownership is determined by the {userId} in the path.
  *
@@ -95,6 +96,18 @@ service cloud.firestore {
       match /studyStats/{statsId} {
         allow get, create, update: if isOwner(userId) && statsId == userId;
         allow delete: if false; 
+      }
+
+      match /recursionBoards/{boardId} {
+        allow get, list, create, update, delete: if isOwner(userId);
+
+        match /cards/{cardId} {
+          allow get, list, create, update, delete: if isOwner(userId);
+        }
+
+        match /connections/{connectionId} {
+          allow get, list, create, update, delete: if isOwner(userId);
+        }
       }
     }
     

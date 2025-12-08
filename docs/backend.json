@@ -282,6 +282,51 @@
         }
       },
       "required": ["id", "userId", "content", "isCompleted", "createdAt"]
+    },
+     "RecursionBoard": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RecursionBoard",
+      "type": "object",
+      "description": "Represents a single board for visualizing recursion.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "name", "createdAt", "updatedAt"]
+    },
+    "RecursionCard": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RecursionCard",
+      "type": "object",
+      "description": "A single card on a recursion board.",
+      "properties": {
+        "id": { "type": "string" },
+        "boardId": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "type": { "type": "string", "enum": ["base", "recursive", "helper"] },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "boardId", "title", "type", "x", "y"]
+    },
+    "RecursionConnection": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RecursionConnection",
+      "type": "object",
+      "description": "A connection between two cards on a recursion board.",
+      "properties": {
+        "id": { "type": "string" },
+        "boardId": { "type": "string" },
+        "fromCardId": { "type": "string" },
+        "toCardId": { "type": "string" },
+        "label": { "type": "string" }
+      },
+      "required": ["id", "boardId", "fromCardId", "toCardId"]
     }
   },
   "auth": {
@@ -403,8 +448,32 @@
             }
           ]
         }
+      },
+      {
+        "path": "/users/{userId}/recursionBoards/{boardId}",
+        "definition": {
+          "entityName": "RecursionBoard",
+          "schema": { "$ref": "#/backend/entities/RecursionBoard" },
+          "description": "Subcollection for user's recursion boards."
+        }
+      },
+      {
+        "path": "/users/{userId}/recursionBoards/{boardId}/cards/{cardId}",
+        "definition": {
+          "entityName": "RecursionCard",
+          "schema": { "$ref": "#/backend/entities/RecursionCard" },
+          "description": "Subcollection for cards within a recursion board."
+        }
+      },
+      {
+        "path": "/users/{userId}/recursionBoards/{boardId}/connections/{connectionId}",
+        "definition": {
+          "entityName": "RecursionConnection",
+          "schema": { "$ref": "#/backend/entities/RecursionConnection" },
+          "description": "Subcollection for connections between cards on a board."
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to provide a secure, scalable, and debuggable solution for the CodeNote application, adhering to the core design principles and strategy mandates. The primary goal is to ensure that each user can only access their own data, avoiding any possibility of cross-user data leakage.\n\n**Authorization Independence (CRITICAL):** The structure enforces Authorization Independence by embedding the `userId` within both the `topics` and `notes` documents. This eliminates the need for `get()` calls in security rules to verify ownership based on parent document data, simplifying rules and ensuring atomic operations.\n\n**Structural Segregation (Homogeneous Security Posture):** The design segregates user-specific data under the `/users/{userId}` path. This approach ensures that all documents within a given user's subcollections (`topics` and `notes`) share the same security requirements, thereby avoiding the complexity of mixed-access data within a single collection.\n\n**Access Modeling:** The structure leverages path-based ownership to control access. The `/users/{userId}/topics/{topicId}/notes/{noteId}` hierarchy clearly defines the ownership relationship: a user owns topics, and topics own notes. This model simplifies security rules based on the current user's `uid`.\n\n**QAPs (Rules are not Filters):** The chosen structure ensures secure `list` operations by restricting access to only the topics and notes belonging to the authenticated user. Since each user's data is stored under their unique `userId`, listing operations are inherently scoped to that user's data, preventing cross-user data access.\n\n**Data Clarity and Predictability:** The schema for `Topic` and `Note` includes explicit timestamps (`createdAt`, `updatedAt`) and a clear ownership structure, enhancing data clarity and predictability. The use of standard naming conventions (`userId`, `topicId`, `noteId`) further improves debuggability and maintainability. The addition of an optional `parentId` field on the `Note` entity allows for hierarchical organization of notes within a topic. The new `StudyStats` entity is stored in a subcollection under the user, with the document ID matching the user's UID to enforce a one-to-one relationship and simplify security rules."
+    "reasoning": "The Firestore structure is designed to provide a secure, scalable, and debuggable solution for the CodeNote application, adhering to the core design principles and strategy mandates. The primary goal is to ensure that each user can only access their own data, avoiding any possibility of cross-user data leakage.\n\n**Authorization Independence (CRITICAL):** The structure enforces Authorization Independence by embedding the `userId` within both the `topics` and `notes` documents. This eliminates the need for `get()` calls in security rules to verify ownership based on parent document data, simplifying rules and ensuring atomic operations.\n\n**Structural Segregation (Homogeneous Security Posture):** The design segregates user-specific data under the `/users/{userId}` path. This approach ensures that all documents within a given user's subcollections (`topics` and `notes`) share the same security requirements, thereby avoiding the complexity of mixed-access data within a single collection.\n\n**Access Modeling:** The structure leverages path-based ownership to control access. The `/users/{userId}/topics/{topicId}/notes/{noteId}` hierarchy clearly defines the ownership relationship: a user owns topics, and topics own notes. This model simplifies security rules based on the current user's `uid`.\n\n**QAPs (Rules are not Filters):** The chosen structure ensures secure `list` operations by restricting access to only the topics and notes belonging to the authenticated user. Since each user's data is stored under their unique `userId`, listing operations are inherently scoped to that user's data, preventing cross-user data access.\n\n**Data Clarity and Predictability:** The schema for `Topic` and `Note` includes explicit timestamps (`createdAt`, `updatedAt`) and a clear ownership structure, enhancing data clarity and predictability. The use of standard naming conventions (`userId`, `topicId`, `noteId`) further improves debuggability and maintainability. The addition of an optional `parentId` field on the `Note` entity allows for hierarchical organization of notes within a topic. The new `StudyStats` entity is stored in a subcollection under the user, with the document ID matching the user's UID to enforce a one-to-one relationship and simplify security rules. The new `RecursionBoard` entities are structured similarly under the user, with boards, cards, and connections in nested subcollections to maintain data locality and simplify ownership rules."
   }
 }

@@ -3,6 +3,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useNotes } from '@/context/NotesContext';
 import { useAuth } from '@/context/AuthContext';
 import { CodeNoteLogo } from '@/components/CodeNoteLogo';
@@ -30,7 +31,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ThemeToggle } from './ThemeToggle';
-import { Folder, Search, Trash2, Plus, Pencil, LogOut } from 'lucide-react';
+import { Folder, Search, Trash2, Plus, Pencil, LogOut, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
 import {
@@ -44,6 +45,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { Skeleton } from './ui/skeleton';
 import { ThemeCustomizer } from './ThemeCustomizer';
+import { usePathname } from 'next/navigation';
 
 interface TopicSidebarProps {
   isMobile?: boolean;
@@ -63,6 +65,7 @@ export function TopicSidebar({ isMobile = false, onTopicSelect }: TopicSidebarPr
     updateTopic,
   } = useNotes();
   const { user, logout } = useAuth();
+  const pathname = usePathname();
   const [isTopicDialogOpen, setIsTopicDialogOpen] = useState(false);
   const [newTopicName, setNewTopicName] = useState('');
   const [renameTopic, setRenameTopic] = useState<typeof topics[number] | null>(null);
@@ -150,6 +153,21 @@ export function TopicSidebar({ isMobile = false, onTopicSelect }: TopicSidebarPr
         
         <ScrollArea className="flex-grow min-h-0">
             <nav className="p-4 pt-0">
+                <Link href="/recursion-cards" passHref>
+                   <Button
+                        variant="ghost"
+                        className={cn(
+                            "w-full justify-start gap-2 h-10 text-sm",
+                            pathname === '/recursion-cards' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-accent'
+                        )}
+                    >
+                        <Share2 className="h-4 w-4 flex-shrink-0" />
+                        Recursion Cards
+                    </Button>
+                </Link>
+
+                <Separator className="my-2" />
+                 
                  {topicsLoading ? (
                     <div className="space-y-2">
                         <Skeleton className="h-10 w-full" />
