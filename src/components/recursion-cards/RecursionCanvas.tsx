@@ -53,6 +53,18 @@ export function RecursionCanvas() {
         });
     };
 
+    // FIX: Filter out nodes that do not have a valid numerical position yet.
+    // This prevents the "NaN" error when a new node is created and Firestore sync is in progress.
+    const validNodes = useMemo(() => {
+        return nodes.filter(node => 
+            node.position && 
+            typeof node.position.x === 'number' && 
+            typeof node.position.y === 'number' &&
+            !isNaN(node.position.x) &&
+            !isNaN(node.position.y)
+        );
+    }, [nodes]);
+
     return (
         <div className="h-full w-full flex flex-col bg-background">
             <header className="flex-shrink-0 p-2 flex items-center justify-between border-b h-[65px] bg-card/80">
@@ -66,7 +78,7 @@ export function RecursionCanvas() {
             </header>
             <div className="flex-grow h-full w-full" onDoubleClick={onPaneDoubleClick}>
                 <ReactFlow
-                    nodes={nodes}
+                    nodes={validNodes}
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}

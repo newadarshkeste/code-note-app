@@ -76,8 +76,8 @@ export type RecursionCardUpdate = Partial<Omit<RecursionCard, 'id' | 'boardId'>>
 export interface RecursionConnection {
   id: string;
   boardId: string;
-  source: string; // fromCardId
-  target: string; // toCardId
+  fromCardId: string;
+  toCardId: string;
   label?: string;
 }
 

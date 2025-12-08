@@ -132,8 +132,8 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
                 const data = doc.data() as RecursionConnection;
                 return {
                     id: doc.id,
-                    source: data.source,
-                    target: data.target,
+                    source: data.fromCardId,
+                    target: data.toCardId,
                     label: data.label,
                 } as RecursionEdge;
             });
@@ -147,11 +147,11 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
     const activeBoard = useMemo(() => boards.find(b => b.id === activeBoardId) || null, [boards, activeBoardId]);
 
     const addBoard = async (name: string) => {
-        if (!boardsRef) return;
+        if (!boardsRef || !user) return;
         try {
             const docRef = await addDoc(boardsRef, {
                 name,
-                userId: user?.uid,
+                userId: user.uid,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
             });
@@ -202,9 +202,17 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
         [setEdges]
     );
 
-    const onConnect: (connection: Connection) => void = useCallback((connection) => {
-        setEdges((eds) => addReactFlowEdge(connection, eds));
-    }, [setEdges]);
+    const onConnect: (connection: Connection) => void = useCallback((params) => {
+        if (!connectionsRef) return;
+        const newConnection = {
+            fromCardId: params.source,
+            toCardId: params.target,
+        };
+        addDoc(connectionsRef, newConnection).catch(err => {
+            console.error("Failed to create connection", err);
+            toast({ variant: "destructive", title: "Error", description: "Could not create connection."})
+        });
+    }, [connectionsRef, toast]);
 
 
     // --- Card and Connection CRUD ---
