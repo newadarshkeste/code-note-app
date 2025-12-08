@@ -44,22 +44,23 @@ export function RecursionCardNode({ data, selected }: NodeProps<RecursionCard>) 
     return (
         <div 
             className={cn(
-                "w-64 rounded-lg border-2 bg-card shadow-md transition-all duration-150 group",
+                "rounded-lg border-2 bg-card shadow-md transition-all duration-150 group",
                 selected ? "ring-2 ring-primary ring-offset-2" : "",
                 styles.body
             )}
+            style={{ width: data.width ? `${data.width}px` : '256px' }}
         >
             <Handle type="target" position={Position.Top} className="!bg-primary" />
             
             <div className="p-3">
                 <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-mono font-bold text-lg text-foreground">{data.title}</h3>
-                    <div className="flex items-center">
+                    <h3 className="font-mono font-bold text-lg text-foreground flex-grow break-words">{data.title}</h3>
+                    <div className="flex items-center flex-shrink-0">
                         <Badge className={cn("text-xs", styles.badge)}>
                             <Icon className="h-3 w-3 mr-1" />
                             {styles.label}
                         </Badge>
-                        <Button
+                         <Button
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -69,11 +70,11 @@ export function RecursionCardNode({ data, selected }: NodeProps<RecursionCard>) 
                         </Button>
                     </div>
                 </div>
-                {data.subtitle && <p className="text-xs text-muted-foreground mt-1">{data.subtitle}</p>}
+                {data.subtitle && <p className="text-xs text-muted-foreground mt-1 break-words">{data.subtitle}</p>}
             </div>
             {data.notes && (
                  <div className="border-t border-border/50 px-3 py-2">
-                    <p className="text-xs text-muted-foreground italic">{data.notes}</p>
+                    <p className="text-xs text-muted-foreground italic break-words">{data.notes}</p>
                 </div>
             )}
             <Handle type="source" position={Position.Bottom} className="!bg-primary" />

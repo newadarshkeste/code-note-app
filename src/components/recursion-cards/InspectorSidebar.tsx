@@ -78,6 +78,17 @@ export function InspectorSidebar() {
                         </Select>
                     </div>
                     <div className="space-y-2">
+                        <Label htmlFor="card-width">Width (px)</Label>
+                        <Input
+                            id="card-width"
+                            type="number"
+                            value={selectedCard.width || 256}
+                            onChange={(e) => handleUpdate('width', parseInt(e.target.value, 10))}
+                            min="100"
+                            step="10"
+                        />
+                    </div>
+                    <div className="space-y-2">
                         <Label htmlFor="card-notes">Notes</Label>
                         <Textarea
                             id="card-notes"

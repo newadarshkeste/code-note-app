@@ -310,6 +310,7 @@
         "type": { "type": "string", "enum": ["base", "recursive", "helper"] },
         "x": { "type": "number" },
         "y": { "type": "number" },
+        "width": { "type": "number" },
         "notes": { "type": "string" }
       },
       "required": ["id", "boardId", "title", "type", "x", "y"]

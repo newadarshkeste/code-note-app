@@ -17,10 +17,11 @@ import {
     writeBatch,
     getDocs,
     where,
+    deleteField,
 } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { RecursionBoard, RecursionCard, RecursionConnection } from '@/lib/types';
-import { Node, Edge, OnNodesChange, OnEdgesChange, applyNodeChanges, applyEdgeChanges, Connection, addEdge as addReactFlowEdge } from 'reactflow';
+import { Node, Edge, OnNodesChange, OnEdgesChange, applyNodeChanges, applyEdgeChanges, Connection, addEdge as addReactFlowEdge, OnEdgesDelete } from 'reactflow';
 
 // ReactFlow specific types
 export type RecursionNode = Node<RecursionCard>;
@@ -40,6 +41,7 @@ interface RecursionCardsContextType {
     onNodesChange: OnNodesChange;
     onEdgesChange: OnEdgesChange;
     onConnect: (connection: Connection) => void;
+    onEdgesDelete: OnEdgesDelete;
     
     addCard: (cardData: Partial<RecursionCard>) => Promise<void>;
     updateCard: (cardId: string, data: Partial<RecursionCard>) => Promise<void>;
@@ -97,7 +99,7 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
             setBoardsLoading(false);
         });
         return () => unsubscribe();
-    }, [boardsRef, activeBoardId]);
+    }, [boardsRef]);
 
     // Listener for Cards (Nodes)
     useEffect(() => {
@@ -106,16 +108,28 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
             return;
         }
         const unsubscribe = onSnapshot(cardsRef, (snapshot) => {
-            const fetchedNodes = snapshot.docs.map(doc => {
+            const newNodes = snapshot.docs.map(doc => {
                 const data = doc.data();
                 return {
                     id: doc.id,
-                    type: 'recursionCard', // Custom node type
+                    type: 'recursionCard',
                     position: { x: data.x, y: data.y },
                     data: { ...data, id: doc.id },
                 } as RecursionNode;
             });
-            setNodes(fetchedNodes);
+            
+            // This is the fix for the "jumping card" bug.
+            // It merges new data with existing node data, preserving the client-side position during updates.
+            setNodes(currentNodes => {
+                return newNodes.map(newNode => {
+                    const existingNode = currentNodes.find(n => n.id === newNode.id);
+                    if (existingNode) {
+                        return { ...newNode, position: existingNode.position };
+                    }
+                    return newNode;
+                });
+            });
+
         }, (error) => {
             console.error("Error fetching cards: ", error);
         });
@@ -194,17 +208,40 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
     // --- ReactFlow Handlers ---
 
     const onNodesChange: OnNodesChange = useCallback(
-        (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
-        [setNodes]
+        (changes) => {
+            setNodes((nds) => applyNodeChanges(changes, nds));
+            // Persist position changes to Firestore
+            for (const change of changes) {
+                if (change.type === 'position' && change.position) {
+                    if(!cardsRef) continue;
+                    const nodeRef = doc(cardsRef, change.id);
+                    updateDoc(nodeRef, { x: change.position.x, y: change.position.y });
+                }
+            }
+        },
+        [cardsRef]
     );
 
     const onEdgesChange: OnEdgesChange = useCallback(
         (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
-        [setEdges]
+        []
     );
 
-    const onConnect: (connection: Connection) => void = useCallback((params) => {
+    const onEdgesDelete: OnEdgesDelete = useCallback((edgesToDelete) => {
         if (!connectionsRef) return;
+        const batch = writeBatch(firestore);
+        edgesToDelete.forEach(edge => {
+            const edgeRef = doc(connectionsRef, edge.id);
+            batch.delete(edgeRef);
+        });
+        batch.commit().catch(err => {
+             console.error("Failed to delete edges", err);
+            toast({ variant: "destructive", title: "Error", description: "Could not delete connections."});
+        });
+    }, [connectionsRef, firestore, toast]);
+
+    const onConnect: (connection: Connection) => void = useCallback((params) => {
+        if (!connectionsRef || !activeBoardId) return;
         const newConnection = {
             boardId: activeBoardId,
             fromCardId: params.source,
@@ -241,7 +278,12 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
         if(!cardsRef) return;
         const cardRef = doc(cardsRef, cardId);
         try {
-            await updateDoc(cardRef, data);
+            // Ensure x and y are not set to undefined
+            const updateData = { ...data };
+            if (updateData.x === undefined) delete updateData.x;
+            if (updateData.y === undefined) delete updateData.y;
+
+            await updateDoc(cardRef, updateData);
         } catch (error) {
              console.error("Error updating card: ", error);
         }
@@ -297,6 +339,7 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
         onNodesChange,
         onEdgesChange,
         onConnect,
+        onEdgesDelete,
 
         addCard,
         updateCard,

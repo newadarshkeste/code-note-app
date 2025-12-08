@@ -1,4 +1,5 @@
 
+
 export interface Note {
   id: string;
   topicId: string;
@@ -67,6 +68,7 @@ export interface RecursionCard {
   type: 'base' | 'recursive' | 'helper';
   x: number;
   y: number;
+  width?: number;
   notes?: string;
 }
 

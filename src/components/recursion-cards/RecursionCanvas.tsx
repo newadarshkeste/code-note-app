@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useCallback, useMemo, useEffect, useState } from 'react';
@@ -26,6 +27,7 @@ export function RecursionCanvas() {
         onNodesChange,
         onEdgesChange,
         onConnect,
+        onEdgesDelete, // Get the new handler
         addCard,
         deleteCard,
         setSelectedCardId,
@@ -37,20 +39,17 @@ export function RecursionCanvas() {
 
     const nodeTypes = useMemo(() => ({ recursionCard: RecursionCardNode }), []);
     
-    // Fit view when the board changes or on initial load
     useEffect(() => {
         if (rfInstance && nodes.length > 0) {
-            // A small timeout ensures the layout is ready before fitting the view
             setTimeout(() => fitView({ duration: 200, padding: 0.1 }), 100);
         }
-    }, [activeBoard?.id, fitView, rfInstance, nodes.length > 0]); // Note: nodes.length > 0 ensures we only run this once after nodes load
+    }, [activeBoard?.id, fitView, rfInstance]); 
 
     const handleAddCard = () => {
-        if (!rfInstance) return; // Guard against uninitialized instance
+        if (!rfInstance) return;
 
         const { x, y, zoom } = rfInstance.getViewport();
         
-        // This is the corrected, robust way to find the center of the viewport
         const centerX = -x / zoom + (rfInstance.width || 0) / (2 * zoom);
         const centerY = -y / zoom + (rfInstance.height || 0) / (2 * zoom);
 
@@ -110,6 +109,7 @@ export function RecursionCanvas() {
                     onEdgesChange={onEdgesChange}
                     onConnect={onConnect}
                     onNodesDelete={handleNodesDelete}
+                    onEdgesDelete={onEdgesDelete} // Add this prop
                     nodeTypes={nodeTypes}
                     onNodeClick={(_, node) => setSelectedCardId(node.id)}
                     onPaneClick={() => setSelectedCardId(null)}
