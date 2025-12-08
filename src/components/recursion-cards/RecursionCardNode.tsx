@@ -51,22 +51,23 @@ export function RecursionCardNode({ data, selected }: NodeProps<RecursionCard>) 
         >
             <Handle type="target" position={Position.Top} className="!bg-primary" />
             
-            <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={handleDelete}
-            >
-                <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
-            
             <div className="p-3">
                 <div className="flex justify-between items-start gap-2">
                     <h3 className="font-mono font-bold text-lg text-foreground">{data.title}</h3>
-                     <Badge className={cn("text-xs", styles.badge)}>
-                        <Icon className="h-3 w-3 mr-1" />
-                        {styles.label}
-                    </Badge>
+                    <div className="flex items-center">
+                        <Badge className={cn("text-xs", styles.badge)}>
+                            <Icon className="h-3 w-3 mr-1" />
+                            {styles.label}
+                        </Badge>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={handleDelete}
+                        >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                    </div>
                 </div>
                 {data.subtitle && <p className="text-xs text-muted-foreground mt-1">{data.subtitle}</p>}
             </div>
