@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useCallback, useMemo } from 'react';
-import ReactFlow, { Background, Controls, MiniMap, BackgroundVariant } from 'reactflow';
+import ReactFlow, { Background, Controls, MiniMap, BackgroundVariant, useReactFlow } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useRecursionCards } from '@/context/RecursionCardsContext';
 import { RecursionCardNode } from './RecursionCardNode';
@@ -19,6 +18,7 @@ export function RecursionCanvas() {
         setSelectedCardId,
     } = useRecursionCards();
 
+    const reactFlowInstance = useReactFlow();
     const nodeTypes = useMemo(() => ({ recursionCard: RecursionCardNode }), []);
     
     const onNodeDragStop = useCallback((event: React.MouseEvent, node: any) => {
@@ -26,17 +26,18 @@ export function RecursionCanvas() {
     }, [updateCard]);
     
     const onPaneDoubleClick = useCallback((event: React.MouseEvent) => {
-        const { x, y } = event;
-        // This is a rough approximation. React Flow has functions to convert screen to flow position.
-        // For now, this is good enough to get started.
+        const position = reactFlowInstance.screenToFlowPosition({
+            x: event.clientX,
+            y: event.clientY,
+        });
         addCard({
             title: "f(n)",
-            position: { x: event.clientX - 300, y: event.clientY - 100 }
+            position: position
         });
-    }, [addCard]);
+    }, [reactFlowInstance, addCard]);
 
     return (
-        <div className="h-full w-full bg-background">
+        <div className="h-full w-full bg-background" onDoubleClick={onPaneDoubleClick}>
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
@@ -44,7 +45,6 @@ export function RecursionCanvas() {
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
                 onNodeDragStop={onNodeDragStop}
-                onPaneDoubleClick={onPaneDoubleClick}
                 nodeTypes={nodeTypes}
                 onNodeClick={(_, node) => setSelectedCardId(node.id)}
                 onPaneClick={() => setSelectedCardId(null)}
