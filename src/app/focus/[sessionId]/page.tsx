@@ -1,12 +1,10 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, 'useEffect', 'useState' from 'react';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Loader2, Skull, Eye, Play, Pause, RefreshCw, Settings } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { toggleTimer, resetTimer, updateSettings } from '../actions';
+import { Loader2, Skull, Eye } from 'lucide-react';
 import { TimerSettingsDialog } from '@/components/Pomodoro';
 
 
@@ -60,7 +58,6 @@ export default function FocusSessionPage({ params: { sessionId } }: { params: { 
     const { firestore } = useFirebase();
     
     const [syncKey, setSyncKey] = useState(0);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const sessionRef = useMemoFirebase(() => sessionId ? doc(firestore, 'focusSessions', sessionId) : null, [firestore, sessionId, syncKey]);
     const { data: session, isLoading } = useDoc<FocusSession>(sessionRef);
@@ -85,20 +82,6 @@ export default function FocusSessionPage({ params: { sessionId } }: { params: { 
         };
     }, []);
 
-    const handleToggle = () => {
-        if (!session || !sessionId) return;
-        toggleTimer(sessionId, !session.isActive);
-    };
-
-    const handleReset = () => {
-        if (!sessionId) return;
-        resetTimer(sessionId);
-    };
-
-    const handleSaveSettings = (focus: number, breakTime: number, longBreak: number, cycle: number) => {
-        if (!sessionId) return;
-        updateSettings(sessionId, { focus, break: breakTime, longBreak, cycle });
-    };
 
     if (isLoading && !session) {
         return (
@@ -142,29 +125,7 @@ export default function FocusSessionPage({ params: { sessionId } }: { params: { 
                     </div>
                 </div>
 
-                <div className="absolute bottom-10 flex items-center justify-center gap-4">
-                     <Button onClick={handleToggle} variant="ghost" size="icon" className="h-16 w-16 rounded-full bg-white/10 hover:bg-white/20">
-                        {session.isActive ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8" />}
-                    </Button>
-                     <Button onClick={handleReset} variant="ghost" size="icon" className="h-16 w-16 rounded-full bg-white/10 hover:bg-white/20">
-                        <RefreshCw className="h-7 w-7" />
-                    </Button>
-                     <Button onClick={() => setIsSettingsOpen(true)} variant="ghost" size="icon" className="h-16 w-16 rounded-full bg-white/10 hover:bg-white/20">
-                        <Settings className="h-7 w-7" />
-                    </Button>
-                </div>
             </main>
-             <TimerSettingsDialog
-                isOpen={isSettingsOpen}
-                setIsOpen={setIsSettingsOpen}
-                currentSettings={{
-                    focus: session.focusDuration,
-                    break: session.breakDuration,
-                    longBreak: session.longBreakDuration,
-                    cycle: session.pomodorosPerCycle,
-                }}
-                onSave={handleSaveSettings}
-             />
         </>
     );
 }
