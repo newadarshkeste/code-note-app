@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect } from 'react';
 import ReactFlow, { Background, Controls, MiniMap, BackgroundVariant, useReactFlow } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useRecursionCards } from '@/context/RecursionCardsContext';
@@ -25,6 +25,14 @@ export function RecursionCanvas() {
     const reactFlowInstance = useReactFlow();
     const nodeTypes = useMemo(() => ({ recursionCard: RecursionCardNode }), []);
     
+    useEffect(() => {
+        // When the number of nodes changes (i.e., a card is added or removed),
+        // adjust the view to fit all nodes.
+        if (nodes.length > 0) {
+            reactFlowInstance.fitView({ duration: 200, padding: 0.1 });
+        }
+    }, [nodes.length, reactFlowInstance]);
+
     const onNodeDragStop = useCallback((event: React.MouseEvent, node: any) => {
         updateCard(node.id, { x: node.position.x, y: node.position.y });
     }, [updateCard]);
@@ -53,8 +61,6 @@ export function RecursionCanvas() {
         });
     };
 
-    // FIX: Filter out nodes that do not have a valid numerical position yet.
-    // This prevents the "NaN" error when a new node is created and Firestore sync is in progress.
     const validNodes = useMemo(() => {
         return nodes.filter(node => 
             node.position && 
