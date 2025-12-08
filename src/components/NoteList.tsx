@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -278,23 +277,8 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
     };
 
     const handleOpenNewItemDialog = (parentId: string | null) => {
-        const parentNote = parentId ? notes.find(n => n.id === parentId) : null;
-        
-        let allowedTypes: Array<'code' | 'text' | 'folder'> = ['code', 'text', 'folder'];
-        let defaultType: 'code' | 'text' | 'folder' = 'code';
-        
-        // This logic is now only for restricting sub-item types, not for blocking creation.
-        if (parentNote?.type === 'code') {
-            allowedTypes = ['text'];
-            defaultType = 'text';
-        } else if (parentNote?.type === 'text') {
-             // This case is now handled by changing the parentId, but we can still toast for clarity if needed.
-             // We won't block the dialog from opening.
-        }
-
-        setAllowedNoteTypes(allowedTypes);
         setNewNoteParentId(parentId);
-        setNewNoteType(defaultType);
+        setNewNoteType('code');
         setNewNoteTitle('');
         setIsNoteDialogOpen(true);
     };
@@ -527,24 +511,24 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                             value={newNoteType}
                             onValueChange={(value: 'code' | 'text' | 'folder') => setNewNoteType(value)}
                         >
-                            {allowedNoteTypes.includes('code') && (
+                            
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="code" id="r1" />
                                     <Label htmlFor="r1" className="font-normal flex items-center gap-2"><Code className="h-4 w-4"/> Code Snippet</Label>
                                 </div>
-                            )}
-                            {allowedNoteTypes.includes('text') && (
+                            
+                            
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="text" id="r2" />
                                     <Label htmlFor="r2" className="font-normal flex items-center gap-2"><Type className="h-4 w-4"/> Text Note</Label>
                                 </div>
-                            )}
-                            {allowedNoteTypes.includes('folder') && (
+                            
+                            
                                  <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="folder" id="r3" />
                                     <Label htmlFor="r3" className="font-normal flex items-center gap-2"><Folder className="h-4 w-4"/> Folder</Label>
                                 </div>
-                            )}
+                            
                         </RadioGroup>
                     </div>
                     {newNoteType === 'code' && (
@@ -586,3 +570,5 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         </>
     );
 }
+
+    
