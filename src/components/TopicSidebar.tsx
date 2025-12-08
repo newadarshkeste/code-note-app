@@ -46,6 +46,7 @@ import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { Skeleton } from './ui/skeleton';
 import { ThemeCustomizer } from './ThemeCustomizer';
 import { usePathname } from 'next/navigation';
+import { Separator } from './ui/separator';
 
 interface TopicSidebarProps {
   isMobile?: boolean;
