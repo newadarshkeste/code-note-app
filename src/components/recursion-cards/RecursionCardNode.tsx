@@ -40,6 +40,15 @@ export function RecursionCardNode({ data, selected }: NodeProps<RecursionCard>) 
         e.stopPropagation();
         deleteCard(data.id);
     }
+    
+    // Style for handles to make them slightly larger and easier to grab
+    const handleStyle = {
+        width: 10,
+        height: 10,
+    };
+    
+    // We create separate source and target handles for each position.
+    // They will overlap, but React Flow will correctly distinguish them.
 
     return (
         <div 
@@ -50,17 +59,21 @@ export function RecursionCardNode({ data, selected }: NodeProps<RecursionCard>) 
             )}
             style={{ width: data.width ? `${data.width}px` : '256px' }}
         >
-            <Handle type="source" position={Position.Top} className="!bg-primary" />
-            <Handle type="target" position={Position.Top} className="!bg-primary" />
+            {/* Top Handles */}
+            <Handle type="source" position={Position.Top} id="top-source" style={handleStyle} className="!bg-primary" />
+            <Handle type="target" position={Position.Top} id="top-target" style={handleStyle} className="!bg-primary" />
             
-            <Handle type="source" position={Position.Bottom} className="!bg-primary" />
-            <Handle type="target" position={Position.Bottom} className="!bg-primary" />
+            {/* Bottom Handles */}
+            <Handle type="source" position={Position.Bottom} id="bottom-source" style={handleStyle} className="!bg-primary" />
+            <Handle type="target" position={Position.Bottom} id="bottom-target" style={handleStyle} className="!bg-primary" />
 
-            <Handle type="source" position={Position.Left} className="!bg-primary" />
-            <Handle type="target" position={Position.Left} className="!bg-primary" />
+            {/* Left Handles */}
+            <Handle type="source" position={Position.Left} id="left-source" style={handleStyle} className="!bg-primary" />
+            <Handle type="target" position={Position.Left} id="left-target" style={handleStyle} className="!bg-primary" />
 
-            <Handle type="source" position={Position.Right} className="!bg-primary" />
-            <Handle type="target" position={Position.Right} className="!bg-primary" />
+            {/* Right Handles */}
+            <Handle type="source" position={Position.Right} id="right-source" style={handleStyle} className="!bg-primary" />
+            <Handle type="target" position={Position.Right} id="right-target" style={handleStyle} className="!bg-primary" />
             
             <div className="p-3">
                 <div className="flex justify-between items-start gap-2">
