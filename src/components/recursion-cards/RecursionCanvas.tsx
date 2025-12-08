@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useEffect } from 'react';
-import ReactFlow, { Background, Controls, MiniMap, BackgroundVariant, useReactFlow, Node } from 'reactflow';
+import ReactFlow, { Background, Controls, MiniMap, BackgroundVariant, useReactFlow, Node, Viewport } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useRecursionCards } from '@/context/RecursionCardsContext';
 import { RecursionCardNode } from './RecursionCardNode';
@@ -29,13 +29,21 @@ export function RecursionCanvas() {
         if (nodes.length > 0) {
             setTimeout(() => reactFlowInstance.fitView({ duration: 200, padding: 0.1 }), 100);
         }
-    }, [activeBoard?.id, nodes.length, reactFlowInstance]);
+    }, [activeBoard?.id, reactFlowInstance]);
+
+     useEffect(() => {
+        if (nodes.length > 0) {
+            reactFlowInstance.fitView({ duration: 200, padding: 0.2 });
+        }
+    }, [nodes.length, reactFlowInstance]);
 
     const handleAddCard = () => {
         const { x, y, zoom } = reactFlowInstance.getViewport();
-        const centerX = -x / zoom + (reactFlowInstance.width / 2) / zoom;
-        const centerY = -y / zoom + (reactFlowInstance.height / 2) / zoom;
         
+        // This is the corrected, robust way to find the center of the viewport
+        const centerX = -x / zoom + reactFlowInstance.width / (2 * zoom);
+        const centerY = -y / zoom + reactFlowInstance.height / (2 * zoom);
+
         addCard({
             title: 'New Card',
             x: centerX,
@@ -63,11 +71,11 @@ export function RecursionCanvas() {
         <div className="h-full w-full flex flex-col bg-background">
              <header className="flex-shrink-0 p-2 flex items-center justify-between border-b h-[65px] bg-card/80">
                 <div className="flex items-center gap-2">
-                    <Link href="/" passHref>
-                        <Button variant="ghost" size="icon">
-                            <ArrowLeft className="h-4 w-4" />
-                        </Button>
-                    </Link>
+                   <Link href="/" passHref>
+                    <Button variant="ghost" size="icon">
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                   </Link>
                     <h2 className="text-lg font-headline font-semibold truncate" title={activeBoard?.name}>
                         {activeBoard?.name || 'Canvas'}
                     </h2>
