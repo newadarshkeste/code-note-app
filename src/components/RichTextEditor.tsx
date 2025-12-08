@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useEditor, EditorContent, Editor, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -13,6 +13,7 @@ import { ResizableImageNodeView } from './ResizableImage';
 import TextStyle from '@tiptap/extension-text-style';
 import { FontSize } from '@/lib/tiptap-font-size';
 import { LineHeight } from '@/lib/tiptap-line-height';
+import { ExcalidrawModal } from './ExcalidrawModal';
 
 
 import {
@@ -31,6 +32,7 @@ import {
   ImageIcon,
   ChevronDown,
   Baseline,
+  Brush, // New icon for drawing
 } from 'lucide-react';
 import { Toggle } from './ui/toggle';
 import {
@@ -73,6 +75,8 @@ interface RichTextEditorProps {
 }
 
 const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
+  const [isDrawModalOpen, setIsDrawModalOpen] = useState(false);
+
   if (!editor) {
     return null;
   }
@@ -107,6 +111,12 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
     };
     input.click();
   }, [editor]);
+  
+  const handleSaveDrawing = (dataUrl: string) => {
+      if (editor) {
+          editor.chain().focus().setImage({ src: dataUrl }).run();
+      }
+  };
 
   const fontSizes = ['12px', '14px', '16px', '18px', '24px', '30px', '36px'];
   const currentFontSize = editor.getAttributes('textStyle').fontSize || '16px';
@@ -120,7 +130,8 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
   const currentLineHeight = editor.getAttributes('paragraph').lineHeight || '1';
 
   return (
-    <div className="border-b p-2 flex flex-wrap items-center gap-1">
+    <>
+      <div className="border-b p-2 flex flex-wrap items-center gap-1">
        <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-9 px-2.5">
@@ -248,7 +259,19 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
       >
         <ImageIcon className="h-4 w-4" />
       </Toggle>
+       <Toggle
+        size="sm"
+        onPressedChange={() => setIsDrawModalOpen(true)}
+      >
+        <Brush className="h-4 w-4" />
+      </Toggle>
     </div>
+    <ExcalidrawModal
+        isOpen={isDrawModalOpen}
+        onClose={() => setIsDrawModalOpen(false)}
+        onSave={handleSaveDrawing}
+    />
+    </>
   );
 };
 
