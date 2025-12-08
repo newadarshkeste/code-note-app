@@ -80,6 +80,8 @@ export interface RecursionConnection {
   boardId: string;
   fromCardId: string;
   toCardId: string;
+  fromHandle?: string;
+  toHandle?: string;
   label?: string;
 }
 

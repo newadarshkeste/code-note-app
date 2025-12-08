@@ -119,8 +119,6 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
                 } as RecursionNode;
             });
             
-            // This is the fix for the "jumping card" bug.
-            // It merges new data with existing node data, preserving the client-side position during updates.
             setNodes(currentNodes => {
                 return newNodes.map(newNode => {
                     const existingNode = currentNodes.find(n => n.id === newNode.id);
@@ -150,6 +148,8 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
                     id: doc.id,
                     source: data.fromCardId,
                     target: data.toCardId,
+                    sourceHandle: data.fromHandle,
+                    targetHandle: data.toHandle,
                     label: data.label,
                     markerEnd: { type: MarkerType.ArrowClosed },
                 } as RecursionEdge;
@@ -212,7 +212,6 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
     const onNodesChange: OnNodesChange = useCallback(
         (changes) => {
             setNodes((nds) => applyNodeChanges(changes, nds));
-            // Persist position changes to Firestore
             for (const change of changes) {
                 if (change.type === 'position' && change.position) {
                     if(!cardsRef) continue;
@@ -243,25 +242,25 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
     }, [connectionsRef, firestore, toast]);
 
     const onConnect = useCallback((connection: Connection) => {
-        if (!connectionsRef || !activeBoardId) return;
+        if (!connectionsRef || !activeBoardId || !connection.source || !connection.target) return;
         
-        // Optimistically update the UI
-        setEdges((eds) => addReactFlowEdge({ ...connection, markerEnd: { type: MarkerType.ArrowClosed } }, eds));
+        const newEdge = { 
+            ...connection, 
+            markerEnd: { type: MarkerType.ArrowClosed } 
+        };
+        setEdges((eds) => addReactFlowEdge(newEdge, eds));
 
-        // Persist to Firestore
-        const newConnection = {
+        const newConnectionData = {
             boardId: activeBoardId,
             fromCardId: connection.source,
             toCardId: connection.target,
-            // You can add logic for labels here if needed
-            // fromHandle: connection.sourceHandle,
-            // toHandle: connection.targetHandle,
+            fromHandle: connection.sourceHandle,
+            toHandle: connection.targetHandle,
         };
-        addDoc(connectionsRef, newConnection).catch(err => {
+        addDoc(connectionsRef, newConnectionData).catch(err => {
             console.error("Failed to create connection", err);
             toast({ variant: "destructive", title: "Error", description: "Could not save connection."});
-            // Revert optimistic update on failure
-            setEdges((eds) => eds.filter(e => !(e.source === connection.source && e.target === connection.target)));
+            setEdges((eds) => eds.filter(e => !(e.source === connection.source && e.target === connection.target && e.sourceHandle === connection.sourceHandle && e.targetHandle === connection.targetHandle)));
         });
     }, [connectionsRef, activeBoardId, toast]);
 
@@ -290,7 +289,6 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
         if(!cardsRef) return;
         const cardRef = doc(cardsRef, cardId);
         try {
-            // Ensure x and y are not set to undefined
             const updateData = { ...data };
             if (updateData.x === undefined) delete updateData.x;
             if (updateData.y === undefined) delete updateData.y;
@@ -306,13 +304,10 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
         
         const batch = writeBatch(firestore);
         
-        // Delete the card itself
         const cardRef = doc(cardsRef, cardId);
         batch.delete(cardRef);
         
-        // Find and delete connections from this card
         const fromConnectionsQuery = query(connectionsRef, where('fromCardId', '==', cardId));
-        // Find and delete connections to this card
         const toConnectionsQuery = query(connectionsRef, where('toCardId', '==', cardId));
 
         try {

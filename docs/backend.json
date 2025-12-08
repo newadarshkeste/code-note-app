@@ -284,6 +284,8 @@
         "boardId": { "type": "string" },
         "fromCardId": { "type": "string" },
         "toCardId": { "type": "string" },
+        "fromHandle": { "type": "string" },
+        "toHandle": { "type": "string" },
         "label": { "type": "string" }
       },
       "required": ["id", "boardId", "fromCardId", "toCardId"]
