@@ -30,17 +30,26 @@ export function ExcalidrawModal({ isOpen, onClose, onSave }: ExcalidrawModalProp
 
   const handleSave = async () => {
     if (!excalidrawAPI) return;
-
-    // The exportToCanvas function is the recommended way to get the canvas for export
-    const canvas = await excalidrawAPI.exportToCanvas({
+  
+    const blob = await excalidrawAPI.exportToBlob({
       elements: excalidrawAPI.getSceneElements(),
-      appState: excalidrawAPI.getAppState(),
-      getDimensions: () => ({ width: 750, height: 750 }), // Specify dimensions
+      appState: {
+        ...excalidrawAPI.getAppState(),
+        // Ensure background is not transparent for the export
+        viewBackgroundColor: excalidrawAPI.getAppState().viewBackgroundColor || '#ffffff', 
+      },
+      mimeType: "image/png",
+      // Set export dimensions if needed, otherwise it uses current canvas size
     });
-
-    const dataUrl = canvas.toDataURL('image/png');
-    onSave(dataUrl);
-    onClose();
+  
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        onSave(reader.result);
+        onClose();
+      }
+    };
+    reader.readAsDataURL(blob);
   };
 
   return (
