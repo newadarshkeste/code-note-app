@@ -53,7 +53,8 @@ const getModeStyles = (mode: FocusSession['mode']) => {
 };
 
 
-export default function FocusSessionPage({ params: { sessionId } }: { params: { sessionId: string } }) {
+export default function FocusSessionPage({ params }: { params: { sessionId: string } }) {
+    const { sessionId } = React.use(params);
     const { firestore } = useFirebase();
     
     const [syncKey, setSyncKey] = useState(0);
