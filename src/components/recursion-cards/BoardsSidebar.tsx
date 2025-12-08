@@ -2,12 +2,13 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRecursionCards } from '@/context/RecursionCardsContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Trash2, Edit, Copy } from 'lucide-react';
+import { Plus, Trash2, Edit, Copy, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -46,8 +47,13 @@ export function BoardsSidebar() {
 
     return (
         <div className="h-full w-full flex flex-col bg-card/80 border-r">
-            <header className="flex-shrink-0 p-4 border-b h-[65px]">
-                <h2 className="text-lg font-headline font-semibold">Boards</h2>
+            <header className="flex-shrink-0 p-2 flex items-center justify-between border-b h-[65px]">
+                <Link href="/" passHref>
+                  <Button variant="ghost" className="flex items-center gap-2">
+                    <ArrowLeft className="h-4 w-4" />
+                    <h2 className="text-lg font-headline font-semibold">Boards</h2>
+                  </Button>
+                </Link>
             </header>
 
             <ScrollArea className="flex-grow min-h-0">

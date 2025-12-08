@@ -17,7 +17,6 @@ export function RecursionCanvas() {
         onEdgesChange,
         onConnect,
         addCard,
-        updateCard,
         deleteCard,
         setSelectedCardId,
         activeBoard,
@@ -31,22 +30,6 @@ export function RecursionCanvas() {
             reactFlowInstance.fitView({ duration: 200, padding: 0.1 });
         }
     }, [nodes.length, reactFlowInstance]);
-
-    const onNodeDragStop = useCallback((event: React.MouseEvent, node: any) => {
-        updateCard(node.id, { x: node.position.x, y: node.position.y });
-    }, [updateCard]);
-    
-    const onPaneDoubleClick = useCallback((event: React.MouseEvent) => {
-        const position = reactFlowInstance.screenToFlowPosition({
-            x: event.clientX,
-            y: event.clientY,
-        });
-        addCard({
-            title: "f(n)",
-            x: position.x,
-            y: position.y,
-        });
-    }, [reactFlowInstance, addCard]);
 
     const handleAddCard = () => {
         const { x, y, zoom } = reactFlowInstance.getViewport();
@@ -87,7 +70,7 @@ export function RecursionCanvas() {
                     Add Card
                 </Button>
             </header>
-            <div className="flex-grow h-full w-full" onDoubleClick={onPaneDoubleClick}>
+            <div className="flex-grow h-full w-full">
                 <ReactFlow
                     nodes={validNodes}
                     edges={edges}
@@ -95,7 +78,6 @@ export function RecursionCanvas() {
                     onEdgesChange={onEdgesChange}
                     onConnect={onConnect}
                     onNodesDelete={handleNodesDelete}
-                    onNodeDragStop={onNodeDragStop}
                     nodeTypes={nodeTypes}
                     onNodeClick={(_, node) => setSelectedCardId(node.id)}
                     onPaneClick={() => setSelectedCardId(null)}
