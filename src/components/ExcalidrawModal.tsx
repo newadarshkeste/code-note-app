@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Button } from '@/components/ui/button';
 import type { ExcalidrawElement, ExcalidrawImperativeAPIRef } from '@excalidraw/excalidraw/types/types';
 import dynamic from 'next/dynamic';
+import { exportToBlob } from '@excalidraw/excalidraw';
 
 const Excalidraw = dynamic(
   async () => (await import('@excalidraw/excalidraw')).Excalidraw,
@@ -31,7 +32,7 @@ export function ExcalidrawModal({ isOpen, onClose, onSave }: ExcalidrawModalProp
   const handleSave = async () => {
     if (!excalidrawAPI) return;
   
-    const blob = await excalidrawAPI.exportToBlob({
+    const blob = await exportToBlob({
       elements: excalidrawAPI.getSceneElements(),
       appState: {
         ...excalidrawAPI.getAppState(),
