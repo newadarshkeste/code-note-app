@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -21,7 +22,7 @@ import {
 } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { RecursionBoard, RecursionCard, RecursionConnection } from '@/lib/types';
-import { Node, Edge, OnNodesChange, OnEdgesChange, applyNodeChanges, applyEdgeChanges, Connection, addEdge as addReactFlowEdge, OnEdgesDelete } from 'reactflow';
+import { Node, Edge, OnNodesChange, OnEdgesChange, applyNodeChanges, applyEdgeChanges, Connection, addEdge as addReactFlowEdge, OnEdgesDelete, MarkerType } from 'reactflow';
 
 // ReactFlow specific types
 export type RecursionNode = Node<RecursionCard>;
@@ -150,6 +151,7 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
                     source: data.fromCardId,
                     target: data.toCardId,
                     label: data.label,
+                    markerEnd: { type: MarkerType.ArrowClosed },
                 } as RecursionEdge;
             });
             setEdges(fetchedEdges);
