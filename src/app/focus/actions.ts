@@ -1,7 +1,7 @@
 
 'use server';
 
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps, App } from 'firebase-admin/app';
 
@@ -80,14 +80,16 @@ export async function updateSettings(sessionId: string, settings: Settings) {
     const sessionRef = doc(db, 'focusSessions', sessionId);
     
     try {
-        await updateDoc(sessionRef, {
+        // Use setDoc with merge to handle updates more gracefully.
+        await setDoc(sessionRef, {
             focusDuration: settings.focus,
             breakDuration: settings.break,
             longBreakDuration: settings.longBreak,
             pomodorosPerCycle: settings.cycle,
-        });
+        }, { merge: true });
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
     }
 }
+

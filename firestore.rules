@@ -1,5 +1,4 @@
 
-
 /**
  * This ruleset enforces a strict user-ownership security model for a multi-user
  * note-taking application. It is designed for rapid prototyping, prioritizing
@@ -169,12 +168,9 @@ service cloud.firestore {
       // The owner can create their own session.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       
-      // Updating is more complex. Allow anyone to update, but only specific fields.
-      // This is because we are using the Admin SDK from a Server Action to update.
-      // A more secure rule would check request.auth.uid, but this requires client-side updates.
-      allow update: if true; 
-      
-      // Only the owner can delete their session.
+      // The owner of the session can update or delete it.
+      // We check the incoming data for create/update and existing for delete.
+      allow update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
   }
