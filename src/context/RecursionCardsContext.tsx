@@ -15,7 +15,8 @@ import {
     doc,
     serverTimestamp,
     writeBatch,
-    getDocs
+    getDocs,
+    where,
 } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { RecursionBoard, RecursionCard, RecursionConnection } from '@/lib/types';
@@ -96,7 +97,7 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
             setBoardsLoading(false);
         });
         return () => unsubscribe();
-    }, [boardsRef]);
+    }, [boardsRef, activeBoardId]);
 
     // Listener for Cards (Nodes)
     useEffect(() => {
@@ -205,6 +206,7 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
     const onConnect: (connection: Connection) => void = useCallback((params) => {
         if (!connectionsRef) return;
         const newConnection = {
+            boardId: activeBoardId,
             fromCardId: params.source,
             toCardId: params.target,
         };
@@ -212,14 +214,15 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
             console.error("Failed to create connection", err);
             toast({ variant: "destructive", title: "Error", description: "Could not create connection."})
         });
-    }, [connectionsRef, toast]);
+    }, [connectionsRef, toast, activeBoardId]);
 
 
     // --- Card and Connection CRUD ---
 
     const addCard = async (cardData: Partial<RecursionCard>) => {
-        if (!cardsRef) return;
+        if (!cardsRef || !activeBoardId) return;
         const newCard = {
+            boardId: activeBoardId,
             title: cardData.title || 'New Card',
             type: cardData.type || 'recursive',
             x: cardData.x ?? 100,
@@ -245,12 +248,37 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
     };
 
     const deleteCard = async (cardId: string) => {
-        if(!cardsRef) return;
+        if(!cardsRef || !connectionsRef) return;
+        
+        const batch = writeBatch(firestore);
+        
+        // Delete the card itself
         const cardRef = doc(cardsRef, cardId);
+        batch.delete(cardRef);
+        
+        // Find and delete connections from this card
+        const fromConnectionsQuery = query(connectionsRef, where('fromCardId', '==', cardId));
+        // Find and delete connections to this card
+        const toConnectionsQuery = query(connectionsRef, where('toCardId', '==', cardId));
+
         try {
-            await deleteDoc(cardRef);
+            const [fromSnapshot, toSnapshot] = await Promise.all([
+                getDocs(fromConnectionsQuery),
+                getDocs(toConnectionsQuery)
+            ]);
+
+            fromSnapshot.forEach(doc => batch.delete(doc.ref));
+            toSnapshot.forEach(doc => batch.delete(doc.ref));
+            
+            await batch.commit();
+
+            if (selectedCardId === cardId) {
+                setSelectedCardId(null);
+            }
+
         } catch (error) {
-             console.error("Error deleting card: ", error);
+             console.error("Error deleting card and its connections: ", error);
+             toast({ variant: 'destructive', title: 'Error', description: 'Could not delete the card.' });
         }
     };
 

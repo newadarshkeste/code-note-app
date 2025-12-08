@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useEffect } from 'react';
-import ReactFlow, { Background, Controls, MiniMap, BackgroundVariant, useReactFlow } from 'reactflow';
+import ReactFlow, { Background, Controls, MiniMap, BackgroundVariant, useReactFlow, Node } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useRecursionCards } from '@/context/RecursionCardsContext';
 import { RecursionCardNode } from './RecursionCardNode';
@@ -18,6 +18,7 @@ export function RecursionCanvas() {
         onConnect,
         addCard,
         updateCard,
+        deleteCard,
         setSelectedCardId,
         activeBoard,
     } = useRecursionCards();
@@ -26,12 +27,10 @@ export function RecursionCanvas() {
     const nodeTypes = useMemo(() => ({ recursionCard: RecursionCardNode }), []);
     
     useEffect(() => {
-        // When the number of nodes changes (i.e., a card is added or removed),
-        // adjust the view to fit all nodes.
         if (nodes.length > 0) {
             reactFlowInstance.fitView({ duration: 200, padding: 0.1 });
         }
-    }, [nodes.length]);
+    }, [nodes.length, reactFlowInstance]);
 
     const onNodeDragStop = useCallback((event: React.MouseEvent, node: any) => {
         updateCard(node.id, { x: node.position.x, y: node.position.y });
@@ -61,6 +60,12 @@ export function RecursionCanvas() {
         });
     };
 
+    const handleNodesDelete = useCallback((deleted: Node[]) => {
+        for (const node of deleted) {
+            deleteCard(node.id);
+        }
+    }, [deleteCard]);
+
     const validNodes = useMemo(() => {
         return nodes.filter(node => 
             node.position && 
@@ -89,6 +94,7 @@ export function RecursionCanvas() {
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
                     onConnect={onConnect}
+                    onNodesDelete={handleNodesDelete}
                     onNodeDragStop={onNodeDragStop}
                     nodeTypes={nodeTypes}
                     onNodeClick={(_, node) => setSelectedCardId(node.id)}
