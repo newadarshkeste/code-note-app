@@ -5,6 +5,8 @@ import ReactFlow, { Background, Controls, MiniMap, BackgroundVariant, useReactFl
 import 'reactflow/dist/style.css';
 import { useRecursionCards } from '@/context/RecursionCardsContext';
 import { RecursionCardNode } from './RecursionCardNode';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 
 export function RecursionCanvas() {
     const {
@@ -16,6 +18,7 @@ export function RecursionCanvas() {
         addCard,
         updateCard,
         setSelectedCardId,
+        activeBoard,
     } = useRecursionCards();
 
     const reactFlowInstance = useReactFlow();
@@ -36,25 +39,47 @@ export function RecursionCanvas() {
         });
     }, [reactFlowInstance, addCard]);
 
+    const handleAddCard = () => {
+        const { x, y, zoom } = reactFlowInstance.getViewport();
+        const centerX = -x / zoom + (reactFlowInstance.width / 2) / zoom;
+        const centerY = -y / zoom + (reactFlowInstance.height / 2) / zoom;
+        
+        addCard({
+            title: 'New Card',
+            position: { x: centerX, y: centerY },
+        });
+    };
+
     return (
-        <div className="h-full w-full bg-background" onDoubleClick={onPaneDoubleClick}>
-            <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                onNodeDragStop={onNodeDragStop}
-                nodeTypes={nodeTypes}
-                onNodeClick={(_, node) => setSelectedCardId(node.id)}
-                onPaneClick={() => setSelectedCardId(null)}
-                fitView
-                className="bg-background"
-            >
-                <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-                <Controls />
-                <MiniMap />
-            </ReactFlow>
+        <div className="h-full w-full flex flex-col bg-background">
+            <header className="flex-shrink-0 p-2 flex items-center justify-between border-b h-[65px] bg-card/80">
+                <h2 className="text-lg font-headline font-semibold truncate" title={activeBoard?.name}>
+                    {activeBoard?.name || 'Canvas'}
+                </h2>
+                <Button onClick={handleAddCard}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Card
+                </Button>
+            </header>
+            <div className="flex-grow h-full w-full" onDoubleClick={onPaneDoubleClick}>
+                <ReactFlow
+                    nodes={nodes}
+                    edges={edges}
+                    onNodesChange={onNodesChange}
+                    onEdgesChange={onEdgesChange}
+                    onConnect={onConnect}
+                    onNodeDragStop={onNodeDragStop}
+                    nodeTypes={nodeTypes}
+                    onNodeClick={(_, node) => setSelectedCardId(node.id)}
+                    onPaneClick={() => setSelectedCardId(null)}
+                    fitView
+                    className="bg-background"
+                >
+                    <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+                    <Controls />
+                    <MiniMap />
+                </ReactFlow>
+            </div>
         </div>
     );
 }
