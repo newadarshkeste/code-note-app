@@ -242,18 +242,28 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
         });
     }, [connectionsRef, firestore, toast]);
 
-    const onConnect: (connection: Connection) => void = useCallback((params) => {
+    const onConnect = useCallback((connection: Connection) => {
         if (!connectionsRef || !activeBoardId) return;
+        
+        // Optimistically update the UI
+        setEdges((eds) => addReactFlowEdge({ ...connection, markerEnd: { type: MarkerType.ArrowClosed } }, eds));
+
+        // Persist to Firestore
         const newConnection = {
             boardId: activeBoardId,
-            fromCardId: params.source,
-            toCardId: params.target,
+            fromCardId: connection.source,
+            toCardId: connection.target,
+            // You can add logic for labels here if needed
+            // fromHandle: connection.sourceHandle,
+            // toHandle: connection.targetHandle,
         };
         addDoc(connectionsRef, newConnection).catch(err => {
             console.error("Failed to create connection", err);
-            toast({ variant: "destructive", title: "Error", description: "Could not create connection."})
+            toast({ variant: "destructive", title: "Error", description: "Could not save connection."});
+            // Revert optimistic update on failure
+            setEdges((eds) => eds.filter(e => !(e.source === connection.source && e.target === connection.target)));
         });
-    }, [connectionsRef, toast, activeBoardId]);
+    }, [connectionsRef, activeBoardId, toast]);
 
 
     // --- Card and Connection CRUD ---

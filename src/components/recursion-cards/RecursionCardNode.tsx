@@ -61,20 +61,20 @@ export function RecursionCardNode({ data, selected }: NodeProps<RecursionCard>) 
             style={{ width: data.width ? `${data.width}px` : '256px' }}
         >
             {/* Top Handles */}
-            <Handle type="source" position={Position.Top} id="top-source" style={handleStyle} />
-            <Handle type="target" position={Position.Top} id="top-target" style={{...handleStyle, top: '-5px'}} />
+            <Handle type="source" position={Position.Top} id="top-source" style={handleStyle} isConnectable={true} />
+            <Handle type="target" position={Position.Top} id="top-target" style={{...handleStyle, top: '-5px'}} isConnectable={true} />
             
             {/* Bottom Handles */}
-            <Handle type="source" position={Position.Bottom} id="bottom-source" style={handleStyle} />
-            <Handle type="target" position={Position.Bottom} id="bottom-target" style={{...handleStyle, bottom: '-5px'}} />
+            <Handle type="source" position={Position.Bottom} id="bottom-source" style={handleStyle} isConnectable={true} />
+            <Handle type="target" position={Position.Bottom} id="bottom-target" style={{...handleStyle, bottom: '-5px'}} isConnectable={true} />
 
             {/* Left Handles */}
-            <Handle type="source" position={Position.Left} id="left-source" style={handleStyle} />
-            <Handle type="target" position={Position.Left} id="left-target" style={{...handleStyle, left: '-5px'}} />
+            <Handle type="source" position={Position.Left} id="left-source" style={handleStyle} isConnectable={true} />
+            <Handle type="target" position={Position.Left} id="left-target" style={{...handleStyle, left: '-5px'}} isConnectable={true} />
 
             {/* Right Handles */}
-            <Handle type="source" position={Position.Right} id="right-source" style={handleStyle} />
-            <Handle type="target" position={Position.Right} id="right-target" style={{...handleStyle, right: '-5px'}} />
+            <Handle type="source" position={Position.Right} id="right-source" style={handleStyle} isConnectable={true} />
+            <Handle type="target" position={Position.Right} id="right-target" style={{...handleStyle, right: '-5px'}} isConnectable={true} />
             
             <div className="p-3">
                 <div className="flex justify-between items-start gap-2">
