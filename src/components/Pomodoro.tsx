@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, RefreshCw, Settings, QrCode } from 'lucide-react';
+import { Play, Pause, RefreshCw, Settings } from 'lucide-react';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -10,7 +9,7 @@ import { useNotes } from '@/context/NotesContext';
 import { useAuth } from '@/context/AuthContext';
 import { useFirestore } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
-import QRCode from 'qrcode.react';
+
 
 import {
   Dialog,
@@ -135,42 +134,6 @@ export function TimerSettingsDialog({
     );
 }
 
-function FocusLockDialog({ isOpen, onOpenChange, sessionId }: { isOpen: boolean; onOpenChange: (open: boolean) => void, sessionId: string | null }) {
-    const [focusUrl, setFocusUrl] = useState('');
-
-    useEffect(() => {
-        if (sessionId) {
-            setFocusUrl(`${window.location.origin}/focus/${sessionId}`);
-        }
-    }, [sessionId]);
-
-    return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Focus Lock</DialogTitle>
-                    <DialogDescription>
-                        Scan this QR code with your phone to open a synced timer. Switching tabs on your phone will trigger a warning.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="flex items-center justify-center p-4">
-                    {focusUrl ? (
-                         <QRCode value={focusUrl} size={200} />
-                    ) : (
-                        <p>Generating session...</p>
-                    )}
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button type="button">Close</Button>
-                    </DialogClose>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    )
-}
-
-
 export function Pomodoro() {
     const { user } = useAuth();
     const firestore = useFirestore();
@@ -189,28 +152,8 @@ export function Pomodoro() {
         pomodorosPerCycle,
         pomodoroCycleCount,
         updateDurations,
-        setFocusSessionId,
     } = pomodoro;
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isFocusLockOpen, setIsFocusLockOpen] = useState(false);
-    
-    // We only need to manage the dialog's view state here
-    const [localFocusSessionId, setLocalFocusSessionId] = useState<string | null>(null);
-
-    const handleOpenFocusLock = () => {
-        if (user) {
-            const newSessionId = doc(collection(firestore, 'focusSessions')).id;
-            setFocusSessionId(newSessionId); // Set in global context
-            setLocalFocusSessionId(newSessionId); // Set for this dialog instance
-            setIsFocusLockOpen(true);
-        }
-    };
-
-    const handleCloseFocusLock = () => {
-        setIsFocusLockOpen(false);
-        // Optional: clear the global session ID if you want a new one each time
-        // setFocusSessionId(null); 
-    };
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -240,9 +183,6 @@ export function Pomodoro() {
                     Pomodoro Timer
                 </CardTitle>
                 <div className="flex items-center">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleOpenFocusLock}>
-                        <QrCode className="h-4 w-4" />
-                    </Button>
                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsSettingsOpen(true)}>
                         <Settings className="h-4 w-4" />
                     </Button>
@@ -287,11 +227,6 @@ export function Pomodoro() {
                     cycle: pomodorosPerCycle
                 }}
                 onSave={updateDurations}
-             />
-             <FocusLockDialog
-                isOpen={isFocusLockOpen}
-                onOpenChange={handleCloseFocusLock}
-                sessionId={localFocusSessionId}
              />
         </Card>
     );

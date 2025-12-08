@@ -128,28 +128,6 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     };
   }, [pomodoro]);
 
-
-  // Firestore Sync for Focus Session
-  useEffect(() => {
-      if (pomodoro.focusSessionId && user && firestore) {
-          const sessionRef = doc(firestore, 'focusSessions', pomodoro.focusSessionId);
-          
-          const data = {
-              userId: user.uid,
-              mode: pomodoro.mode,
-              timeLeft: pomodoro.timeLeft,
-              isActive: pomodoro.isActive,
-              expiresAt: Timestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000), 
-              focusDuration: pomodoro.focusDuration,
-              breakDuration: pomodoro.breakDuration,
-              longBreakDuration: pomodoro.longBreakDuration,
-              pomodorosPerCycle: pomodoro.pomodorosPerCycle,
-          };
-          setDoc(sessionRef, data, { merge: true });
-      }
-  }, [pomodoro, user, firestore]);
-
-
   const topicsRef = useMemo(() => user ? collection(firestore, 'users', user.uid, 'topics') : null, [user, firestore]);
   const todosRef = useMemo(() => user ? collection(firestore, 'users', user.uid, 'todos') : null, [user, firestore]);
   

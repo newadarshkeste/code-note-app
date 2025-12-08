@@ -202,47 +202,6 @@
         "id"
       ]
     },
-    "FocusSession": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "FocusSession",
-        "type": "object",
-        "description": "A temporary document to sync Pomodoro timer state between devices.",
-        "properties": {
-            "id": {
-                "type": "string",
-                "description": "Unique identifier for the session."
-            },
-            "userId": {
-                "type": "string",
-                "description": "The UID of the user who started the session."
-            },
-            "mode": {
-                "type": "string",
-                "enum": ["focus", "break", "longBreak"]
-            },
-            "timeLeft": {
-                "type": "number",
-                "description": "Seconds remaining in the current timer."
-            },
-            "isActive": {
-                "type": "boolean",
-                "description": "Whether the timer is currently running."
-            },
-            "expiresAt": {
-                "type": "string",
-                "format": "date-time",
-                "description": "Timestamp when this session document can be safely deleted."
-            }
-        },
-        "required": [
-            "id",
-            "userId",
-            "mode",
-            "timeLeft",
-            "isActive",
-            "expiresAt"
-        ]
-    },
     "Todo": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Todo",
@@ -432,22 +391,6 @@
                     "description": "The Firebase UID of the user whose stats are being stored."
                 }
             ]
-        }
-      },
-       {
-        "path": "/focusSessions/{sessionId}",
-        "definition": {
-          "entityName": "FocusSession",
-          "schema": {
-            "$ref": "#/backend/entities/FocusSession"
-          },
-          "description": "Top-level collection for temporary focus sessions to sync timers. Publicly readable but writable only by the owner.",
-          "params": [
-            {
-              "name": "sessionId",
-              "description": "Unique ID for the focus session."
-            }
-          ]
         }
       },
       {

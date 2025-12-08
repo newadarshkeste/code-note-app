@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -64,7 +65,6 @@ export const useStudyStats = () => {
     const [timeLeft, setTimeLeft] = useLocalStorage('study:timeLeft', focusDuration * 60);
     const [pomodoroCycleCount, setPomodoroCycleCount] = useLocalStorage('study:pomodoroCycleCount', 0);
     const [sessionMinutes, setSessionMinutes] = useState(0);
-    const [focusSessionId, setFocusSessionId] = useState<string | null>(null);
 
     const onPomodoroComplete = useCallback(async () => {
         if (!user || !statsRef) return;
@@ -236,8 +236,6 @@ export const useStudyStats = () => {
                 sessionMinutes,
                 setSessionMinutes,
                 onPomodoroComplete,
-                focusSessionId,
-                setFocusSessionId
             },
             dailyStats: {
                 minutesToday: stats?.dailyMinutes?.[todayStr] || 0,
@@ -260,6 +258,6 @@ export const useStudyStats = () => {
         mode, setMode, timeLeft, setTimeLeft, isActive, setIsActive, toggleTimer, resetTimer, 
         focusDuration, breakDuration, longBreakDuration, pomodorosPerCycle, 
         pomodoroCycleCount, setPomodoroCycleCount, updateDurations, sessionMinutes, setSessionMinutes, 
-        onPomodoroComplete, updateStudyStatsOnNoteSave, recordPracticeSession, focusSessionId, setFocusSessionId
+        onPomodoroComplete, updateStudyStatsOnNoteSave, recordPracticeSession
     ]);
 };
