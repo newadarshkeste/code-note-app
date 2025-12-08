@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useCallback, useMemo, useEffect } from 'react';
@@ -7,7 +6,8 @@ import 'reactflow/dist/style.css';
 import { useRecursionCards } from '@/context/RecursionCardsContext';
 import { RecursionCardNode } from './RecursionCardNode';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export function RecursionCanvas() {
     const {
@@ -27,9 +27,9 @@ export function RecursionCanvas() {
     
     useEffect(() => {
         if (nodes.length > 0) {
-            reactFlowInstance.fitView({ duration: 200, padding: 0.1 });
+            setTimeout(() => reactFlowInstance.fitView({ duration: 200, padding: 0.1 }), 100);
         }
-    }, [nodes.length, reactFlowInstance]);
+    }, [activeBoard?.id, nodes.length, reactFlowInstance]);
 
     const handleAddCard = () => {
         const { x, y, zoom } = reactFlowInstance.getViewport();
@@ -61,10 +61,17 @@ export function RecursionCanvas() {
 
     return (
         <div className="h-full w-full flex flex-col bg-background">
-            <header className="flex-shrink-0 p-2 flex items-center justify-between border-b h-[65px] bg-card/80">
-                <h2 className="text-lg font-headline font-semibold truncate" title={activeBoard?.name}>
-                    {activeBoard?.name || 'Canvas'}
-                </h2>
+             <header className="flex-shrink-0 p-2 flex items-center justify-between border-b h-[65px] bg-card/80">
+                <div className="flex items-center gap-2">
+                    <Link href="/" passHref>
+                        <Button variant="ghost" size="icon">
+                            <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                    </Link>
+                    <h2 className="text-lg font-headline font-semibold truncate" title={activeBoard?.name}>
+                        {activeBoard?.name || 'Canvas'}
+                    </h2>
+                </div>
                 <Button onClick={handleAddCard}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Card
