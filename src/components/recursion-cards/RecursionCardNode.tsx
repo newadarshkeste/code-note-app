@@ -51,13 +51,9 @@ export function RecursionCardNode({ data, selected }: NodeProps<RecursionCard>) 
             style={{ width: data.width ? `${data.width}px` : '256px' }}
         >
             <Handle type="target" position={Position.Top} className="!bg-primary" />
-            <Handle type="source" position={Position.Top} className="!bg-primary" />
-            <Handle type="target" position={Position.Right} className="!bg-primary" />
-            <Handle type="source" position={Position.Right} className="!bg-primary" />
-            <Handle type="target" position={Position.Bottom} className="!bg-primary" />
             <Handle type="source" position={Position.Bottom} className="!bg-primary" />
             <Handle type="target" position={Position.Left} className="!bg-primary" />
-            <Handle type="source" position={Position.Left} className="!bg-primary" />
+            <Handle type="source" position={Position.Right} className="!bg-primary" />
             
             <div className="p-3">
                 <div className="flex justify-between items-start gap-2">
