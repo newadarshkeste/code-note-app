@@ -31,7 +31,7 @@ export function RecursionCanvas() {
         if (nodes.length > 0) {
             reactFlowInstance.fitView({ duration: 200, padding: 0.1 });
         }
-    }, [nodes.length, reactFlowInstance]);
+    }, [nodes.length]);
 
     const onNodeDragStop = useCallback((event: React.MouseEvent, node: any) => {
         updateCard(node.id, { x: node.position.x, y: node.position.y });
