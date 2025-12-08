@@ -1,11 +1,10 @@
 
 'use client';
 
-import React, 'useEffect', 'useState' from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Loader2, Skull, Eye } from 'lucide-react';
-import { TimerSettingsDialog } from '@/components/Pomodoro';
 
 
 interface FocusSession {
