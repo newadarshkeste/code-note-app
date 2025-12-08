@@ -73,7 +73,7 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }:
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: note.id, disabled: note.parentId ? getSubNotes(note.parentId).some(n => n.type === 'folder') && note.type === 'folder' : false });
+    } = useSortable({ id: note.id });
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -105,7 +105,7 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }:
         }
     }
 
-    const isOverFolder = note.type === 'folder' && overId === note.id && activeId !== note.id;
+    const isOverContainer = note.type !== 'folder' && overId === note.id && activeId !== note.id;
     
     return (
         <Collapsible open={isExpanded} onOpenChange={setIsExpanded} className="relative w-full">
@@ -114,7 +114,7 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }:
                 style={style} 
                 className={cn(
                     "group flex items-center w-full my-1 rounded-md bg-card/80 hover:bg-accent/80 pr-1 transition-all duration-150",
-                    isOverFolder && "ring-2 ring-primary bg-primary/10"
+                    isOverContainer && "ring-2 ring-primary bg-primary/10"
                 )}
             >
                 <div 
@@ -142,11 +142,9 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }:
                     <span className="truncate flex-grow text-left">{note.title}</span>
                 </Button>
                 <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    {note.type === 'folder' && (
-                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onAddInside(note.id); }}>
-                            <Plus className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                    )}
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onAddInside(note.id); }}>
+                        <Plus className="h-4 w-4 text-muted-foreground" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setRenameNote(note); setRenamingTitle(note.title); }}>
                         <Pencil className="h-4 w-4 text-muted-foreground" />
                     </Button>
@@ -280,24 +278,22 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         setNewNoteParentId(parentId);
         setNewNoteType('code');
         setNewNoteTitle('');
+
+        const parentNote = parentId ? notes.find(n => n.id === parentId) : null;
+        if (parentNote && parentNote.type === 'code') {
+             // If parent is a code note, only allow text notes or other code notes inside
+            setAllowedNoteTypes(['text', 'code']);
+            setNewNoteType('text'); // Default to text note
+        } else {
+            setAllowedNoteTypes(['code', 'text', 'folder']);
+        }
+
         setIsNoteDialogOpen(true);
     };
 
     const handleAddItemClick = () => {
-        let parentId: string | null = null;
-
-        if (activeNote) {
-            // If active note is a folder, new item goes inside it.
-            if (activeNote.type === 'folder') {
-                parentId = activeNote.id;
-            } else {
-                // If active note is text/code, new item is its sibling.
-                parentId = activeNote.parentId || null;
-            }
-        }
-        // If no active note, parentId remains null (top-level).
-        
-        handleOpenNewItemDialog(parentId);
+        // Always create new items at the top level of the current topic
+        handleOpenNewItemDialog(null);
     };
     
     const handleSaveAndSwitch = async () => {
@@ -511,24 +507,24 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
                             value={newNoteType}
                             onValueChange={(value: 'code' | 'text' | 'folder') => setNewNoteType(value)}
                         >
-                            
+                            {allowedNoteTypes.includes('code') && (
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="code" id="r1" />
                                     <Label htmlFor="r1" className="font-normal flex items-center gap-2"><Code className="h-4 w-4"/> Code Snippet</Label>
                                 </div>
-                            
-                            
+                            )}
+                            {allowedNoteTypes.includes('text') && (
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="text" id="r2" />
                                     <Label htmlFor="r2" className="font-normal flex items-center gap-2"><Type className="h-4 w-4"/> Text Note</Label>
                                 </div>
-                            
-                            
+                            )}
+                            {allowedNoteTypes.includes('folder') && (
                                  <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="folder" id="r3" />
                                     <Label htmlFor="r3" className="font-normal flex items-center gap-2"><Folder className="h-4 w-4"/> Folder</Label>
                                 </div>
-                            
+                            )}
                         </RadioGroup>
                     </div>
                     {newNoteType === 'code' && (

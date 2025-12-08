@@ -371,46 +371,46 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const batch = writeBatch(firestore);
     const activeNoteRef = doc(notesCollectionRef, activeId);
 
-    if (overNote && overNote.type === 'folder' && activeNote.type !== 'folder' && activeNote.parentId !== overNote.id) {
-        const newSiblings = notes.filter(n => n.parentId === overNote.id);
-        const newOrder = newSiblings.length;
-        batch.update(activeNoteRef, { parentId: overNote.id, order: newOrder });
-        const oldSiblings = notes.filter(n => n.parentId === activeNote.parentId && n.id !== activeNote.id).sort((a, b) => (a.order || 0) - (b.order || 0));
+    // This is the new, simplified logic for reparenting and reordering.
+    const newParentId = overNote ? (overNote.type !== 'folder' ? overNote.parentId : overId) : null;
+    const newSiblings = notes.filter(n => (n.parentId || null) === newParentId && n.id !== activeId);
+
+    // Determine the new order.
+    let newOrder;
+    if (overNote && overNote.type !== 'folder' && (overNote.parentId || null) === newParentId) {
+        // Dropped on an item, figure out if it's before or after.
+        const overIndex = newSiblings.findIndex(n => n.id === overId);
+        newOrder = overIndex !== -1 ? overIndex : newSiblings.length;
+    } else {
+        // Dropped on a folder or in empty space, add to the end.
+        newOrder = newSiblings.length;
+    }
+    
+    // Create a new array with the moved item.
+    const reorderedSiblings = [...newSiblings];
+    reorderedSiblings.splice(newOrder, 0, { ...activeNote, parentId: newParentId } as Note);
+
+    // Update parentId and order for all affected notes in the batch.
+    batch.update(activeNoteRef, { parentId: newParentId || null });
+    reorderedSiblings.forEach((note, index) => {
+        if (note.order !== index || note.id === activeId) {
+            const noteRef = doc(notesCollectionRef, note.id);
+            batch.update(noteRef, { order: index });
+        }
+    });
+
+    // If the original parent container is now different, we also need to re-order those items.
+    if (activeNote.parentId !== newParentId) {
+        const oldSiblings = notes.filter(n => (n.parentId || null) === (activeNote.parentId || null) && n.id !== activeId).sort((a,b) => (a.order || 0) - (b.order || 0));
         oldSiblings.forEach((note, index) => {
             if (note.order !== index) {
                 const noteRef = doc(notesCollectionRef, note.id);
                 batch.update(noteRef, { order: index });
             }
         });
-    } else { 
-        const newParentId = overNote ? overNote.parentId : null;
-        let newItems = notes.filter(n => n.parentId === newParentId);
-        if (activeNote.parentId !== newParentId) {
-            batch.update(activeNoteRef, { parentId: newParentId });
-            const oldSiblings = notes.filter(n => n.parentId === activeNote.parentId && n.id !== activeNote.id).sort((a,b) => (a.order || 0)- (b.order || 0));
-            oldSiblings.forEach((note, index) => {
-                if (note.order !== index) {
-                    const noteRef = doc(notesCollectionRef, note.id);
-                    batch.update(noteRef, { order: index });
-                }
-            });
-        }
-        const localItems = notes.filter(n => (n.parentId || null) === (overNote ? (overNote.parentId || null) : null));
-        const localActiveIndex = localItems.findIndex(i => i.id === activeId);
-        const localOverIndex = overId ? localItems.findIndex(i => i.id === overId) : localItems.length;
-        if(localActiveIndex !== -1){
-            const [movedItem] = localItems.splice(localActiveIndex, 1);
-            localItems.splice(localOverIndex > localActiveIndex ? localOverIndex -1 : localOverIndex, 0, movedItem);
-        } else {
-            localItems.splice(localOverIndex, 0, {...activeNote, parentId: newParentId});
-        }
-        localItems.forEach((note, index) => {
-            if (note.order !== index || note.id === activeId) {
-                const noteRef = doc(notesCollectionRef, note.id);
-                batch.update(noteRef, { order: index, parentId: newParentId || null });
-            }
-        });
     }
+
+
     try {
         await batch.commit();
     } catch (e) {
