@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
-import type { Topic, Note, NoteUpdate, NoteCreate } from '@/lib/types';
+import type { Topic, Note, NoteUpdate, NoteCreate, Todo, TodoCreate, TodoUpdate } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 import { 
@@ -62,6 +62,11 @@ interface NotesContextType {
   setDirtyNoteContent: React.Dispatch<React.SetStateAction<DirtyNoteContent | null>>;
   saveActiveNote: () => Promise<void>;
   studyStats: ReturnType<typeof useStudyStats>;
+  todos: Todo[];
+  todosLoading: boolean;
+  addTodo: (todo: TodoCreate) => Promise<void>;
+  updateTodo: (todoId: string, data: TodoUpdate) => Promise<void>;
+  deleteTodo: (todoId: string) => Promise<void>;
 }
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
@@ -74,6 +79,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   const [topicsLoading, setTopicsLoading] = useState(true);
   const [notes, setNotes] = useState<Note[]>([]);
   const [notesLoading, setNotesLoading] = useState(true);
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [todosLoading, setTodosLoading] = useState(true);
 
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
@@ -127,13 +134,12 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
       if (pomodoro.focusSessionId && user && firestore) {
           const sessionRef = doc(firestore, 'focusSessions', pomodoro.focusSessionId);
           
-          // Data to sync to Firestore
           const data = {
               userId: user.uid,
               mode: pomodoro.mode,
               timeLeft: pomodoro.timeLeft,
               isActive: pomodoro.isActive,
-              expiresAt: Timestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
+              expiresAt: Timestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000), 
               focusDuration: pomodoro.focusDuration,
               breakDuration: pomodoro.breakDuration,
               longBreakDuration: pomodoro.longBreakDuration,
@@ -145,6 +151,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
 
   const topicsRef = useMemo(() => user ? collection(firestore, 'users', user.uid, 'topics') : null, [user, firestore]);
+  const todosRef = useMemo(() => user ? collection(firestore, 'users', user.uid, 'todos') : null, [user, firestore]);
   
   const notesCollectionRef = useMemo(() => {
     if (user && activeTopicId) {
@@ -153,32 +160,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     return null;
   }, [user, firestore, activeTopicId]);
 
-  const updateNote = useCallback(async (noteId: string, data: NoteUpdate) => {
-    if (!user || !activeTopicId) return;
-    const noteDocRef = doc(firestore, 'users', user.uid, 'topics', activeTopicId, 'notes', noteId);
-    
-    setIsSaving(true);
-    
-    let finalData: NoteUpdate & { updatedAt: any } = {
-      ...data,
-      updatedAt: serverTimestamp(),
-    };
-
-    try {
-        await updateDoc(noteDocRef, finalData);
-        setIsDirty(false);
-    } catch (error) {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: noteDocRef.path,
-            operation: 'update',
-            requestResourceData: finalData
-        }));
-        throw new Error("Update failed due to permissions");
-    } finally {
-        setIsSaving(false);
-    }
-  }, [user, firestore, activeTopicId]);
-
+  // Topic listener
   useEffect(() => {
     if (!topicsRef) {
       setTopics([]);
@@ -192,23 +174,19 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
       const fetchedTopics = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Topic));
       setTopics(fetchedTopics);
       if (!activeTopicId && fetchedTopics.length > 0) {
-        // Do not auto-select a topic if one isn't already selected, this causes issues on mobile.
-        // setActiveTopicId(fetchedTopics[0].id); 
+        // Do not auto-select
       } else if (fetchedTopics.length === 0) {
         setActiveTopicId(null);
       }
       setTopicsLoading(false);
     }, (error) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: topicsRef.path,
-            operation: 'list',
-        }));
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: topicsRef.path, operation: 'list' }));
         setTopicsLoading(false);
     });
-
     return () => unsubscribe();
   }, [topicsRef, activeTopicId]);
 
+  // Note listener
   useEffect(() => {
     if (!notesCollectionRef) {
         setNotes([]);
@@ -217,7 +195,6 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     }
     setNotesLoading(true);
     
-    // Sort by 'createdAt' as a fallback for notes without an 'order' field.
     const q = query(notesCollectionRef, orderBy('createdAt', 'desc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -226,7 +203,6 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         return {
             ...data,
             id: doc.id,
-            // Provide default values for old notes that might be missing these fields
             order: data.order ?? 0,
             parentId: data.parentId ?? null,
         } as Note;
@@ -234,16 +210,44 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
       setNotes(fetchedNotes);
       setNotesLoading(false);
     }, (error) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: notesCollectionRef.path,
-            operation: 'list',
-        }));
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: notesCollectionRef.path, operation: 'list' }));
         setNotesLoading(false);
     });
 
     return () => unsubscribe();
 
   }, [notesCollectionRef]);
+
+  // Todo listener
+  useEffect(() => {
+    if (!todosRef) {
+        setTodos([]);
+        setTodosLoading(false);
+        return;
+    }
+    setTodosLoading(true);
+    const q = query(todosRef, orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const fetchedTodos = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                ...data,
+                id: doc.id,
+                dueDate: data.dueDate,
+                createdAt: data.createdAt,
+                completedAt: data.completedAt,
+            } as Todo;
+        });
+        setTodos(fetchedTodos);
+        setTodosLoading(false);
+    }, (error) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: todosRef.path, operation: 'list'}));
+        setTodosLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [todosRef]);
+
 
   useEffect(() => {
     const noteToSelect = notes.find(n => n.type !== 'folder');
@@ -260,15 +264,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     if (!topicsRef || !user) return;
     const newTopicData = { name, createdAt: serverTimestamp(), userId: user.uid };
     addDoc(topicsRef, newTopicData)
-      .then(docRef => {
-        setActiveTopicId(docRef.id);
-      })
-      .catch(() => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: topicsRef.path,
-            operation: 'create',
-            requestResourceData: newTopicData
-        }));
+      .then(docRef => { setActiveTopicId(docRef.id); })
+      .catch(() => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: topicsRef.path, operation: 'create', requestResourceData: newTopicData }));
       });
   };
 
@@ -277,12 +274,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const topicDocRef = doc(firestore, 'users', user.uid, 'topics', topicId);
     const updatedData = { name };
     updateDoc(topicDocRef, updatedData)
-        .catch(() => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: topicDocRef.path,
-                operation: 'update',
-                requestResourceData: updatedData
-            }));
+        .catch(() => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: topicDocRef.path, operation: 'update', requestResourceData: updatedData }));
         });
   };
 
@@ -294,20 +286,11 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
     getDocs(notesInTopicRef).then(notesSnapshot => {
         const batch = writeBatch(firestore);
-        
         batch.delete(topicDocRef);
-
-        notesSnapshot.forEach(noteDoc => {
-            batch.delete(noteDoc.ref);
-        });
-
+        notesSnapshot.forEach(noteDoc => { batch.delete(noteDoc.ref); });
         return batch.commit();
     })
-    .catch((error) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: topicDocRef.path,
-            operation: 'delete',
-        }));
+    .catch((error) => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: topicDocRef.path, operation: 'delete' }));
     });
   };
 
@@ -341,47 +324,40 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     }
 
     addDoc(notesCollectionRef, newNoteData)
-        .then(docRef => {
-            if (newNoteData.type !== 'folder') {
-                setActiveNoteId(docRef.id);
-            }
-        })
-        .catch(() => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: notesCollectionRef.path,
-                operation: 'create',
-                requestResourceData: newNoteData
-            }));
+        .then(docRef => { if (newNoteData.type !== 'folder') { setActiveNoteId(docRef.id); }})
+        .catch(() => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: notesCollectionRef.path, operation: 'create', requestResourceData: newNoteData }));
         });
   };
 
+  const updateNote = useCallback(async (noteId: string, data: NoteUpdate) => {
+    if (!user || !activeTopicId) return;
+    const noteDocRef = doc(firestore, 'users', user.uid, 'topics', activeTopicId, 'notes', noteId);
+    setIsSaving(true);
+    let finalData: NoteUpdate & { updatedAt: any } = { ...data, updatedAt: serverTimestamp() };
+    try {
+        await updateDoc(noteDocRef, finalData);
+        setIsDirty(false);
+    } catch (error) {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: noteDocRef.path, operation: 'update', requestResourceData: finalData }));
+        throw new Error("Update failed due to permissions");
+    } finally {
+        setIsSaving(false);
+    }
+  }, [user, firestore, activeTopicId]);
+
   const deleteNote = async (noteId: string) => {
     if (!notesCollectionRef) return;
-
     const batch = writeBatch(firestore);
-
     const noteDocRef = doc(notesCollectionRef, noteId);
     batch.delete(noteDocRef);
-
     const subNotesQuery = query(notesCollectionRef, where('parentId', '==', noteId));
-    
     try {
         const subNotesSnapshot = await getDocs(subNotesQuery);
-        subNotesSnapshot.forEach(subNoteDoc => {
-            batch.delete(subNoteDoc.ref);
-        });
-
+        subNotesSnapshot.forEach(subNoteDoc => { batch.delete(subNoteDoc.ref); });
         await batch.commit();
-
-        if (activeNoteId === noteId) {
-          setActiveNoteId(null);
-        }
-
+        if (activeNoteId === noteId) { setActiveNoteId(null); }
     } catch (error) {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: noteDocRef.path,
-            operation: 'delete',
-        }));
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: noteDocRef.path, operation: 'delete' }));
     }
   };
 
@@ -390,45 +366,28 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
     const activeNote = notes.find(n => n.id === activeId);
     const overNote = overId ? notes.find(n => n.id === overId) : null;
-
     if (!activeNote || activeNote.id === overId) return;
 
     const batch = writeBatch(firestore);
     const activeNoteRef = doc(notesCollectionRef, activeId);
 
-    // Case 1: Dropping a non-folder item INTO a folder
     if (overNote && overNote.type === 'folder' && activeNote.type !== 'folder' && activeNote.parentId !== overNote.id) {
         const newSiblings = notes.filter(n => n.parentId === overNote.id);
         const newOrder = newSiblings.length;
-        
         batch.update(activeNoteRef, { parentId: overNote.id, order: newOrder });
-
-        // Re-order the old siblings
-        const oldSiblings = notes
-            .filter(n => n.parentId === activeNote.parentId && n.id !== activeNote.id)
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
-
+        const oldSiblings = notes.filter(n => n.parentId === activeNote.parentId && n.id !== activeNote.id).sort((a, b) => (a.order || 0) - (b.order || 0));
         oldSiblings.forEach((note, index) => {
             if (note.order !== index) {
                 const noteRef = doc(notesCollectionRef, note.id);
                 batch.update(noteRef, { order: index });
             }
         });
-    } else { // Case 2: Reordering notes (including folders among themselves)
+    } else { 
         const newParentId = overNote ? overNote.parentId : null;
         let newItems = notes.filter(n => n.parentId === newParentId);
-
-        const activeIndex = notes.findIndex(n => n.id === activeId);
-        const overIndex = overId ? notes.findIndex(n => n.id === overId) : newItems.length;
-
-        // If changing parent
         if (activeNote.parentId !== newParentId) {
             batch.update(activeNoteRef, { parentId: newParentId });
-            
-            // Re-order old siblings
-            const oldSiblings = notes
-                .filter(n => n.parentId === activeNote.parentId && n.id !== activeNote.id)
-                .sort((a,b) => (a.order || 0)- (b.order || 0));
+            const oldSiblings = notes.filter(n => n.parentId === activeNote.parentId && n.id !== activeNote.id).sort((a,b) => (a.order || 0)- (b.order || 0));
             oldSiblings.forEach((note, index) => {
                 if (note.order !== index) {
                     const noteRef = doc(notesCollectionRef, note.id);
@@ -436,58 +395,45 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
                 }
             });
         }
-        
         const localItems = notes.filter(n => (n.parentId || null) === (overNote ? (overNote.parentId || null) : null));
         const localActiveIndex = localItems.findIndex(i => i.id === activeId);
         const localOverIndex = overId ? localItems.findIndex(i => i.id === overId) : localItems.length;
-        
         if(localActiveIndex !== -1){
             const [movedItem] = localItems.splice(localActiveIndex, 1);
             localItems.splice(localOverIndex > localActiveIndex ? localOverIndex -1 : localOverIndex, 0, movedItem);
         } else {
-             // Item is new to this context
             localItems.splice(localOverIndex, 0, {...activeNote, parentId: newParentId});
         }
-
-
         localItems.forEach((note, index) => {
-            if (note.order !== index || note.id === activeId) { // always update moved item
+            if (note.order !== index || note.id === activeId) {
                 const noteRef = doc(notesCollectionRef, note.id);
                 batch.update(noteRef, { order: index, parentId: newParentId || null });
             }
         });
     }
-
     try {
         await batch.commit();
     } catch (e) {
         console.error("Failed to reorder notes:", e);
         toast({ variant: 'destructive', title: "Error", description: "Could not save new note order." });
     }
-
   }, [notes, notesCollectionRef, firestore, toast]);
 
   const activeNote = useMemo(() => {
     if (!activeNoteId) return null;
-    const note = notes.find(note => note.id === activeNoteId);
-    return note || null;
+    return notes.find(note => note.id === activeNoteId) || null;
   }, [activeNoteId, notes]);
-  
 
   const activeTopic = useMemo(() => {
     return topics.find(topic => topic.id === activeTopicId) || null;
   }, [activeTopicId, topics]);
   
   const getSubNotes = useCallback((parentId: string | null) => {
-    return notes
-      .filter(note => (note.parentId || null) === (parentId || null))
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    return notes.filter(note => (note.parentId || null) === (parentId || null)).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   }, [notes]);
-
 
   const getAllNotes = async (): Promise<Note[]> => {
     if (!user) return [];
-    
     const allNotes: Note[] = [];
     for (const topic of topics) {
       const notesRef = collection(firestore, 'users', user.uid, 'topics', topic.id, 'notes');
@@ -502,37 +448,68 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
   const saveActiveNote = useCallback(async () => {
     if (!activeNote || !isDirty || !dirtyNoteContent) return;
-    
     const originalContent = activeNote.content;
     const newContent = dirtyNoteContent.content;
     const charsChanged = Math.abs(newContent.length - originalContent.length);
-
     try {
       await updateNote(activeNote.id, { 
           title: dirtyNoteContent.title, 
           content: dirtyNoteContent.content,
           language: dirtyNoteContent.language || 'plaintext' 
       });
-      
-      const sessionData: StudySessionData = {
-          sessionMinutes: studyStats.pomodoro.sessionMinutes,
-          linesTyped: charsChanged,
-          topicId: activeNote.topicId
-      };
+      const sessionData: StudySessionData = { sessionMinutes: studyStats.pomodoro.sessionMinutes, linesTyped: charsChanged, topicId: activeNote.topicId };
       studyStats.updateStudyStatsOnNoteSave(sessionData);
-
-      toast({
-        title: 'Note Saved!',
-        description: `"${dirtyNoteContent.title}" has been saved successfully.`,
-      });
+      toast({ title: 'Note Saved!', description: `"${dirtyNoteContent.title}" has been saved successfully.` });
     } catch (error) {
-       toast({
-        variant: 'destructive',
-        title: 'Error Saving Note',
-        description: 'Could not save the note.',
-      });
+       toast({ variant: 'destructive', title: 'Error Saving Note', description: 'Could not save the note.' });
     }
   }, [activeNote, isDirty, dirtyNoteContent, updateNote, studyStats, toast]);
+
+  // To-Do Methods
+  const addTodo = async (todo: TodoCreate) => {
+    if (!todosRef || !user) return;
+    const newTodoData = {
+        ...todo,
+        userId: user.uid,
+        isCompleted: false,
+        createdAt: serverTimestamp(),
+        completedAt: null
+    };
+    addDoc(todosRef, newTodoData).catch(() => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: todosRef.path,
+            operation: 'create',
+            requestResourceData: newTodoData,
+        }));
+    });
+  };
+
+  const updateTodo = async (todoId: string, data: TodoUpdate) => {
+      if (!todosRef) return;
+      const todoDocRef = doc(todosRef, todoId);
+      const finalData: any = { ...data };
+      if (data.isCompleted !== undefined) {
+          finalData.completedAt = data.isCompleted ? serverTimestamp() : null;
+      }
+      updateDoc(todoDocRef, finalData).catch(() => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: todoDocRef.path,
+              operation: 'update',
+              requestResourceData: finalData,
+          }));
+      });
+  };
+
+  const deleteTodo = async (todoId: string) => {
+      if (!todosRef) return;
+      const todoDocRef = doc(todosRef, todoId);
+      deleteDoc(todoDocRef).catch(() => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: todoDocRef.path,
+              operation: 'delete',
+          }));
+      });
+  };
 
   const value = {
     topics,
@@ -563,6 +540,11 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     setDirtyNoteContent,
     saveActiveNote,
     studyStats,
+    todos,
+    todosLoading,
+    addTodo,
+    updateTodo,
+    deleteTodo,
   };
 
   return <NotesContext.Provider value={value}>{children}</NotesContext.Provider>;

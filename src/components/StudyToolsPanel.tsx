@@ -1,10 +1,10 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { Button } from './ui/button';
-import { Timer, BrainCircuit } from 'lucide-react';
+import { Timer, BrainCircuit, ListTodo } from 'lucide-react';
 import { Pomodoro } from './Pomodoro';
 import { DailyTracker } from './DailyTracker';
 import { StreakCounter } from './StreakCounter';
@@ -15,6 +15,9 @@ import { cn } from '@/lib/utils';
 import { AiQuizGenerator } from './AiQuizGenerator';
 import { useUI } from '@/context/UIContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { TodoList } from './TodoList';
+import { TodoCalendar } from './TodoCalendar';
 
 const TimerProgressButton = ({ onClick }: { onClick: () => void }) => {
     const { studyStats } = useNotes();
@@ -77,14 +80,50 @@ export function StudyToolsPanel() {
   const { isStudyToolsOpen, setStudyToolsOpen, isQuizGeneratorOpen, setQuizGeneratorOpen } = useUI();
   const isMobile = useIsMobile();
   
+  const panelContent = (
+    <div className="p-4 space-y-4">
+        <Accordion type="multiple" defaultValue={['pomodoro', 'tasks']} className="w-full">
+            <AccordionItem value="pomodoro">
+                <AccordionTrigger className="text-base font-semibold py-2">
+                    <div className="flex items-center gap-2">
+                        <Timer className="h-5 w-5" />
+                        <span>Pomodoro & Stats</span>
+                    </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
+                    <Pomodoro />
+                    <Separator />
+                    <StreakCounter />
+                    <DailyTracker />
+                </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="tasks">
+                <AccordionTrigger className="text-base font-semibold py-2">
+                    <div className="flex items-center gap-2">
+                        <ListTodo className="h-5 w-5" />
+                        <span>To-Do & Tasks</span>
+                    </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
+                    <TodoList />
+                    <Separator />
+                    <TodoCalendar />
+                </AccordionContent>
+            </AccordionItem>
+        </Accordion>
+        <Separator />
+        <Button variant="outline" className="w-full" onClick={() => { setStudyToolsOpen(false); setQuizGeneratorOpen(true); }}>
+            <BrainCircuit className="h-4 w-4 mr-2" />
+            AI Quiz Generator
+        </Button>
+    </div>
+  );
+
   if (isMobile) {
-    // On mobile, the panels are modals and don't need a persistent trigger.
-    // The functionality is triggered from other UI elements like the welcome screen.
     return (
         <>
             <Sheet open={isStudyToolsOpen} onOpenChange={setStudyToolsOpen}>
-                <SheetContent className="w-[320px] sm:w-[320px] sm:max-w-none p-0 flex flex-col">
-                    {/* Content is the same as desktop */}
+                <SheetContent className="w-full max-w-sm p-0 flex flex-col">
                     <SheetHeader className="p-4 border-b">
                         <SheetTitle className="flex items-center gap-2">
                         <Timer className="h-5 w-5" />
@@ -92,17 +131,7 @@ export function StudyToolsPanel() {
                         </SheetTitle>
                     </SheetHeader>
                     <ScrollArea className="flex-grow">
-                        <div className="p-4 space-y-6">
-                            <Pomodoro />
-                            <Separator />
-                            <Button variant="outline" className="w-full" onClick={() => { setStudyToolsOpen(false); setQuizGeneratorOpen(true); }}>
-                                <BrainCircuit className="h-4 w-4 mr-2" />
-                                AI Quiz Generator
-                            </Button>
-                            <Separator />
-                            <StreakCounter />
-                            <DailyTracker />
-                        </div>
+                        {panelContent}
                     </ScrollArea>
                 </SheetContent>
             </Sheet>
@@ -128,7 +157,7 @@ export function StudyToolsPanel() {
         <SheetTrigger asChild>
           <TimerProgressButton onClick={() => setStudyToolsOpen(true)} />
         </SheetTrigger>
-        <SheetContent className="w-[320px] sm:w-[320px] sm:max-w-none p-0 flex flex-col">
+        <SheetContent className="w-[380px] sm:max-w-none p-0 flex flex-col">
           <SheetHeader className="p-4 border-b">
             <SheetTitle className="flex items-center gap-2">
               <Timer className="h-5 w-5" />
@@ -136,17 +165,7 @@ export function StudyToolsPanel() {
             </SheetTitle>
           </SheetHeader>
           <ScrollArea className="flex-grow">
-              <div className="p-4 space-y-6">
-                  <Pomodoro />
-                  <Separator />
-                  <Button variant="outline" className="w-full" onClick={() => { setStudyToolsOpen(false); setQuizGeneratorOpen(true); }}>
-                      <BrainCircuit className="h-4 w-4 mr-2" />
-                      AI Quiz Generator
-                  </Button>
-                  <Separator />
-                  <StreakCounter />
-                  <DailyTracker />
-              </div>
+              {panelContent}
           </ScrollArea>
         </SheetContent>
       </Sheet>

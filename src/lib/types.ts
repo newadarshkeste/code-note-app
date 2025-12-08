@@ -8,7 +8,6 @@ export interface Note {
   language?: string;
   createdAt: any; // Firestore Timestamp
   updatedAt: any; // Firestore Timestamp
-  // This can be optionally added when fetching notes for export
   topicName?: string; 
   parentId?: string | null;
   order: number;
@@ -27,3 +26,22 @@ export interface Topic {
   name: string;
   createdAt?: any; // Firestore Timestamp
 }
+
+export interface Todo {
+    id: string;
+    userId: string;
+    content: string;
+    isCompleted: boolean;
+    dueDate?: string; // YYYY-MM-DD
+    topicId?: string;
+    noteId?: string;
+    createdAt: any; // Firestore Timestamp
+    completedAt?: any | null; // Firestore Timestamp
+}
+
+export type TodoCreate = {
+    content: string;
+    dueDate?: string;
+};
+
+export type TodoUpdate = Partial<Pick<Todo, 'content' | 'isCompleted' | 'dueDate'>>;

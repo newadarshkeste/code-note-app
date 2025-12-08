@@ -14,6 +14,7 @@
  * /users/{userId}
  *   - /topics/{topicId}
  *     - /notes/{noteId}
+ *   - /todos/{todoId}
  *   - /studyStats/{userId}
  * This hierarchical structure is the primary mechanism for enforcing security,
  * as ownership is determined by the {userId} in the path.
@@ -35,141 +36,71 @@ service cloud.firestore {
     //  Helper Functions
     //-------------------------------------------------------------------------
 
-    /**
-     * Checks if the user is authenticated.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the authenticated user's UID matches the provided userId from the path.
-     * This is the foundation of the user-ownership model.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * A robust check for update/delete operations, ensuring the user is the owner
-     * AND that the document they are trying to modify actually exists.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
+    function hasValidTodoFieldsOnCreate(userId) {
+        let data = request.resource.data;
+        return data.userId == userId
+            && data.content is string
+            && data.isCompleted == false;
     }
 
-    /**
-     * On create, validates that the user document's internal `id` field matches
-     * the document's ID (which is the user's UID).
-     */
-    function hasValidUserFieldsOnCreate(userId) {
-      let data = request.resource.data;
-      return data.id == userId
-          && data.email == request.auth.token.email;
+    function hasImmutableTodoFields() {
+        let incomingData = request.resource.data;
+        let existingData = resource.data;
+        return incomingData.userId == existingData.userId
+            && incomingData.createdAt == existingData.createdAt;
     }
-
-    /**
-     * On update, ensures the user document's internal `id` and email are immutable.
-     */
-    function hasImmutableUserFields() {
-      let data = request.resource.data;
-      return data.id == resource.data.id
-          && data.email == resource.data.email;
-    }
-
-    /**
-     * On create, validates that the topic document's internal `userId` field
-     * matches the `userId` from the path.
-     */
-    function hasValidTopicFieldsOnCreate(userId) {
-      return request.resource.data.userId == userId;
-    }
-
-    /**
-     * On update, ensures the topic document's internal `userId` is immutable.
-     */
-    function hasImmutableTopicFields() {
-      return request.resource.data.userId == resource.data.userId;
-    }
-
-    /**
-     * On create, validates that the note document has all required fields
-     * and that the parentId and topicId are consistent.
-     */
-    function hasValidNoteFieldsOnCreate(topicId) {
-      let data = request.resource.data;
-      return data.topicId == topicId
-          && data.title is string
-          && data.content is string
-          && data.type is string && (data.type == 'text' || data.type == 'code' || data.type == 'folder')
-          && ('parentId' in data) // parentId can be null or a string
-          && data.order is number;
-    }
-
-    /**
-     * On update, ensures key note fields are immutable.
-     * Allows `order` and `parentId` to be changed for reordering.
-     */
-    function hasImmutableNoteFields() {
-       let incomingData = request.resource.data;
-       let existingData = resource.data;
-       
-       return (!('topicId' in incomingData) || incomingData.topicId == existingData.topicId)
-          && (!('type' in incomingData) || (incomingData.type == existingData.type && (incomingData.type == 'text' || incomingData.type == 'code' || incomingData.type == 'folder')))
-          && (!('createdAt' in incomingData) || incomingData.createdAt == existingData.createdAt);
-          // parentId and order can be updated
-    }
-
-    //-------------------------------------------------------------------------
-    //  Collection Rules
-    //-------------------------------------------------------------------------
 
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && hasValidUserFieldsOnCreate(userId);
-      allow update: if isExistingOwner(userId) && hasImmutableUserFields();
-      allow delete: if isExistingOwner(userId);
+      allow list: if false; // Prevent user enumeration
+      
+      // A user can create their own document
+      allow create: if isOwner(userId) && request.resource.data.id == userId && request.resource.data.email == request.auth.token.email;
+      
+      // A user can update their own document, but cannot change their ID or email
+      allow update: if isOwner(userId) && request.resource.data.id == resource.data.id && request.resource.data.email == resource.data.email;
+      
+      // Users should not be able to delete their own account from here
+      allow delete: if false;
 
       match /topics/{topicId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId) && hasValidTopicFieldsOnCreate(userId);
-        allow update: if isExistingOwner(userId) && hasImmutableTopicFields();
-        allow delete: if isExistingOwner(userId);
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId);
 
         match /notes/{noteId} {
-          allow get: if isOwner(userId);
-          allow list: if isOwner(userId);
-          allow create: if isOwner(userId) && hasValidNoteFieldsOnCreate(topicId);
-          allow update: if isExistingOwner(userId) && hasImmutableNoteFields();
-          allow delete: if isExistingOwner(userId);
+          allow get, list: if isOwner(userId);
+          allow create: if isOwner(userId) && request.resource.data.topicId == topicId;
+          allow update: if isOwner(userId) && request.resource.data.topicId == resource.data.topicId;
+          allow delete: if isOwner(userId);
         }
       }
       
-      /**
-       * @description Controls access to the user's single study statistics document.
-       * @path /users/{userId}/studyStats/{userId}
-       * @allow (read, write) The user can read and write their own statistics document.
-       * @deny (list) Listing is implicitly denied and nonsensical for a singleton document.
-       */
+      match /todos/{todoId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && hasValidTodoFieldsOnCreate(userId);
+        allow update: if isOwner(userId) && hasImmutableTodoFields();
+        allow delete: if isOwner(userId);
+      }
+
       match /studyStats/{statsId} {
-        // The user can only access their own stats document.
         allow get, create, update: if isOwner(userId) && statsId == userId;
-        allow delete: if false; // Stats should not be deletable by the user.
+        allow delete: if false; 
       }
     }
     
-    // Rules for the temporary focus session for QR code syncing
     match /focusSessions/{sessionId} {
-      // Anyone can read a session document if they have the ID (from the QR code)
       allow get: if true;
-
-      // The owner can create their own session.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      
-      // The owner of the session can update or delete it.
-      // We check the incoming data for create/update and existing for delete.
       allow update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }

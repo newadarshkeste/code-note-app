@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Topic": {
@@ -241,6 +242,46 @@
             "isActive",
             "expiresAt"
         ]
+    },
+    "Todo": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Todo",
+      "type": "object",
+      "description": "Represents a single to-do item for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the to-do item."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who owns this task."
+        },
+        "content": {
+          "type": "string",
+          "description": "The text content of the to-do item."
+        },
+        "isCompleted": {
+          "type": "boolean",
+          "description": "Whether the task has been completed."
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Optional due date for the task in YYYY-MM-DD format."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the task was created."
+        },
+        "completedAt": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Timestamp when the task was marked as complete."
+        }
+      },
+      "required": ["id", "userId", "content", "isCompleted", "createdAt"]
     }
   },
   "auth": {
@@ -307,6 +348,26 @@
             {
               "name": "noteId",
               "description": "The unique ID of the note."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/todos/{todoId}",
+        "definition": {
+          "entityName": "Todo",
+          "schema": {
+            "$ref": "#/backend/entities/Todo"
+          },
+          "description": "Subcollection to store to-do items for a user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase UID of the user who owns the to-do."
+            },
+            {
+              "name": "todoId",
+              "description": "The unique ID for the to-do item."
             }
           ]
         }
