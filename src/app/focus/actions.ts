@@ -25,6 +25,7 @@ export async function toggleTimer(sessionId: string, newIsActive: boolean) {
     await updateDoc(sessionRef, { isActive: newIsActive });
     return { success: true };
   } catch (error: any) {
+    console.error(`Failed to toggle timer for session ${sessionId}:`, error);
     return { success: false, error: error.message };
   }
 }
@@ -63,6 +64,7 @@ export async function resetTimer(sessionId: string) {
 
         return { success: true };
     } catch (error: any) {
+        console.error(`Failed to reset timer for session ${sessionId}:`, error);
         return { success: false, error: error.message };
     }
 }
@@ -89,7 +91,7 @@ export async function updateSettings(sessionId: string, settings: Settings) {
         }, { merge: true });
         return { success: true };
     } catch (error: any) {
+        console.error(`Failed to update settings for session ${sessionId}:`, error);
         return { success: false, error: error.message };
     }
 }
-
