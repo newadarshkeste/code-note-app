@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useCallback, useMemo } from 'react';
@@ -25,7 +26,7 @@ export function RecursionCanvas() {
     const nodeTypes = useMemo(() => ({ recursionCard: RecursionCardNode }), []);
     
     const onNodeDragStop = useCallback((event: React.MouseEvent, node: any) => {
-        updateCard(node.id, { position: node.position });
+        updateCard(node.id, { x: node.position.x, y: node.position.y });
     }, [updateCard]);
     
     const onPaneDoubleClick = useCallback((event: React.MouseEvent) => {
@@ -35,7 +36,8 @@ export function RecursionCanvas() {
         });
         addCard({
             title: "f(n)",
-            position: position
+            x: position.x,
+            y: position.y,
         });
     }, [reactFlowInstance, addCard]);
 
@@ -46,7 +48,8 @@ export function RecursionCanvas() {
         
         addCard({
             title: 'New Card',
-            position: { x: centerX, y: centerY },
+            x: centerX,
+            y: centerY,
         });
     };
 

@@ -65,7 +65,8 @@ export interface RecursionCard {
   title: string;
   subtitle?: string;
   type: 'base' | 'recursive' | 'helper';
-  position: { x: number; y: number };
+  x: number;
+  y: number;
   notes?: string;
 }
 

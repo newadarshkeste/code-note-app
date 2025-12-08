@@ -106,11 +106,11 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
         }
         const unsubscribe = onSnapshot(cardsRef, (snapshot) => {
             const fetchedNodes = snapshot.docs.map(doc => {
-                const data = doc.data() as RecursionCard;
+                const data = doc.data();
                 return {
                     id: doc.id,
                     type: 'recursionCard', // Custom node type
-                    position: data.position,
+                    position: { x: data.x, y: data.y },
                     data: { ...data, id: doc.id },
                 } as RecursionNode;
             });
@@ -211,10 +211,13 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
 
     const addCard = async (cardData: Partial<RecursionCard>) => {
         if (!cardsRef) return;
-        const newCard: Omit<RecursionCard, 'id' | 'boardId'> = {
+        const newCard = {
             title: cardData.title || 'New Card',
             type: cardData.type || 'recursive',
-            position: cardData.position || { x: 250, y: 100 },
+            x: cardData.x ?? 100,
+            y: cardData.y ?? 100,
+            notes: cardData.notes || '',
+            subtitle: cardData.subtitle || '',
         };
         try {
             await addDoc(cardsRef, newCard);
