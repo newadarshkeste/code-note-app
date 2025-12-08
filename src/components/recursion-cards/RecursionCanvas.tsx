@@ -1,7 +1,17 @@
 'use client';
 
-import React, { useCallback, useMemo, useEffect } from 'react';
-import ReactFlow, { Background, Controls, MiniMap, BackgroundVariant, useReactFlow, Node, Viewport } from 'reactflow';
+import React, { useCallback, useMemo, useEffect, useState } from 'react';
+import ReactFlow, {
+    Background,
+    Controls,
+    MiniMap,
+    BackgroundVariant,
+    useReactFlow,
+    Node,
+    Edge,
+    ReactFlowInstance,
+    Viewport,
+} from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useRecursionCards } from '@/context/RecursionCardsContext';
 import { RecursionCardNode } from './RecursionCardNode';
@@ -22,27 +32,27 @@ export function RecursionCanvas() {
         activeBoard,
     } = useRecursionCards();
 
-    const reactFlowInstance = useReactFlow();
+    const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
+    const { fitView } = useReactFlow();
+
     const nodeTypes = useMemo(() => ({ recursionCard: RecursionCardNode }), []);
     
+    // Fit view when the board changes or on initial load
     useEffect(() => {
-        if (nodes.length > 0) {
-            setTimeout(() => reactFlowInstance.fitView({ duration: 200, padding: 0.1 }), 100);
+        if (rfInstance && nodes.length > 0) {
+            // A small timeout ensures the layout is ready before fitting the view
+            setTimeout(() => fitView({ duration: 200, padding: 0.1 }), 100);
         }
-    }, [activeBoard?.id, reactFlowInstance]);
-
-     useEffect(() => {
-        if (nodes.length > 0) {
-            reactFlowInstance.fitView({ duration: 200, padding: 0.2 });
-        }
-    }, [nodes.length, reactFlowInstance]);
+    }, [activeBoard?.id, fitView, rfInstance, nodes.length > 0]); // Note: nodes.length > 0 ensures we only run this once after nodes load
 
     const handleAddCard = () => {
-        const { x, y, zoom } = reactFlowInstance.getViewport();
+        if (!rfInstance) return; // Guard against uninitialized instance
+
+        const { x, y, zoom } = rfInstance.getViewport();
         
         // This is the corrected, robust way to find the center of the viewport
-        const centerX = -x / zoom + reactFlowInstance.width / (2 * zoom);
-        const centerY = -y / zoom + reactFlowInstance.height / (2 * zoom);
+        const centerX = -x / zoom + (rfInstance.width || 0) / (2 * zoom);
+        const centerY = -y / zoom + (rfInstance.height || 0) / (2 * zoom);
 
         addCard({
             title: 'New Card',
@@ -56,7 +66,7 @@ export function RecursionCanvas() {
             deleteCard(node.id);
         }
     }, [deleteCard]);
-
+    
     const validNodes = useMemo(() => {
         return nodes.filter(node => 
             node.position && 
@@ -65,6 +75,13 @@ export function RecursionCanvas() {
             !isNaN(node.position.x) &&
             !isNaN(node.position.y)
         );
+    }, [nodes]);
+    
+    useEffect(() => {
+        const invalidNodes = nodes.filter(n => !n.position || isNaN(n.position.x) || isNaN(n.position.y));
+        if (invalidNodes.length > 0) {
+            console.warn('Invalid nodes detected in state:', invalidNodes);
+        }
     }, [nodes]);
 
     return (
@@ -80,7 +97,7 @@ export function RecursionCanvas() {
                         {activeBoard?.name || 'Canvas'}
                     </h2>
                 </div>
-                <Button onClick={handleAddCard}>
+                <Button onClick={handleAddCard} disabled={!rfInstance}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Card
                 </Button>
@@ -96,7 +113,7 @@ export function RecursionCanvas() {
                     nodeTypes={nodeTypes}
                     onNodeClick={(_, node) => setSelectedCardId(node.id)}
                     onPaneClick={() => setSelectedCardId(null)}
-                    fitView
+                    onInit={setRfInstance}
                     className="bg-background"
                 >
                     <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
