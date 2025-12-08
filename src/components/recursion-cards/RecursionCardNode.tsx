@@ -6,7 +6,9 @@ import { Handle, Position, NodeProps } from 'reactflow';
 import { RecursionCard } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Lightbulb, RefreshCw, FileCode } from 'lucide-react';
+import { Lightbulb, RefreshCw, FileCode, Trash2 } from 'lucide-react';
+import { Button } from '../ui/button';
+import { useRecursionCards } from '@/context/RecursionCardsContext';
 
 const typeStyles = {
     base: {
@@ -30,18 +32,34 @@ const typeStyles = {
 }
 
 export function RecursionCardNode({ data, selected }: NodeProps<RecursionCard>) {
+    const { deleteCard } = useRecursionCards();
     const styles = typeStyles[data.type] || typeStyles.recursive;
     const Icon = styles.icon;
+
+    const handleDelete = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        deleteCard(data.id);
+    }
 
     return (
         <div 
             className={cn(
-                "w-64 rounded-lg border-2 bg-card shadow-md transition-all duration-150",
+                "w-64 rounded-lg border-2 bg-card shadow-md transition-all duration-150 group",
                 selected ? "ring-2 ring-primary ring-offset-2" : "",
                 styles.body
             )}
         >
             <Handle type="target" position={Position.Top} className="!bg-primary" />
+            
+            <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={handleDelete}
+            >
+                <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+            
             <div className="p-3">
                 <div className="flex justify-between items-start gap-2">
                     <h3 className="font-mono font-bold text-lg text-foreground">{data.title}</h3>
