@@ -173,12 +173,12 @@ export const useStudyStats = () => {
                     lastWarningAt: null,
                     timeLeft: timeLeft,
                     mode: mode,
-                    duration: getTimerdurations(),
+                    duration: getTimerDuration(),
                 });
                 setFocusSessionId(newSessionId);
             }
         }
-    }, [isActive, mode, user, firestore, focusSessionId, setFocusSessionId, setDoc, timeLeft]);
+    }, [isActive, mode, user, firestore, focusSessionId, setFocusSessionId, timeLeft]);
 
     const resetTimer = () => {
         setIsActive(false);
