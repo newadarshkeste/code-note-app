@@ -110,5 +110,12 @@ service cloud.firestore {
         }
       }
     }
+
+    match /focusSessions/{sessionId} {
+      // Anyone with the link can read the session status to monitor it.
+      allow get: if true;
+      // Only the authenticated owner of the session can create or update it.
+      allow create, update, delete: if request.auth.uid == request.resource.data.userId;
+    }
   }
 }

@@ -1,12 +1,11 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { isToday, isYesterday, format, differenceInDays } from 'date-fns';
 import { useAuth } from '@/context/AuthContext';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, writeBatch, increment, setDoc } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, writeBatch, increment, setDoc, deleteDoc, serverTimestamp, getDoc, collection } from 'firebase/firestore';
 
 export type TimerMode = 'focus' | 'break' | 'longBreak';
 
@@ -47,15 +46,31 @@ const defaultStats: StudyStats = {
 export const useStudyStats = () => {
     const { user } = useAuth();
     const firestore = useFirestore();
+    const [studyData, setStudyData] = useState<StudyStats | null>(null);
 
     const statsRef = useMemoFirebase(() => 
         user ? doc(firestore, 'users', user.uid, 'studyStats', user.uid) : null
     , [user, firestore]);
     
-    const { data: studyData } = useDoc<StudyStats>(statsRef);
+    useEffect(() => {
+        if (!statsRef) {
+            setStudyData(null);
+            return;
+        };
+
+        const unsubscribe = onSnapshot(statsRef, (doc) => {
+            if (doc.exists()) {
+                setStudyData(doc.data() as StudyStats);
+            } else {
+                setStudyData(defaultStats);
+            }
+        });
+        return () => unsubscribe();
+    }, [statsRef]);
+
     const stats = studyData || defaultStats;
 
-    // Pomodoro State (persisted in localStorage for ephemeral UI state)
+    // Pomodoro State
     const [mode, setMode] = useLocalStorage<TimerMode>('study:mode', 'focus');
     const [isActive, setIsActive] = useLocalStorage('study:isActive', false);
     const [focusDuration, setFocusDuration] = useLocalStorage('study:focusDuration', 25);
@@ -65,6 +80,7 @@ export const useStudyStats = () => {
     const [timeLeft, setTimeLeft] = useLocalStorage('study:timeLeft', focusDuration * 60);
     const [pomodoroCycleCount, setPomodoroCycleCount] = useLocalStorage('study:pomodoroCycleCount', 0);
     const [sessionMinutes, setSessionMinutes] = useState(0);
+    const [focusSessionId, setFocusSessionId] = useLocalStorage<string | null>('study:focusSessionId', null);
 
     const onPomodoroComplete = useCallback(async () => {
         if (!user || !statsRef) return;
@@ -72,16 +88,21 @@ export const useStudyStats = () => {
         const minutes = focusDuration;
         const todayStr = format(new Date(), 'yyyy-MM-dd');
         
+        // Use a transaction or a batched write to ensure atomicity
         const batch = writeBatch(firestore);
 
+        // Fetch the latest stats directly inside the function to avoid stale state
+        const currentStatsSnap = await getDoc(statsRef);
+        const currentStats = currentStatsSnap.exists() ? currentStatsSnap.data() as StudyStats : defaultStats;
+        
         const updateData: any = {
             totalMinutesStudied: increment(minutes),
             [`dailyMinutes.${todayStr}`]: increment(minutes),
         };
 
-        const lastDate = stats.lastStudyDate ? new Date(stats.lastStudyDate) : null;
+        const lastDate = currentStats.lastStudyDate ? new Date(currentStats.lastStudyDate) : null;
         const today = new Date();
-        let newStreak = stats.streak || 0;
+        let newStreak = currentStats.streak || 0;
 
         if (!lastDate || differenceInDays(today, lastDate) > 1) {
             newStreak = 1; // Reset streak
@@ -91,7 +112,7 @@ export const useStudyStats = () => {
 
         updateData.streak = newStreak;
         updateData.lastStudyDate = todayStr;
-        if (newStreak > (stats.bestStreak || 0)) {
+        if (newStreak > (currentStats.bestStreak || 0)) {
             updateData.bestStreak = newStreak;
         }
 
@@ -103,9 +124,29 @@ export const useStudyStats = () => {
             console.error("Failed to update stats on pomodoro completion:", error);
         }
 
-    }, [user, firestore, statsRef, stats, focusDuration]);
+    }, [user, firestore, statsRef, focusDuration]);
 
     const toggleTimer = () => setIsActive(!isActive);
+
+    useEffect(() => {
+        if (isActive && mode === 'focus' && !focusSessionId) {
+            if (user) {
+                const newSessionId = doc(collection(firestore, 'focusSessions')).id;
+                const sessionRef = doc(firestore, 'focusSessions', newSessionId);
+                setDoc(sessionRef, {
+                    userId: user.uid,
+                    createdAt: serverTimestamp(),
+                    isActive: true,
+                    lastWarningAt: null,
+                });
+                setFocusSessionId(newSessionId);
+            }
+        } else if (!isActive && focusSessionId) {
+            const sessionRef = doc(firestore, 'focusSessions', focusSessionId);
+            deleteDoc(sessionRef);
+            setFocusSessionId(null);
+        }
+    }, [isActive, mode, user, firestore, focusSessionId]);
 
     const resetTimer = () => {
         setIsActive(false);
@@ -113,6 +154,11 @@ export const useStudyStats = () => {
         setTimeLeft(focusDuration * 60);
         setPomodoroCycleCount(0);
         setSessionMinutes(0);
+        if (focusSessionId) {
+             const sessionRef = doc(firestore, 'focusSessions', focusSessionId);
+             deleteDoc(sessionRef);
+             setFocusSessionId(null);
+        }
     };
 
     const updateDurations = (newFocus: number, newBreak: number, newLongBreak: number, newCycle: number) => {
@@ -157,9 +203,12 @@ export const useStudyStats = () => {
             }
         }
 
-        const lastDate = stats.lastStudyDate ? new Date(stats.lastStudyDate) : null;
+        const currentStatsSnap = await getDoc(statsRef);
+        const currentStats = currentStatsSnap.exists() ? currentStatsSnap.data() as StudyStats : defaultStats;
+
+        const lastDate = currentStats.lastStudyDate ? new Date(currentStats.lastStudyDate) : null;
         const today = new Date();
-        let newStreak = stats.streak || 0;
+        let newStreak = currentStats.streak || 0;
 
         if (!lastDate || differenceInDays(today, lastDate) > 1) {
             newStreak = 1;
@@ -167,9 +216,9 @@ export const useStudyStats = () => {
             newStreak += 1;
         }
 
-        if (newStreak !== stats.streak) {
+        if (newStreak !== currentStats.streak) {
             updateData.streak = newStreak;
-            if (newStreak > (stats.bestStreak || 0)) {
+            if (newStreak > (currentStats.bestStreak || 0)) {
                 updateData.bestStreak = newStreak;
             }
         }
@@ -184,32 +233,32 @@ export const useStudyStats = () => {
             console.error("Failed to update study stats on note save:", error);
         }
 
-    }, [user, firestore, statsRef, stats]);
+    }, [user, firestore, statsRef]);
 
     const recordPracticeSession = useCallback(async (noteId: string, score: number) => {
         if (!user || !statsRef) return;
         
-        const existingSession = stats.practiceSessions?.[noteId] || { count: 0, averageScore: 0 };
+        const currentStatsSnap = await getDoc(statsRef);
+        const currentStats = currentStatsSnap.exists() ? currentStatsSnap.data() as StudyStats : defaultStats;
+
+        const existingSession = currentStats.practiceSessions?.[noteId] || { count: 0, averageScore: 0 };
         const newCount = existingSession.count + 1;
         const newAverage = ((existingSession.averageScore * existingSession.count) + score) / newCount;
 
         const updateData = {
             totalPracticeSessions: increment(1),
-            [`practiceSessions.${noteId}.count`]: increment(1),
-            [`practiceSessions.${noteId}.averageScore`]: newAverage
+            [`practiceSessions.${noteId}`]: {
+                count: newCount,
+                averageScore: newAverage
+            }
         };
-        
-        // If it's the first time, we need to set the initial values.
-        if (existingSession.count === 0) {
-             updateData[`practiceSessions.${noteId}.averageScore`] = score;
-        }
         
         try {
             await setDoc(statsRef, updateData, { merge: true });
         } catch(error) {
              console.error("Failed to record practice session:", error);
         }
-    }, [user, statsRef, stats.practiceSessions]);
+    }, [user, statsRef]);
 
 
     return useMemo(() => {
@@ -236,6 +285,7 @@ export const useStudyStats = () => {
                 sessionMinutes,
                 setSessionMinutes,
                 onPomodoroComplete,
+                focusSessionId,
             },
             dailyStats: {
                 minutesToday: stats?.dailyMinutes?.[todayStr] || 0,
@@ -258,6 +308,6 @@ export const useStudyStats = () => {
         mode, setMode, timeLeft, setTimeLeft, isActive, setIsActive, toggleTimer, resetTimer, 
         focusDuration, breakDuration, longBreakDuration, pomodorosPerCycle, 
         pomodoroCycleCount, setPomodoroCycleCount, updateDurations, sessionMinutes, setSessionMinutes, 
-        onPomodoroComplete, updateStudyStatsOnNoteSave, recordPracticeSession
+        onPomodoroComplete, updateStudyStatsOnNoteSave, recordPracticeSession, focusSessionId
     ]);
 };

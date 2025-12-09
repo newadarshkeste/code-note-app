@@ -87,3 +87,11 @@ export interface RecursionConnection {
 
 export type RecursionConnectionCreate = Omit<RecursionConnection, 'id' | 'boardId'>;
 export type RecursionConnectionUpdate = Partial<Omit<RecursionConnection, 'id' | 'boardId'>>;
+
+export interface FocusSession {
+  id: string;
+  userId: string;
+  createdAt: any;
+  isActive: boolean;
+  lastWarningAt?: any;
+}

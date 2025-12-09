@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, RefreshCw, Settings } from 'lucide-react';
+import { Play, Pause, RefreshCw, Settings, Smartphone, Copy, Check } from 'lucide-react';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useNotes } from '@/context/NotesContext';
 import { useAuth } from '@/context/AuthContext';
 import { useFirestore } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 
 import {
@@ -22,6 +22,7 @@ import {
 } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 export function TimerSettingsDialog({
     isOpen,
@@ -134,6 +135,66 @@ export function TimerSettingsDialog({
     );
 }
 
+function FocusLockDialog({
+  isOpen,
+  setIsOpen,
+  focusSessionId,
+}: {
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+  focusSessionId: string | null;
+}) {
+  const [copied, setCopied] = useState(false);
+  const focusUrl =
+    typeof window !== 'undefined' && focusSessionId
+      ? `${window.location.origin}/focus/${focusSessionId}`
+      : '';
+
+  useEffect(() => {
+    if (!isOpen) {
+      setCopied(false);
+    }
+  }, [isOpen]);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(focusUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Smartphone className="h-5 w-5" />
+            Focus Lock
+          </DialogTitle>
+          <DialogDescription>
+            Open the link on your phone to lock focus. Switching apps or tabs on
+            that device will trigger a warning here.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-4 py-4">
+          <Label htmlFor="focus-link">Secure Focus Link</Label>
+          <div className="flex gap-2">
+            <Input id="focus-link" value={focusUrl} readOnly />
+            <Button onClick={handleCopy} variant="outline" size="icon">
+              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button">Close</Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 export function Pomodoro() {
     const { user } = useAuth();
     const firestore = useFirestore();
@@ -152,8 +213,28 @@ export function Pomodoro() {
         pomodorosPerCycle,
         pomodoroCycleCount,
         updateDurations,
+        focusSessionId,
     } = pomodoro;
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isFocusLockOpen, setIsFocusLockOpen] = useState(false);
+    const [wasDistracted, setWasDistracted] = useState(false);
+
+     useEffect(() => {
+        if (!focusSessionId || !user) {
+            setWasDistracted(false);
+            return;
+        };
+
+        const sessionRef = doc(firestore, 'focusSessions', focusSessionId);
+        const unsubscribe = onSnapshot(sessionRef, (doc) => {
+            if (doc.exists() && doc.data().lastWarningAt) {
+                setWasDistracted(true);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [focusSessionId, user, firestore]);
+    
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -175,14 +256,32 @@ export function Pomodoro() {
                 return 'Focus';
         }
     }
+    
+     const handleToggleTimer = () => {
+        toggleTimer();
+        if (isActive && wasDistracted) {
+            // Reset distraction warning when pausing/resuming
+            setWasDistracted(false);
+        }
+    };
+
 
     return (
         <Card>
-            <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                <CardTitle className="text-base font-semibold">
-                    Pomodoro Timer
-                </CardTitle>
-                <div className="flex items-center">
+            <CardHeader className="pb-2 flex flex-row items-start justify-between">
+                <div>
+                    <CardTitle className="text-base font-semibold">
+                        Pomodoro Timer
+                    </CardTitle>
+                    {wasDistracted && (
+                         <Alert variant="destructive" className="mt-2 text-xs p-2">
+                             <AlertDescription>
+                                Focus was violated on a connected device.
+                             </AlertDescription>
+                         </Alert>
+                    )}
+                </div>
+                <div className="flex items-center flex-shrink-0">
                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsSettingsOpen(true)}>
                         <Settings className="h-4 w-4" />
                     </Button>
@@ -207,7 +306,7 @@ export function Pomodoro() {
                 </div>
 
                 <div className="flex w-full items-center justify-center space-x-2">
-                    <Button onClick={toggleTimer} size="lg" className="flex-grow">
+                    <Button onClick={handleToggleTimer} size="lg" className="flex-grow">
                         {isActive ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                         <span className="ml-2">{isActive ? 'Pause' : 'Start'}</span>
                     </Button>
@@ -216,6 +315,18 @@ export function Pomodoro() {
                     </Button>
                 </div>
             </CardContent>
+            
+            <DialogFooter className="px-6 pb-4 border-t pt-4">
+                 <Button
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => setIsFocusLockOpen(true)}
+                    disabled={!isActive || mode !== 'focus'}
+                 >
+                    <Smartphone className="h-4 w-4 mr-2"/>
+                    Enable Focus Lock
+                 </Button>
+            </DialogFooter>
 
              <TimerSettingsDialog 
                 isOpen={isSettingsOpen}
@@ -227,6 +338,11 @@ export function Pomodoro() {
                     cycle: pomodorosPerCycle
                 }}
                 onSave={updateDurations}
+             />
+             <FocusLockDialog
+                isOpen={isFocusLockOpen}
+                setIsOpen={setIsFocusLockOpen}
+                focusSessionId={focusSessionId}
              />
         </Card>
     );
