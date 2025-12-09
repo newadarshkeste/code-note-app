@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -5,7 +6,7 @@ import { useLocalStorage } from './useLocalStorage';
 import { isToday, isYesterday, format, differenceInDays } from 'date-fns';
 import { useAuth } from '@/context/AuthContext';
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, writeBatch, increment, setDoc, deleteDoc, serverTimestamp, getDoc, collection } from 'firebase/firestore';
+import { doc, writeBatch, increment, setDoc, deleteDoc, serverTimestamp, getDoc, collection, onSnapshot } from 'firebase/firestore';
 
 export type TimerMode = 'focus' | 'break' | 'longBreak';
 
@@ -146,7 +147,7 @@ export const useStudyStats = () => {
             deleteDoc(sessionRef);
             setFocusSessionId(null);
         }
-    }, [isActive, mode, user, firestore, focusSessionId]);
+    }, [isActive, mode, user, firestore, focusSessionId, setFocusSessionId, setDoc]);
 
     const resetTimer = () => {
         setIsActive(false);
