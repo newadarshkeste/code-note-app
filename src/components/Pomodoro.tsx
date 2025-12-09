@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -9,6 +10,7 @@ import { useNotes } from '@/context/NotesContext';
 import { useAuth } from '@/context/AuthContext';
 import { useFirestore } from '@/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import Image from 'next/image';
 
 
 import {
@@ -149,6 +151,11 @@ function FocusLockDialog({
     typeof window !== 'undefined' && focusSessionId
       ? `${window.location.origin}/focus/${focusSessionId}`
       : '';
+  
+  const qrCodeUrl = focusUrl 
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(focusUrl)}`
+    : '';
+
 
   useEffect(() => {
     if (!isOpen) {
@@ -171,15 +178,23 @@ function FocusLockDialog({
             Focus Lock
           </DialogTitle>
           <DialogDescription>
-            Open the link on your phone to lock focus. Switching apps or tabs on
-            that device will trigger a warning here.
+            Scan the QR code or open the link on your phone to lock focus. Switching apps will trigger a warning.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-4 py-4">
-          <Label htmlFor="focus-link">Secure Focus Link</Label>
-          <div className="flex gap-2">
+        <div className="flex flex-col items-center gap-4 py-4">
+          {qrCodeUrl && (
+            <Image
+                src={qrCodeUrl}
+                alt="Focus Lock QR Code"
+                width={250}
+                height={250}
+                className="rounded-lg border"
+            />
+          )}
+          <Label htmlFor="focus-link" className="sr-only">Secure Focus Link</Label>
+          <div className="flex gap-2 w-full">
             <Input id="focus-link" value={focusUrl} readOnly />
-            <Button onClick={handleCopy} variant="outline" size="icon">
+            <Button onClick={handleCopy} variant="outline" size="icon" className="flex-shrink-0">
               {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
