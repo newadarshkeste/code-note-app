@@ -93,6 +93,7 @@ export interface FocusSession {
   userId: string;
   createdAt: any;
   isActive: boolean;
+  isCompleted?: boolean;
   lastWarningAt?: any;
   timeLeft?: number;
   mode?: 'focus' | 'break' | 'longBreak';

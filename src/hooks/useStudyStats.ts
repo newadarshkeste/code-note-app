@@ -178,16 +178,15 @@ export const useStudyStats = () => {
                 setFocusSessionId(newSessionId);
             }
         }
-    }, [isActive, mode, user, firestore, focusSessionId, setFocusSessionId, timeLeft]);
+    }, [isActive, mode, user, firestore, focusSessionId, setFocusSessionId, timeLeft, getTimerDuration]);
 
     const resetTimer = () => {
         setIsActive(false);
         if (focusSessionId) {
              const sessionRef = doc(firestore, 'focusSessions', focusSessionId);
-             // Instead of deleting, we update it to inactive, then delete.
-             // This gives the client a chance to see the session has ended.
-             updateDoc(sessionRef, { isActive: false }).then(() => {
-                deleteDoc(sessionRef);
+             // Instead of deleting, mark as completed.
+             updateDoc(sessionRef, { isActive: false, isCompleted: true }).catch(err => {
+                 console.error("Could not mark session as completed: ", err);
              });
              setFocusSessionId(null);
         }

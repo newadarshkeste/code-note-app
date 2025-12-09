@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { doc, updateDoc, onSnapshot, DocumentData, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
-import { Smartphone, CheckCircle, AlertTriangle, Play, Pause, RefreshCw } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { Smartphone, CheckCircle, AlertTriangle, Play, Pause } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FocusSession } from '@/lib/types';
 
@@ -28,8 +27,8 @@ export default function FocusSessionPage() {
   const { sessionId } = useParams();
   const firestore = useFirestore();
   const [sessionData, setSessionData] = useState<FocusSession | null>(null);
-  const [wasDistracted, setWasDistracted] = useState(false);
   const [isSessionActive, setIsSessionActive] = useState(true);
+  const [wasDistracted, setWasDistracted] = useState(false);
 
   useEffect(() => {
     if (!sessionId || typeof sessionId !== 'string' || !firestore) return;
@@ -40,16 +39,14 @@ export default function FocusSessionPage() {
         if (docSnap.exists()) {
             const data = docSnap.data() as FocusSession;
             setSessionData(data);
-             // If the session is explicitly marked as inactive (e.g., paused or reset),
-            // or if a distraction is recorded, update the state.
-            if (data.isActive === false) {
+            if (data.isCompleted) {
                 setIsSessionActive(false);
             }
             if (data.lastWarningAt) {
                 setWasDistracted(true);
             }
         } else {
-            // This case now cleanly handles session deletion on reset.
+            // This case handles session deletion/completion.
             setIsSessionActive(false);
             setSessionData(null);
         }
@@ -58,7 +55,7 @@ export default function FocusSessionPage() {
     let blurTimeout: NodeJS.Timeout;
     const triggerWarning = () => {
       // Only trigger a warning if the session is active.
-      if (!isSessionActive) return;
+      if (!isSessionActive || !sessionData?.isActive) return;
 
       clearTimeout(blurTimeout);
       blurTimeout = setTimeout(() => {
@@ -80,9 +77,9 @@ export default function FocusSessionPage() {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       unsubscribe();
     };
-  }, [sessionId, firestore, isSessionActive]);
+  }, [sessionId, firestore, isSessionActive, sessionData?.isActive]);
   
-  if (!isSessionActive && !sessionData) {
+  if (!isSessionActive) {
       return (
            <div className="flex flex-col items-center justify-center h-dvh w-screen bg-background text-foreground text-center p-4">
                 <div className="flex flex-col items-center gap-4 max-w-sm">

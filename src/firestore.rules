@@ -198,6 +198,7 @@ service cloud.firestore {
       
       // Only the owner can create, update, or delete their session
       allow create, update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Allow delete only if the user is the owner of the document being deleted
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
   }
