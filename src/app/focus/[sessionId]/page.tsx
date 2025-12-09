@@ -29,6 +29,7 @@ export default function FocusSessionPage() {
   const firestore = useFirestore();
   const [sessionData, setSessionData] = useState<FocusSession | null>(null);
   const [wasDistracted, setWasDistracted] = useState(false);
+  const [isSessionActive, setIsSessionActive] = useState(true);
 
   useEffect(() => {
     if (!sessionId || typeof sessionId !== 'string' || !firestore) return;
@@ -39,17 +40,26 @@ export default function FocusSessionPage() {
         if (docSnap.exists()) {
             const data = docSnap.data() as FocusSession;
             setSessionData(data);
+             // If the session is explicitly marked as inactive (e.g., paused or reset),
+            // or if a distraction is recorded, update the state.
+            if (data.isActive === false) {
+                setIsSessionActive(false);
+            }
             if (data.lastWarningAt) {
                 setWasDistracted(true);
             }
         } else {
-            // This case happens on a full reset, not on pause.
+            // This case now cleanly handles session deletion on reset.
+            setIsSessionActive(false);
             setSessionData(null);
         }
     });
     
     let blurTimeout: NodeJS.Timeout;
     const triggerWarning = () => {
+      // Only trigger a warning if the session is active.
+      if (!isSessionActive) return;
+
       clearTimeout(blurTimeout);
       blurTimeout = setTimeout(() => {
         updateDoc(sessionRef, { lastWarningAt: serverTimestamp() });
@@ -70,9 +80,9 @@ export default function FocusSessionPage() {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       unsubscribe();
     };
-  }, [sessionId, firestore]);
+  }, [sessionId, firestore, isSessionActive]);
   
-  if (!sessionData) {
+  if (!isSessionActive && !sessionData) {
       return (
            <div className="flex flex-col items-center justify-center h-dvh w-screen bg-background text-foreground text-center p-4">
                 <div className="flex flex-col items-center gap-4 max-w-sm">
@@ -80,6 +90,20 @@ export default function FocusSessionPage() {
                     <h1 className="text-3xl font-bold font-headline">Session Ended</h1>
                     <p className="text-muted-foreground">
                         The focus session has been completed or stopped. You can now close this window.
+                    </p>
+                </div>
+            </div>
+      )
+  }
+  
+  if (!sessionData) {
+       return ( // Loading state
+           <div className="flex flex-col items-center justify-center h-dvh w-screen bg-background text-foreground text-center p-4">
+                <div className="flex flex-col items-center gap-4 max-w-sm">
+                    <Smartphone className="h-16 w-16 text-primary animate-pulse" />
+                    <h1 className="text-3xl font-bold font-headline">Connecting...</h1>
+                    <p className="text-muted-foreground">
+                        Syncing with your study session.
                     </p>
                 </div>
             </div>

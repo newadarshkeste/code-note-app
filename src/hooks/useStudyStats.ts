@@ -152,6 +152,11 @@ export const useStudyStats = () => {
                 mode: mode,
                 duration: getTimerDuration(),
                 isActive: isActive, // Keep this in sync
+            }).catch(err => {
+                // This can happen if the doc is deleted, which is fine on reset.
+                if (err.code !== 'not-found') {
+                     console.error("Could not sync timer state:", err);
+                }
             });
         }
     }, [isActive, focusSessionId, timeLeft, mode, firestore]);
@@ -168,7 +173,7 @@ export const useStudyStats = () => {
                     lastWarningAt: null,
                     timeLeft: timeLeft,
                     mode: mode,
-                    duration: getTimerDuration(),
+                    duration: getTimerdurations(),
                 });
                 setFocusSessionId(newSessionId);
             }
@@ -177,15 +182,20 @@ export const useStudyStats = () => {
 
     const resetTimer = () => {
         setIsActive(false);
+        if (focusSessionId) {
+             const sessionRef = doc(firestore, 'focusSessions', focusSessionId);
+             // Instead of deleting, we update it to inactive, then delete.
+             // This gives the client a chance to see the session has ended.
+             updateDoc(sessionRef, { isActive: false }).then(() => {
+                deleteDoc(sessionRef);
+             });
+             setFocusSessionId(null);
+        }
+        // Reset local state after handling firestore
         setMode('focus');
         setTimeLeft(focusDuration * 60);
         setPomodoroCycleCount(0);
         setSessionMinutes(0);
-        if (focusSessionId) {
-             const sessionRef = doc(firestore, 'focusSessions', focusSessionId);
-             deleteDoc(sessionRef); // Okay to delete on a full reset
-             setFocusSessionId(null);
-        }
     };
 
     const updateDurations = (newFocus: number, newBreak: number, newLongBreak: number, newCycle: number) => {
