@@ -379,7 +379,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
     // If the original parent container is now different, we also need to re-order those items.
     if (activeNote.parentId !== newParentId) {
-        const oldSiblings = notes.filter(n => (n.parentId || null) === (activeNote.parentId || null) && n.id !== activeId).sort((a,b) => (a.order || 0) - (b.order || 0));
+        const oldSiblings = notes.filter(n => (n.parentId || null) === (activeNote.parentId || null) && n.id !== activeId).sort((a, b) => (a.order || 0) - (b.order || 0));
         oldSiblings.forEach((note, index) => {
             if (note.order !== index) {
                 const noteRef = doc(notesCollectionRef, note.id);
@@ -446,13 +446,19 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   // To-Do Methods
   const addTodo = async (todo: TodoCreate) => {
     if (!todosRef || !user) return;
-    const newTodoData = {
-        ...todo,
+    const newTodoData: any = {
+        content: todo.content,
         userId: user.uid,
         isCompleted: false,
         createdAt: serverTimestamp(),
         completedAt: null
     };
+
+    // This is the fix: only add dueDate if it's defined.
+    if (todo.dueDate) {
+        newTodoData.dueDate = todo.dueDate;
+    }
+
     addDoc(todosRef, newTodoData).catch(() => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: todosRef.path,
