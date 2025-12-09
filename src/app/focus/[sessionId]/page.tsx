@@ -1,10 +1,16 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, FirebaseProvider } from '@/firebase';
+import { AuthProvider } from '@/context/AuthContext';
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getAuth, Auth } from "firebase/auth";
+import { firebaseConfig } from "@/firebase/config";
+
 import { Smartphone, CheckCircle, AlertTriangle, Play, Pause } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FocusSession } from '@/lib/types';
@@ -24,8 +30,9 @@ const getModeLabel = (mode: FocusSession['mode']) => {
     }
 };
 
-export default function FocusSessionPage() {
-  const { sessionId } = useParams();
+function FocusSessionPageContent() {
+  const params = useParams();
+  const sessionId = params?.sessionId;
   const firestore = useFirestore();
   const [sessionData, setSessionData] = useState<FocusSession | null>(null);
   const [isSessionActive, setIsSessionActive] = useState(true);
@@ -166,4 +173,38 @@ export default function FocusSessionPage() {
         </div>
     </div>
   );
+}
+
+
+interface FirebaseServices {
+  firebaseApp: FirebaseApp;
+  firestore: Firestore;
+  auth: Auth;
+}
+
+export default function FocusSessionPage() {
+  const [services, setServices] = useState<FirebaseServices | null>(null);
+
+  useEffect(() => {
+    const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    const firestore = getFirestore(firebaseApp);
+    const auth = getAuth(firebaseApp);
+    setServices({ firebaseApp, firestore, auth });
+  }, []);
+
+  if (!services) {
+    return null; // Or a loading spinner
+  }
+  
+  return (
+      <FirebaseProvider
+        firebaseApp={services.firebaseApp}
+        firestore={services.firestore}
+        auth={services.auth}
+      >
+        <AuthProvider>
+            <FocusSessionPageContent />
+        </AuthProvider>
+      </FirebaseProvider>
+  )
 }
