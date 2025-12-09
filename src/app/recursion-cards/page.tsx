@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -7,8 +8,9 @@ import { BoardsSidebar } from '@/components/recursion-cards/BoardsSidebar';
 import { RecursionCanvas } from '@/components/recursion-cards/RecursionCanvas';
 import { InspectorSidebar } from '@/components/recursion-cards/InspectorSidebar';
 import { ReactFlowProvider } from 'reactflow';
+import { ClientProviders } from '@/components/ClientProviders';
 
-export default function RecursionCardsPage() {
+function RecursionCardsPageContent() {
     return (
         <RecursionCardsProvider>
             <ReactFlowProvider>
@@ -30,4 +32,12 @@ export default function RecursionCardsPage() {
             </ReactFlowProvider>
         </RecursionCardsProvider>
     );
+}
+
+export default function RecursionCardsPage() {
+    return (
+        <ClientProviders>
+            <RecursionCardsPageContent />
+        </ClientProviders>
+    )
 }
