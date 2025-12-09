@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -19,6 +18,7 @@ export function TodoList() {
     const { todos, todosLoading, addTodo, updateTodo, deleteTodo } = useNotes();
     const [newTodoContent, setNewTodoContent] = useState('');
     const [newTodoDate, setNewTodoDate] = useState<Date | undefined>();
+    const [month, setMonth] = useState<Date>(new Date());
 
     const sortedTodos = useMemo(() => {
         return [...todos].sort((a, b) => {
@@ -77,6 +77,8 @@ export function TodoList() {
                             mode="single"
                             selected={newTodoDate}
                             onSelect={setNewTodoDate}
+                            month={month}
+                            onMonthChange={setMonth}
                             initialFocus
                         />
                     </PopoverContent>
