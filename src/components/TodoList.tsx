@@ -65,7 +65,7 @@ export function TodoList() {
                             size="icon"
                             className={cn(
                                 'h-9 w-9 flex-shrink-0',
-                                !newTodoDate && 'text-muted-foreground'
+                                newTodoDate ? 'text-primary' : 'text-muted-foreground'
                             )}
                         >
                             <CalendarIcon className="h-4 w-4" />
@@ -73,13 +73,20 @@ export function TodoList() {
                     </PopoverTrigger>
                     <PopoverContent
                       className="w-auto p-0"
-                      onMouseDown={(e) => e.preventDefault()}
+                      onMouseDown={(e) => {
+                        // This is the fix to prevent the form from submitting
+                        e.preventDefault();
+                      }}
                     >
                         <Calendar
                             mode="single"
                             selected={newTodoDate}
-                            onSelect={setNewTodoDate}
-                            initialFocus
+                            onSelect={(date) => {
+                                if (date) {
+                                  setNewTodoDate(new Date(date));
+                                }
+                              }}
+                            initialFocus={false}
                         />
                     </PopoverContent>
                 </Popover>
