@@ -392,6 +392,7 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
             <SheetContent className="w-[400px] sm:w-[540px] sm:max-w-none p-0 flex flex-col">
               <VisuallyHidden>
                 <DialogTitle>AI Assistant</DialogTitle>
+                <DialogDescription>Chat with an AI to help you with your code or text.</DialogDescription>
               </VisuallyHidden>
               <AiAssistantPanel />
             </SheetContent>

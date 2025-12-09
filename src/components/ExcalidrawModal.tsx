@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import type { ExcalidrawElement, ExcalidrawImperativeAPIRef } from '@excalidraw/excalidraw/types/types';
 import dynamic from 'next/dynamic';
@@ -58,6 +58,7 @@ export function ExcalidrawModal({ isOpen, onClose, onSave }: ExcalidrawModalProp
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-4 border-b">
           <DialogTitle>Draw a Diagram</DialogTitle>
+          <DialogDescription className="sr-only">An Excalidraw canvas for creating and editing diagrams.</DialogDescription>
         </DialogHeader>
         <div className="flex-grow min-h-0">
             {isOpen && ( // Only render Excalidraw when the modal is open

@@ -118,6 +118,7 @@ export function BoardsSidebar() {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Rename Board</DialogTitle>
+                        <DialogDescription>Enter a new name for your board.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <Label htmlFor="edit-board-name">New Name</Label>

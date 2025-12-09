@@ -22,7 +22,7 @@ import {
 } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { RecursionBoard, RecursionCard, RecursionConnection } from '@/lib/types';
-import { Node, Edge, OnNodesChange, OnEdgesChange, applyNodeChanges, applyEdgeChanges, Connection, addEdge as addReactFlowEdge, OnEdgesDelete, MarkerType } from 'reactflow';
+import { Node, Edge, OnNodesChange, OnEdgesChange, applyNodeChanges, applyEdgeChanges, Connection, addEdge as addReactFlowEdge, OnEdgesDelete, MarkerType, NodeChange } from 'reactflow';
 
 // ReactFlow specific types
 export type RecursionNode = Node<RecursionCard>;
@@ -213,7 +213,8 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
         (changes) => {
             setNodes((nds) => applyNodeChanges(changes, nds));
             for (const change of changes) {
-                if (change.type === 'position' && change.position) {
+                // This is the fix: check if the position is valid before updating Firestore.
+                if (change.type === 'position' && change.position && !isNaN(change.position.x) && !isNaN(change.position.y)) {
                     if(!cardsRef) continue;
                     const nodeRef = doc(cardsRef, change.id);
                     updateDoc(nodeRef, { x: change.position.x, y: change.position.y });
