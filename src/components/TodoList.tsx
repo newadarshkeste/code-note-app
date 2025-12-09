@@ -53,43 +53,45 @@ export function TodoList() {
 
     return (
         <div className="flex flex-col h-full max-h-[400px]">
-             <form onSubmit={handleAddTodo} className="flex gap-2 p-1">
-                <Input
-                    placeholder="Add a new task..."
-                    value={newTodoContent}
-                    onChange={(e) => setNewTodoContent(e.target.value)}
-                    className="h-9 text-sm"
-                />
-                 <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                    <PopoverTrigger asChild>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className={cn(
-                                'h-9 w-9 flex-shrink-0',
-                                newTodoDate ? 'text-primary' : 'text-muted-foreground'
-                            )}
-                        >
-                            <CalendarIcon className="h-4 w-4" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <Calendar
-                            mode="single"
-                            selected={newTodoDate}
-                            onSelect={(date) => {
-                                setNewTodoDate(date ?? undefined);
-                                setIsCalendarOpen(false);
-                            }}
-                            initialFocus
-                        />
-                    </PopoverContent>
-                </Popover>
-                <Button type="submit" size="icon" className="h-9 w-9 flex-shrink-0" disabled={!newTodoContent.trim()}>
-                    <Plus className="h-4 w-4" />
-                </Button>
-            </form>
+             <div className="p-1">
+                <form onSubmit={handleAddTodo} className="flex gap-2">
+                    <Input
+                        placeholder="Add a new task..."
+                        value={newTodoContent}
+                        onChange={(e) => setNewTodoContent(e.target.value)}
+                        className="h-9 text-sm"
+                    />
+                     <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                type="button"
+                                variant={"outline"}
+                                size="icon"
+                                className={cn(
+                                    'h-9 w-9 flex-shrink-0',
+                                    newTodoDate && "text-primary"
+                                )}
+                            >
+                                <CalendarIcon className="h-4 w-4" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={newTodoDate}
+                                onSelect={(date) => {
+                                    setNewTodoDate(date ?? undefined);
+                                    setIsCalendarOpen(false);
+                                }}
+                                initialFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
+                    <Button type="submit" size="icon" className="h-9 w-9 flex-shrink-0" disabled={!newTodoContent.trim()}>
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                </form>
+            </div>
 
             <ScrollArea className="flex-grow min-h-0 mt-2">
                 <div className="space-y-2 pr-2">
