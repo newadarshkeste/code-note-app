@@ -61,7 +61,7 @@ export function TodoList() {
                         onChange={(e) => setNewTodoContent(e.target.value)}
                         className="h-9 text-sm"
                     />
-                     <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                         <PopoverTrigger asChild>
                             <Button
                                 type="button"
