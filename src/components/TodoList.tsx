@@ -18,6 +18,7 @@ export function TodoList() {
     const { todos, todosLoading, addTodo, updateTodo, deleteTodo } = useNotes();
     const [newTodoContent, setNewTodoContent] = useState('');
     const [newTodoDate, setNewTodoDate] = useState<Date | undefined>();
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
     const sortedTodos = useMemo(() => {
         return [...todos].sort((a, b) => {
@@ -51,49 +52,48 @@ export function TodoList() {
 
     return (
         <div className="flex flex-col h-full max-h-[400px]">
-            <form onSubmit={handleAddTodo} className="flex gap-2 p-1">
+             <form onSubmit={handleAddTodo} className="flex gap-2 p-1">
                 <Input
                     placeholder="Add a new task..."
                     value={newTodoContent}
                     onChange={(e) => setNewTodoContent(e.target.value)}
                     className="h-9 text-sm"
                 />
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className={cn(
-                                'h-9 w-9 flex-shrink-0',
-                                newTodoDate ? 'text-primary' : 'text-muted-foreground'
-                            )}
-                        >
-                            <CalendarIcon className="h-4 w-4" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-auto p-0"
-                      onMouseDown={(e) => {
-                        // This is the fix to prevent the form from submitting
-                        e.preventDefault();
-                      }}
-                    >
-                        <Calendar
-                            mode="single"
-                            selected={newTodoDate}
-                            onSelect={(date) => {
-                                if (date) {
-                                  setNewTodoDate(new Date(date));
-                                }
-                              }}
-                            initialFocus={false}
-                        />
-                    </PopoverContent>
-                </Popover>
+                 <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className={cn(
+                        'h-9 w-9 flex-shrink-0',
+                        newTodoDate ? 'text-primary' : 'text-muted-foreground'
+                    )}
+                    onClick={() => setIsCalendarOpen(true)}
+                >
+                    <CalendarIcon className="h-4 w-4" />
+                </Button>
                 <Button type="submit" size="icon" className="h-9 w-9 flex-shrink-0" disabled={!newTodoContent.trim()}>
                     <Plus className="h-4 w-4" />
                 </Button>
             </form>
+
+            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                <PopoverTrigger asChild>
+                    {/* The trigger is now the button inside the form, so this can be empty */}
+                    <span />
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                    <Calendar
+                        mode="single"
+                        selected={newTodoDate}
+                        onSelect={(date) => {
+                            setNewTodoDate(date ?? undefined);
+                            setIsCalendarOpen(false);
+                        }}
+                        initialFocus
+                    />
+                </PopoverContent>
+            </Popover>
+
             <ScrollArea className="flex-grow min-h-0 mt-2">
                 <div className="space-y-2 pr-2">
                     {todosLoading ? (
