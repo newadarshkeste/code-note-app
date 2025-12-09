@@ -71,7 +71,10 @@ export function TodoList() {
                             <CalendarIcon className="h-4 w-4" />
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
+                    <PopoverContent
+                      className="w-auto p-0"
+                      onMouseDown={(e) => e.preventDefault()}
+                    >
                         <Calendar
                             mode="single"
                             selected={newTodoDate}
