@@ -94,4 +94,7 @@ export interface FocusSession {
   createdAt: any;
   isActive: boolean;
   lastWarningAt?: any;
+  timeLeft?: number;
+  mode?: 'focus' | 'break' | 'longBreak';
+  duration?: number;
 }

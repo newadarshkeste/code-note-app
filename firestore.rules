@@ -1,34 +1,4 @@
 
-/**
- * This ruleset enforces a strict user-ownership security model for a multi-user
- * note-taking application. It is designed for rapid prototyping, prioritizing
- * strong authorization while maintaining flexibility in data schemas.
- *
- * Core Philosophy:
- * Each user's data is completely isolated. A user can only ever read or write
- * their own information. There is no concept of public or shared data, and
- * users cannot see or interact with other users' content in any way.
- *
- * Data Structure:
- * All user-generated content is nested under a user-specific path:
- * /users/{userId}
- *   - /topics/{topicId}
- *     - /notes/{noteId}
- *   - /todos/{todoId}
- *   - /studyStats/{userId}
- *   - /recursionBoards/{boardId}
- * This hierarchical structure is the primary mechanism for enforcing security,
- * as ownership is determined by the {userId} in the path.
- *
- * Key Security Decisions:
- * - User Enumeration is Disabled: Listing the top-level `/users` collection is
- *   explicitly forbidden to prevent discovery of other users on the platform.
- * - Strict Ownership: All operations (read, write, delete) on any document
- *   within a user's data tree (`/users/{userId}/*`) are restricted to the
- *   authenticated user whose UID matches the `userId` in the path.
- * - Default Deny: All access is denied by default. Permissions are only granted
- *   through explicit `allow` statements.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -63,13 +33,10 @@ service cloud.firestore {
       allow get: if isOwner(userId);
       allow list: if false; // Prevent user enumeration
       
-      // A user can create their own document
       allow create: if isOwner(userId) && request.resource.data.id == userId && request.resource.data.email == request.auth.token.email;
       
-      // A user can update their own document, but cannot change their ID or email
       allow update: if isOwner(userId) && request.resource.data.id == resource.data.id && request.resource.data.email == resource.data.email;
       
-      // Users should not be able to delete their own account from here
       allow delete: if false;
 
       match /topics/{topicId} {
@@ -95,6 +62,7 @@ service cloud.firestore {
 
       match /studyStats/{statsId} {
         allow get, create, update: if isOwner(userId) && statsId == userId;
+        allow list: if false;
         allow delete: if false; 
       }
 
@@ -112,10 +80,8 @@ service cloud.firestore {
     }
 
     match /focusSessions/{sessionId} {
-      // Anyone with the link can read the session status to monitor it.
       allow get: if true;
-      // Only the authenticated owner of the session can create or update it.
-      allow create, update, delete: if request.auth.uid == request.resource.data.userId;
+      allow create, update, delete: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
   }
 }

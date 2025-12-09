@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -6,7 +7,7 @@ import { useLocalStorage } from './useLocalStorage';
 import { isToday, isYesterday, format, differenceInDays } from 'date-fns';
 import { useAuth } from '@/context/AuthContext';
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, writeBatch, increment, setDoc, deleteDoc, serverTimestamp, getDoc, collection, onSnapshot } from 'firebase/firestore';
+import { doc, writeBatch, increment, setDoc, deleteDoc, serverTimestamp, getDoc, collection, onSnapshot, updateDoc } from 'firebase/firestore';
 
 export type TimerMode = 'focus' | 'break' | 'longBreak';
 
@@ -65,6 +66,10 @@ export const useStudyStats = () => {
             } else {
                 setStudyData(defaultStats);
             }
+        }, (error) => {
+            console.error("Error fetching study stats:", error);
+            // We can assume the global error handler will catch permission errors
+            // but log others.
         });
         return () => unsubscribe();
     }, [statsRef]);
@@ -128,6 +133,27 @@ export const useStudyStats = () => {
     }, [user, firestore, statsRef, focusDuration]);
 
     const toggleTimer = () => setIsActive(!isActive);
+    
+    const getTimerDuration = () => {
+        switch(mode) {
+            case 'focus': return focusDuration * 60;
+            case 'break': return breakDuration * 60;
+            case 'longBreak': return longBreakDuration * 60;
+            default: return focusDuration * 60;
+        }
+    };
+    
+    // Sync timer state to Firestore for Focus Lock
+    useEffect(() => {
+        if (isActive && focusSessionId) {
+            const sessionRef = doc(firestore, 'focusSessions', focusSessionId);
+            updateDoc(sessionRef, {
+                timeLeft: timeLeft,
+                mode: mode,
+                duration: getTimerDuration()
+            });
+        }
+    }, [isActive, focusSessionId, timeLeft, mode, firestore]);
 
     useEffect(() => {
         if (isActive && mode === 'focus' && !focusSessionId) {
@@ -139,6 +165,9 @@ export const useStudyStats = () => {
                     createdAt: serverTimestamp(),
                     isActive: true,
                     lastWarningAt: null,
+                    timeLeft: timeLeft,
+                    mode: mode,
+                    duration: getTimerDuration(),
                 });
                 setFocusSessionId(newSessionId);
             }
@@ -147,7 +176,7 @@ export const useStudyStats = () => {
             deleteDoc(sessionRef);
             setFocusSessionId(null);
         }
-    }, [isActive, mode, user, firestore, focusSessionId, setFocusSessionId, setDoc]);
+    }, [isActive, mode, user, firestore, focusSessionId, setFocusSessionId, setDoc, timeLeft]);
 
     const resetTimer = () => {
         setIsActive(false);
@@ -170,15 +199,6 @@ export const useStudyStats = () => {
         if (!isActive) {
             setTimeLeft(newFocus * 60);
             setMode('focus');
-        }
-    };
-    
-    const getTimerDuration = () => {
-        switch(mode) {
-            case 'focus': return focusDuration * 60;
-            case 'break': return breakDuration * 60;
-            case 'longBreak': return longBreakDuration * 60;
-            default: return focusDuration * 60;
         }
     };
 
