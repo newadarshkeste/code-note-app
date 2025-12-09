@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -6,10 +5,8 @@ import { useNotes } from '@/context/NotesContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar as CalendarIcon, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
-import { Calendar } from './ui/calendar';
 import { cn } from '@/lib/utils';
 import type { Todo } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
@@ -18,8 +15,7 @@ import { Skeleton } from './ui/skeleton';
 export function TodoList() {
     const { todos, todosLoading, addTodo, updateTodo, deleteTodo } = useNotes();
     const [newTodoContent, setNewTodoContent] = useState('');
-    const [newTodoDate, setNewTodoDate] = useState<Date | undefined>();
-    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const [newTodoDate, setNewTodoDate] = useState(''); // State now holds a string e.g. "2024-07-30"
 
     const sortedTodos = useMemo(() => {
         return [...todos].sort((a, b) => {
@@ -40,10 +36,10 @@ export function TodoList() {
         if (newTodoContent.trim()) {
             await addTodo({
                 content: newTodoContent.trim(),
-                dueDate: newTodoDate ? format(newTodoDate, 'yyyy-MM-dd') : undefined,
+                dueDate: newTodoDate || undefined, // Use the date string directly
             });
             setNewTodoContent('');
-            setNewTodoDate(undefined);
+            setNewTodoDate(''); // Reset the date input
         }
     };
 
@@ -61,32 +57,12 @@ export function TodoList() {
                         onChange={(e) => setNewTodoContent(e.target.value)}
                         className="h-9 text-sm"
                     />
-                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                        <PopoverTrigger asChild>
-                            <Button
-                                type="button"
-                                variant={"outline"}
-                                size="icon"
-                                className={cn(
-                                    'h-9 w-9 flex-shrink-0',
-                                    newTodoDate && "text-primary"
-                                )}
-                            >
-                                <CalendarIcon className="h-4 w-4" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={newTodoDate}
-                                onSelect={(date) => {
-                                    setNewTodoDate(date ?? undefined);
-                                    setIsCalendarOpen(false);
-                                }}
-                                initialFocus
-                            />
-                        </PopoverContent>
-                    </Popover>
+                    <Input
+                        type="date"
+                        value={newTodoDate}
+                        onChange={(e) => setNewTodoDate(e.target.value)}
+                        className="h-9 text-sm w-36 flex-shrink-0"
+                    />
                     <Button type="submit" size="icon" className="h-9 w-9 flex-shrink-0" disabled={!newTodoContent.trim()}>
                         <Plus className="h-4 w-4" />
                     </Button>
