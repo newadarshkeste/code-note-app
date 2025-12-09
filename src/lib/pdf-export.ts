@@ -94,6 +94,21 @@ const cleanupContainer = (container: HTMLElement) => {
     }
 };
 
+const safeFormatDate = (timestamp: any): string => {
+    if (!timestamp) return 'N/A';
+    // Firestore Timestamps have a toDate() method
+    if (typeof timestamp.toDate === 'function') {
+        return format(timestamp.toDate(), 'PPP');
+    }
+    // Handle ISO strings or other date-like objects
+    try {
+        return format(new Date(timestamp), 'PPP');
+    } catch (e) {
+        return 'Invalid Date';
+    }
+};
+
+
 // ----------------- MAIN EXPORT FUNCTION ---------------
 export const generatePdf = async (notes: NoteForPdf[]) => {
   const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
@@ -136,8 +151,8 @@ export const generatePdf = async (notes: NoteForPdf[]) => {
     }
 
     // -------- Note Title + Metadata ----------
-    const created = note.createdAt?.toDate ? format(note.createdAt.toDate(), 'PPP') : 'N/A';
-    const updated = note.updatedAt?.toDate ? format(note.updatedAt.toDate(), 'PPP') : 'N/A';
+    const created = safeFormatDate(note.createdAt);
+    const updated = safeFormatDate(note.updatedAt);
     
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(13);
