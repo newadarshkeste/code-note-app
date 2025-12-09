@@ -35,7 +35,6 @@ export default function FocusSessionPage() {
 
     const sessionRef = doc(firestore, 'focusSessions', sessionId as string);
 
-    // Main listener for session data (timer, mode, etc.)
     const unsubscribe = onSnapshot(sessionRef, (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data() as FocusSession;
@@ -44,12 +43,11 @@ export default function FocusSessionPage() {
                 setWasDistracted(true);
             }
         } else {
-            // Session ended (document deleted)
+            // This case happens on a full reset, not on pause.
             setSessionData(null);
         }
     });
     
-    // Logic for this tab to report distractions
     let blurTimeout: NodeJS.Timeout;
     const triggerWarning = () => {
       clearTimeout(blurTimeout);
@@ -66,7 +64,6 @@ export default function FocusSessionPage() {
     window.addEventListener('blur', onBlur);
     document.addEventListener('visibilitychange', onVisibilityChange);
 
-    // Clean up all listeners
     return () => {
       clearTimeout(blurTimeout);
       window.removeEventListener('blur', onBlur);

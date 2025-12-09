@@ -145,12 +145,13 @@ export const useStudyStats = () => {
     
     // Sync timer state to Firestore for Focus Lock
     useEffect(() => {
-        if (isActive && focusSessionId) {
+        if (focusSessionId) {
             const sessionRef = doc(firestore, 'focusSessions', focusSessionId);
             updateDoc(sessionRef, {
                 timeLeft: timeLeft,
                 mode: mode,
-                duration: getTimerDuration()
+                duration: getTimerDuration(),
+                isActive: isActive, // Keep this in sync
             });
         }
     }, [isActive, focusSessionId, timeLeft, mode, firestore]);
@@ -171,10 +172,6 @@ export const useStudyStats = () => {
                 });
                 setFocusSessionId(newSessionId);
             }
-        } else if (!isActive && focusSessionId) {
-            const sessionRef = doc(firestore, 'focusSessions', focusSessionId);
-            deleteDoc(sessionRef);
-            setFocusSessionId(null);
         }
     }, [isActive, mode, user, firestore, focusSessionId, setFocusSessionId, setDoc, timeLeft]);
 
@@ -186,7 +183,7 @@ export const useStudyStats = () => {
         setSessionMinutes(0);
         if (focusSessionId) {
              const sessionRef = doc(firestore, 'focusSessions', focusSessionId);
-             deleteDoc(sessionRef);
+             deleteDoc(sessionRef); // Okay to delete on a full reset
              setFocusSessionId(null);
         }
     };

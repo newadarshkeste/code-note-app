@@ -119,6 +119,20 @@ service cloud.firestore {
           && (!('createdAt' in incomingData) || incomingData.createdAt == existingData.createdAt);
           // parentId and order can be updated
     }
+    
+    function hasValidTodoFieldsOnCreate(userId) {
+        let data = request.resource.data;
+        return data.userId == userId
+            && data.content is string
+            && data.isCompleted == false;
+    }
+
+    function hasImmutableTodoFields() {
+        let incomingData = request.resource.data;
+        let existingData = resource.data;
+        return incomingData.userId == existingData.userId
+            && incomingData.createdAt == existingData.createdAt;
+    }
 
     //-------------------------------------------------------------------------
     //  Collection Rules
@@ -129,22 +143,27 @@ service cloud.firestore {
       allow list: if false;
       allow create: if isOwner(userId) && hasValidUserFieldsOnCreate(userId);
       allow update: if isExistingOwner(userId) && hasImmutableUserFields();
-      allow delete: if isExistingOwner(userId);
+      allow delete: if false; // Users shouldn't delete their own record
 
       match /topics/{topicId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
+        allow get, list: if isOwner(userId);
         allow create: if isOwner(userId) && hasValidTopicFieldsOnCreate(userId);
         allow update: if isExistingOwner(userId) && hasImmutableTopicFields();
         allow delete: if isExistingOwner(userId);
 
         match /notes/{noteId} {
-          allow get: if isOwner(userId);
-          allow list: if isOwner(userId);
+          allow get, list: if isOwner(userId);
           allow create: if isOwner(userId) && hasValidNoteFieldsOnCreate(topicId);
           allow update: if isExistingOwner(userId) && hasImmutableNoteFields();
           allow delete: if isExistingOwner(userId);
         }
+      }
+      
+       match /todos/{todoId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && hasValidTodoFieldsOnCreate(userId);
+        allow update: if isOwner(userId) && hasImmutableTodoFields();
+        allow delete: if isOwner(userId);
       }
       
       /**
@@ -156,17 +175,30 @@ service cloud.firestore {
       match /studyStats/{statsId} {
         // The user can only access their own stats document.
         allow get, create, update: if isOwner(userId) && statsId == userId;
-        allow delete: if false; // Stats should not be deletable by the user.
+        allow list, delete: if false; // Stats should not be listable or deletable by the user.
+      }
+      
+       match /recursionBoards/{boardId} {
+        allow get, list, create, update, delete: if isOwner(userId);
+
+        match /cards/{cardId} {
+          allow get, list, create, update, delete: if isOwner(userId);
+        }
+
+        match /connections/{connectionId} {
+          allow get, list, create, update, delete: if isOwner(userId);
+        }
       }
     }
     
     // Rules for the temporary focus session for QR code syncing
     match /focusSessions/{sessionId} {
-      // Anyone can read a session document if they have the ID (from the QR code)
+      // Anyone can read a session document if they have the ID
       allow get: if true;
       
       // Only the owner can create, update, or delete their session
-      allow create, update, delete: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create, update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
   }
 }
