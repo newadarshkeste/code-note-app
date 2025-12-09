@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { ClientProviders } from "@/components/ClientProviders";
 
 export const metadata: Metadata = {
   title: "CodeNote",
@@ -32,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           defaultTheme="light"
           enableSystem={false}
         >
-          <ClientProviders>{children}</ClientProviders>
+          {children}
           <Toaster />
         </ThemeProvider>
       </body>

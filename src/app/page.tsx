@@ -5,8 +5,9 @@ import { useAuth } from '@/context/AuthContext';
 import { AppLayout } from '@/components/AppLayout';
 import { LoginPage } from '@/components/LoginPage';
 import { Loader2 } from 'lucide-react';
+import { ClientProviders } from '@/components/ClientProviders';
 
-export default function Home() {
+function App() {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -22,4 +23,12 @@ export default function Home() {
   }
 
   return <AppLayout />;
+}
+
+export default function Home() {
+  return (
+    <ClientProviders>
+      <App />
+    </ClientProviders>
+  )
 }
