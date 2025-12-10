@@ -5,7 +5,7 @@ import React, { useState, useMemo } from 'react';
 import { useNotes } from '@/context/NotesContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
     Dialog,
     DialogContent,
@@ -187,14 +187,14 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }:
                     variant="ghost"
                     onClick={() => onNoteSelect(note.id)}
                     className={cn(
-                        "flex-grow justify-start gap-2 h-full text-sm min-w-0", // min-w-0 is key for truncation
+                        "flex-grow justify-start gap-2 h-full text-sm",
                         activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : ''
                     )}
                 >
                     {getNoteIcon(note.type)}
-                    <span className="truncate flex-grow text-left">{note.title}</span>
+                    <span className="whitespace-nowrap">{note.title}</span>
                 </Button>
-                <div className="flex-shrink-0 flex items-center">
+                <div className="flex-shrink-0 flex items-center ml-auto">
                     <NoteActionsMenu 
                         note={note}
                         onRename={(n) => { setRenameNote(n); setRenamingTitle(n.title); }}
@@ -442,7 +442,7 @@ export function NoteList() {
                 </div>
 
                 <ScrollArea className="flex-grow min-h-0">
-                    <div className="p-4 pt-2">
+                     <div className="p-4 pt-2">
                         {notesLoading ? (
                             <div className="space-y-2">
                                 <Skeleton className="h-10 w-full" />
@@ -468,6 +468,7 @@ export function NoteList() {
                              <p className="text-sm text-center text-muted-foreground pt-4">No notes in this topic.</p>
                          )}
                     </div>
+                    <ScrollBar orientation="horizontal" />
                 </ScrollArea>
             </div>
             
@@ -577,5 +578,3 @@ export function NoteList() {
         </>
     );
 }
-
-    
