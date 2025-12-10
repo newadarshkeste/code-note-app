@@ -198,7 +198,7 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete,
                     {getNoteIcon(note.type)}
                     <span className="truncate">{note.title}</span>
                 </Button>
-                <div className="flex-shrink-0 flex items-center ml-auto">
+                <div className="flex-shrink-0 flex items-center ml-auto" onPointerDown={(e) => e.stopPropagation()}>
                     <NoteActionsMenu 
                         note={note}
                         onRename={onRename}
@@ -256,7 +256,11 @@ export function NoteList() {
     const [renamingTitle, setRenamingTitle] = useState('');
 
     const sensors = useSensors(
-        useSensor(PointerSensor),
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8, // Require mouse to move 8px before drag starts
+            },
+        }),
         useSensor(KeyboardSensor, {
             coordinateGetter: sortableKeyboardCoordinates,
         })
