@@ -16,12 +16,6 @@ import {
     DialogDescription,
 } from '@/components/ui/dialog';
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -32,7 +26,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
-import { FilePlus2, Search, Trash2, Pencil, Type, Code, GripVertical, ChevronRight, ChevronDown, Folder, Plus, MoreHorizontal } from 'lucide-react';
+import { FilePlus2, Search, Trash2, Pencil, Type, Code, GripVertical, ChevronRight, ChevronDown, Folder, Plus } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Note, Topic } from '@/lib/types';
@@ -59,74 +53,68 @@ import { CSS } from '@dnd-kit/utilities';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 
-function NoteActionsMenu({ note, onRename, onAddChild, onDelete, setUiLocked }: { note: Note, onRename: (note: Note) => void, onAddChild: (noteId: string) => void, onDelete: (noteId: string) => void, setUiLocked: (locked: boolean) => void }) {
-    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+function NoteActionsMenu({
+  note,
+  onRename,
+  onAddChild,
+  onDelete,
+}: {
+  note: Note;
+  onRename: (note: Note) => void;
+  onAddChild: (noteId: string) => void;
+  onDelete: (noteId: string) => void;
+}) {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm(`Delete "${note.title}" and all its sub-notes?`)) {
+      onDelete(note.id);
+    }
+  };
 
-    return (
-        <>
-            {/* --- Dropdown Menu --- */}
-            <DropdownMenu onOpenChange={setUiLocked}>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 flex-shrink-0"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                </DropdownMenuTrigger>
+  const handleRename = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onRename(note);
+  };
 
-                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenuItem onSelect={() => onRename(note)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Rename
-                    </DropdownMenuItem>
+  const handleAddInside = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onAddChild(note.id);
+  };
 
-                    <DropdownMenuItem onSelect={() => onAddChild(note.id)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Item Inside
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem
-                        className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                        onSelect={() => setShowDeleteDialog(true)}
-                    >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* --- Delete Dialog (SEPARATE) --- */}
-            <AlertDialog open={showDeleteDialog} onOpenChange={(open) => {
-                setUiLocked(open);
-                setShowDeleteDialog(open);
-            }}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will permanently delete "{note.title}" and all its sub-notes.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            className="bg-destructive hover:bg-destructive/90"
-                            onClick={() => onDelete(note.id)}
-                        >
-                            Delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </>
-    );
+  return (
+    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7"
+        onClick={handleRename}
+        title="Rename"
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7"
+        onClick={handleAddInside}
+        title="Add item inside"
+      >
+        <Plus className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 text-destructive"
+        onClick={handleDelete}
+        title="Delete"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
 }
 
-function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete, activeId, overId, uiLocked, setUiLocked }: { note: Note, onNoteSelect: (id: string) => void, onAddInside: (parentId: string) => void, onRename: (note: Note) => void, onDelete: (noteId: string) => void, activeId: string | null, overId: string | null, uiLocked: boolean, setUiLocked: (locked: boolean) => void }) {
+function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete, activeId, overId }: { note: Note, onNoteSelect: (id: string) => void, onAddInside: (parentId: string) => void, onRename: (note: Note) => void, onDelete: (noteId: string) => void, activeId: string | null, overId: string | null }) {
     const { 
         activeNoteId, 
         getSubNotes, 
@@ -143,7 +131,6 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete,
         isDragging,
     } = useSortable({ 
         id: note.id,
-        disabled: uiLocked,
     });
 
     const style = {
@@ -184,7 +171,6 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete,
                     {...attributes} 
                     {...listeners} 
                     className="cursor-grab p-2 text-muted-foreground hover:bg-muted rounded-l-md"
-                    onClick={(e) => e.stopPropagation()}
                 >
                     <GripVertical className="h-4 w-4" />
                 </div>
@@ -197,7 +183,7 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete,
                     variant="ghost"
                     onClick={() => onNoteSelect(note.id)}
                     className={cn(
-                        "flex-grow justify-start gap-2 h-full text-sm min-w-0", // Added min-w-0
+                        "flex-grow justify-start gap-2 h-full text-sm min-w-0",
                         activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : ''
                     )}
                 >
@@ -205,12 +191,11 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete,
                     <span className="truncate">{note.title}</span>
                 </Button>
                 <div className="flex-shrink-0 flex items-center ml-auto" onPointerDown={(e) => e.stopPropagation()}>
-                    <NoteActionsMenu 
+                   <NoteActionsMenu 
                         note={note}
                         onRename={onRename}
                         onAddChild={onAddInside}
                         onDelete={onDelete}
-                        setUiLocked={setUiLocked}
                     />
                 </div>
             </div>
@@ -220,7 +205,7 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete,
                     <div className="pl-6">
                         <SortableContext items={subNotes.map(n => n.id)} strategy={verticalListSortingStrategy}>
                            {subNotes.map(subNote => (
-                               <SortableNoteItem key={subNote.id} note={subNote} onNoteSelect={onNoteSelect} onAddInside={onAddInside} onRename={onRename} onDelete={onDelete} activeId={activeId} overId={overId} uiLocked={uiLocked} setUiLocked={setUiLocked} />
+                               <SortableNoteItem key={subNote.id} note={subNote} onNoteSelect={onNoteSelect} onAddInside={onAddInside} onRename={onRename} onDelete={onDelete} activeId={activeId} overId={overId} />
                            ))}
                         </SortableContext>
                     </div>
@@ -261,13 +246,12 @@ export function NoteList() {
     const [overId, setOverId] = useState<string | null>(null);
     const [renameNote, setRenameNote] = useState<Note | null>(null);
     const [renamingTitle, setRenamingTitle] = useState('');
-    const [uiLocked, setUiLocked] = useState(false);
 
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8, // Require mouse to move 8px before drag starts
+                distance: 8,
             },
         }),
         useSensor(KeyboardSensor, {
@@ -470,9 +454,7 @@ export function NoteList() {
                                           onRename={handleOpenRenameDialog}
                                           onDelete={deleteNote}
                                           activeId={activeDragId} 
-                                          overId={overId}
-                                          uiLocked={uiLocked}
-                                          setUiLocked={setUiLocked} />
+                                          overId={overId} />
                                     ))}
                                  </SortableContext>
                              </DndContext>
@@ -502,7 +484,6 @@ export function NoteList() {
             </AlertDialog>
             
             <Dialog open={!!renameNote} onOpenChange={(open) => {
-                setUiLocked(open);
                 if (!open) setRenameNote(null);
             }}>
                 <DialogContent>
@@ -535,7 +516,6 @@ export function NoteList() {
 
             <Dialog open={isNoteDialogOpen} onOpenChange={(open) => {
                 if(!open) setNewNoteParentId(null);
-                setUiLocked(open);
                 setIsNoteDialogOpen(open);
             }}>
                 <DialogContent>
