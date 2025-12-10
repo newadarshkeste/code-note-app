@@ -380,7 +380,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const newTopic: Topic = { 
         id: tempId, 
         name, 
-        userId: user.uid, // Add userId
+        userId: user.uid,
         createdAt: Timestamp.now()
     };
     
@@ -390,8 +390,10 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     
     if (isOnline && topicsRef) {
         const { id, ...payload } = newTopic;
-        addDoc(topicsRef, { ...payload, createdAt: serverTimestamp() })
-          .catch(() => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: topicsRef.path, operation: 'create', requestResourceData: payload }));
+        const finalPayload = { ...payload, createdAt: serverTimestamp() };
+
+        addDoc(topicsRef, finalPayload)
+          .catch(() => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: topicsRef.path, operation: 'create', requestResourceData: finalPayload }));
         });
     } else {
         await addSyncTask({ type: 'topic', action: 'add', payload: newTopic });
@@ -464,7 +466,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         title: note.title,
         type: note.type,
         topicId: activeTopicId,
-        userId: user.uid, // Add userId
+        userId: user.uid,
         content,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
@@ -767,7 +769,3 @@ export function useNotes() {
   }
   return context;
 }
-
-    
-
-    
