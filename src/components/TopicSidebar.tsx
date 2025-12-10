@@ -1,12 +1,8 @@
-
-
 'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useNotes } from '@/context/NotesContext';
-import { useAuth } from '@/context/AuthContext';
-import { CodeNoteLogo } from '@/components/CodeNoteLogo';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -30,29 +26,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ThemeToggle } from './ThemeToggle';
-import { Folder, Search, Trash2, Plus, Pencil, LogOut, Share2, Menu } from 'lucide-react';
+import { Folder, Search, Trash2, Plus, Pencil, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { Skeleton } from './ui/skeleton';
-import { ThemeCustomizer } from './ThemeCustomizer';
 import { usePathname } from 'next/navigation';
 import { Separator } from './ui/separator';
 
-interface TopicSidebarProps {
-  onToggle: () => void;
-}
-
-export function TopicSidebar({ onToggle }: TopicSidebarProps) {
+export function TopicSidebar() {
   const {
     topics,
     topicsLoading,
@@ -64,7 +45,6 @@ export function TopicSidebar({ onToggle }: TopicSidebarProps) {
     deleteTopic,
     updateTopic,
   } = useNotes();
-  const { user, logout } = useAuth();
   const pathname = usePathname();
   const [isTopicDialogOpen, setIsTopicDialogOpen] = useState(false);
   const [newTopicName, setNewTopicName] = useState('');
@@ -95,66 +75,25 @@ export function TopicSidebar({ onToggle }: TopicSidebarProps) {
   const filteredTopics = topics.filter(topic => 
     topic.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
-  const headerContent = (
-      <header className="flex-shrink-0 p-4 flex items-center justify-between border-b h-[65px]">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={onToggle} className="mr-1">
-                <Menu className="h-5 w-5" />
-            </Button>
-            <CodeNoteLogo />
-          </div>
-          <div className="flex items-center gap-2">
-              <ThemeCustomizer />
-              <ThemeToggle />
-              <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                          <Avatar className="h-8 w-8">
-                              <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'User'} />
-                              <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
-                          </Avatar>
-                      </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
-                      <DropdownMenuLabel className="font-normal">
-                      <div className="flex flex-col space-y-1">
-                          <p className="text-sm font-medium leading-none">{user?.displayName}</p>
-                          <p className="text-xs leading-none text-muted-foreground">
-                          {user?.email}
-                          </p>
-                      </div>
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={logout}>
-                          <LogOut className="mr-2 h-4 w-4" />
-                          <span>Log out</span>
-                      </DropdownMenuItem>
-                  </DropdownMenuContent>
-              </DropdownMenu>
-          </div>
-      </header>
-  );
 
   return (
     <>
       <div className="h-full flex flex-col bg-card/80 border-r">
-        {headerContent}
-
-        <div className="p-4 flex-shrink-0">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search topics..."
-              className="pl-9 h-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+        <div className="p-4 flex-shrink-0 space-y-4 border-b">
+            <h2 className="text-lg font-headline font-semibold">Topics</h2>
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                placeholder="Search topics..."
+                className="pl-9 h-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
         </div>
         
         <ScrollArea className="flex-grow min-h-0">
-            <nav className="p-4 pt-0">
+            <nav className="p-4 pt-2">
                 <Link href="/recursion-cards" passHref>
                    <Button
                         variant="ghost"

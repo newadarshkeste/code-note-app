@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -27,7 +26,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
-import { FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight, GripVertical, ChevronRight, ChevronDown, Folder, Plus, Menu } from 'lucide-react';
+import { FilePlus2, Search, Trash2, Pencil, Type, Code, GripVertical, ChevronRight, ChevronDown, Folder, Plus } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Note, Topic } from '@/lib/types';
@@ -213,11 +212,7 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }:
     );
 }
 
-interface NoteListProps {
-  onToggle: () => void;
-}
-
-export function NoteList({ onToggle }: NoteListProps) {
+export function NoteList() {
     const {
         activeTopic,
         notes,
@@ -225,7 +220,6 @@ export function NoteList({ onToggle }: NoteListProps) {
         addNote,
         isDirty,
         setIsDirty,
-        activeNote,
         activeNoteId,
         setActiveNoteId,
         saveActiveNote,
@@ -276,9 +270,8 @@ export function NoteList({ onToggle }: NoteListProps) {
 
         const parentNote = parentId ? notes.find(n => n.id === parentId) : null;
         if (parentNote && parentNote.type === 'code') {
-             // If parent is a code note, only allow text notes or other code notes inside
             setAllowedNoteTypes(['text', 'code']);
-            setNewNoteType('text'); // Default to text note
+            setNewNoteType('text');
         } else {
             setAllowedNoteTypes(['code', 'text', 'folder']);
         }
@@ -287,7 +280,6 @@ export function NoteList({ onToggle }: NoteListProps) {
     };
 
     const handleAddItemClick = () => {
-        // Always create new items at the top level of the current topic
         handleOpenNewItemDialog(null);
     };
     
@@ -386,28 +378,25 @@ export function NoteList({ onToggle }: NoteListProps) {
 
     return (
         <>
-            <div className="h-full w-full flex flex-col bg-card border-r">
-                <header className="flex-shrink-0 p-4 flex items-center justify-between border-b h-[65px]">
-                    <div className="flex items-center gap-2 min-w-0">
-                         <Button variant="ghost" size="icon" onClick={onToggle} className="mr-1">
-                            <Menu className="h-5 w-5" />
-                        </Button>
+            <div className="h-full w-full flex flex-col bg-card">
+                <header className="flex-shrink-0 p-4 flex items-center justify-between border-b h-[109px]">
+                    <div className="flex flex-col gap-4 w-full">
                         <h2 className="text-lg font-headline font-semibold truncate" title={activeTopic.name}>
                             {activeTopic.name}
                         </h2>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search notes..."
+                                className="pl-9 h-10"
+                                value={noteSearch}
+                                onChange={(e) => setNoteSearch(e.target.value)}
+                            />
+                        </div>
                     </div>
                 </header>
                 
-                <div className="p-4 flex-shrink-0 space-y-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search notes..."
-                            className="pl-9 h-10"
-                            value={noteSearch}
-                            onChange={(e) => setNoteSearch(e.target.value)}
-                        />
-                    </div>
+                <div className="p-4 flex-shrink-0 border-b">
                      <Button
                         className="w-full justify-center gap-2"
                         onClick={handleAddItemClick}
@@ -417,7 +406,7 @@ export function NoteList({ onToggle }: NoteListProps) {
                     </Button>
                 </div>
 
-                <ScrollArea className="flex-grow min-h-0 border-t">
+                <ScrollArea className="flex-grow min-h-0">
                     <div className="p-4 pt-2">
                         {notesLoading ? (
                             <div className="space-y-2">
