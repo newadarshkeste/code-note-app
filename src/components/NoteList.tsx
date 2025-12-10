@@ -187,14 +187,14 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }:
                     variant="ghost"
                     onClick={() => onNoteSelect(note.id)}
                     className={cn(
-                        "flex-grow justify-start gap-2 h-full text-sm",
+                        "flex-grow justify-start gap-2 h-full text-sm min-w-0", // min-w-0 is key for truncation
                         activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : ''
                     )}
                 >
                     {getNoteIcon(note.type)}
                     <span className="truncate flex-grow text-left">{note.title}</span>
                 </Button>
-                <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex-shrink-0 flex items-center">
                     <NoteActionsMenu 
                         note={note}
                         onRename={(n) => { setRenameNote(n); setRenamingTitle(n.title); }}
@@ -577,3 +577,5 @@ export function NoteList() {
         </>
     );
 }
+
+    
