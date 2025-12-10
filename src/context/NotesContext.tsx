@@ -86,6 +86,23 @@ interface NotesContextType {
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
 
+/**
+ * A utility function to create a new object without any `undefined` properties.
+ * Firestore does not allow `undefined` values in documents.
+ * @param obj The object to sanitize.
+ * @returns A new object with `undefined` properties removed.
+ */
+function removeUndefined(obj: Record<string, any>) {
+  const newObj: Record<string, any> = {};
+  for (const key in obj) {
+    if (obj[key] !== undefined) {
+      newObj[key] = obj[key];
+    }
+  }
+  return newObj;
+}
+
+
 export function NotesProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const firestore = useFirestore();
@@ -146,7 +163,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         if (task.type === 'topic') {
             const topicRef = doc(firestore, 'users', user.uid, 'topics', task.payload.id);
             if (task.action === 'add' || task.action === 'update') {
-                batch.set(topicRef, task.payload, { merge: true });
+                batch.set(topicRef, removeUndefined(task.payload), { merge: true });
             } else if (task.action === 'delete') {
                 batch.delete(topicRef);
             }
@@ -154,7 +171,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             const { topicId, id, ...payload } = task.payload;
             const noteRef = doc(firestore, 'users', user.uid, 'topics', topicId, 'notes', id);
             if (task.action === 'add' || task.action === 'update') {
-                batch.set(noteRef, payload, { merge: true });
+                batch.set(noteRef, removeUndefined(payload), { merge: true });
             } else if (task.action === 'delete') {
                 batch.delete(noteRef);
             }
@@ -461,13 +478,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
     if (isOnline && notesCollectionRef) {
         const { id, ...payload } = newNote;
-        const finalPayload = { ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), userId: user.uid };
+        const finalPayload = removeUndefined({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), userId: user.uid });
         
-        // Ensure language is not undefined
-        if (finalPayload.language === undefined) {
-          delete finalPayload.language;
-        }
-
         addDoc(notesCollectionRef, finalPayload)
             .catch(() => {
                 errorEmitter.emit('permission-error', new FirestorePermissionError({ path: notesCollectionRef.path, operation: 'create', requestResourceData: finalPayload }));
@@ -490,7 +502,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     
     if (isOnline) {
         const noteDocRef = doc(firestore, 'users', user.uid, 'topics', activeTopicId, 'notes', noteId);
-        let finalData: NoteUpdate & { updatedAt: any } = { ...data, updatedAt: serverTimestamp() };
+        const finalData = removeUndefined({ ...data, updatedAt: serverTimestamp() });
         await updateDoc(noteDocRef, finalData)
             .catch(() => {
                 errorEmitter.emit('permission-error', new FirestorePermissionError({ path: noteDocRef.path, operation: 'update', requestResourceData: finalData }));
@@ -580,7 +592,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             await setLocalNote(updatedLocalNote);
             if (isOnline && user && activeTopicId) {
                  const noteRef = doc(firestore, 'users', user.uid, 'topics', activeTopicId, 'notes', id);
-                 updateDoc(noteRef, changes).catch(e => console.error("DnD sync error:", e));
+                 updateDoc(noteRef, removeUndefined(changes)).catch(e => console.error("DnD sync error:", e));
             } else if (user && activeTopicId) {
                 await addSyncTask({ type: 'note', action: 'update', payload: { id, topicId: activeTopicId, ...changes } });
             }
@@ -742,3 +754,5 @@ export function useNotes() {
   }
   return context;
 }
+
+    
