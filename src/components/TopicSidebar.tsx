@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -13,24 +14,8 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Folder, Search, Trash2, Plus, Pencil, Share2, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
@@ -39,50 +24,6 @@ import { usePathname } from 'next/navigation';
 import { Separator } from './ui/separator';
 import type { Topic } from '@/lib/types';
 
-
-function TopicActionsMenu({ topic, onRename, onDelete }: { topic: Topic, onRename: (topic: Topic) => void, onDelete: (topicId: string) => void }) {
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-    return (
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Topic options</span>
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenuItem onClick={() => onRename(topic)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        <span>Rename</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                        className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                        onClick={() => setIsDeleteDialogOpen(true)}
-                    >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        <span>Delete</span>
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will permanently delete the topic "{topic.name}" and all its notes. This action cannot be undone.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onDelete(topic.id)} className="bg-destructive hover:bg-destructive/90">
-                        Delete
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    );
-}
 
 export function TopicSidebar() {
   const {
@@ -120,6 +61,19 @@ export function TopicSidebar() {
   
   const handleSelectTopic = (topicId: string) => {
     setActiveTopicId(topicId);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, topic: Topic) => {
+    e.stopPropagation();
+    if (window.confirm(`Are you sure you want to delete the topic "${topic.name}" and all its notes?`)) {
+      deleteTopic(topic.id);
+    }
+  };
+  
+  const handleRenameClick = (e: React.MouseEvent, topic: Topic) => {
+    e.stopPropagation();
+    setRenameTopic(topic);
+    setRenamingName(topic.name);
   };
 
 
@@ -174,19 +128,20 @@ export function TopicSidebar() {
                             variant="ghost"
                             onClick={() => handleSelectTopic(topic.id)}
                             className={cn(
-                                "flex-grow justify-start gap-2 h-10 text-sm",
+                                "flex-grow justify-start gap-2 h-10 text-sm min-w-0", // Added min-w-0 for truncation
                                 activeTopicId === topic.id ? 'bg-primary/10 text-primary font-semibold' : ''
                             )}
                         >
                             <Folder className="h-4 w-4 flex-shrink-0" />
                             <span className="truncate flex-grow text-left">{topic.name}</span>
                         </Button>
-                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                           <TopicActionsMenu 
-                                topic={topic}
-                                onRename={(t) => { setRenameTopic(t); setRenamingName(t.name); }}
-                                onDelete={deleteTopic}
-                           />
+                         <div className="flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-1">
+                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => handleRenameClick(e, topic)} title="Rename topic">
+                             <Pencil className="h-4 w-4" />
+                           </Button>
+                           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => handleDeleteClick(e, topic)} title="Delete topic">
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
                         </div>
                     </li>
                 ))}
