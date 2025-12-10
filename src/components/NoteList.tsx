@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -55,55 +54,70 @@ import {
     verticalListSortingStrategy,
     useSortable,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 
 function NoteActionsMenu({ note, onRename, onAddChild, onDelete }: { note: Note, onRename: (note: Note) => void, onAddChild: (noteId: string) => void, onDelete: (noteId: string) => void }) {
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     return (
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <>
+            {/* --- Dropdown Menu --- */}
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 flex-shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Note options</span>
                     </Button>
                 </DropdownMenuTrigger>
+
                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenuItem onClick={() => onRename(note)}>
+                    <DropdownMenuItem onSelect={() => onRename(note)}>
                         <Pencil className="mr-2 h-4 w-4" />
-                        <span>Rename</span>
+                        Rename
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onAddChild(note.id)}>
+
+                    <DropdownMenuItem onSelect={() => onAddChild(note.id)}>
                         <Plus className="mr-2 h-4 w-4" />
-                        <span>Add Item Inside</span>
+                        Add Item Inside
                     </DropdownMenuItem>
+
                     <DropdownMenuItem
-                        className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                        onClick={() => setIsDeleteDialogOpen(true)}
+                        className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                        onSelect={() => setShowDeleteDialog(true)}
                     >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        <span>Delete</span>
+                        Delete
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
-            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will permanently delete "{note.title}" and all its sub-notes. This action cannot be undone.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onDelete(note.id)} className="bg-destructive hover:bg-destructive/90">
-                        Delete
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+
+            {/* --- Delete Dialog (SEPARATE) --- */}
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete "{note.title}" and all its sub-notes.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive hover:bg-destructive/90"
+                            onClick={() => onDelete(note.id)}
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 }
 
@@ -589,5 +603,3 @@ export function NoteList() {
         </>
     );
 }
-
-    
