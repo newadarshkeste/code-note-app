@@ -160,22 +160,25 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const batch = writeBatch(firestore);
 
     for (const task of tasks) {
-        if (task.type === 'topic') {
-            const topicRef = doc(firestore, 'users', user.uid, 'topics', task.payload.id);
-            if (task.action === 'add' || task.action === 'update') {
-                batch.set(topicRef, removeUndefined(task.payload), { merge: true });
-            } else if (task.action === 'delete') {
-                batch.delete(topicRef);
-            }
-        } else if (task.type === 'note') {
-            const { topicId, id, ...payload } = task.payload;
-            const noteRef = doc(firestore, 'users', user.uid, 'topics', topicId, 'notes', id);
-            if (task.action === 'add' || task.action === 'update') {
-                batch.set(noteRef, removeUndefined(payload), { merge: true });
-            } else if (task.action === 'delete') {
-                batch.delete(noteRef);
-            }
+      const sanitizedPayload = removeUndefined(task.payload);
+
+      if (task.type === 'topic') {
+        const { id: topicId, ...payload } = sanitizedPayload;
+        const topicRef = doc(firestore, 'users', user.uid, 'topics', topicId);
+        if (task.action === 'add' || task.action === 'update') {
+          batch.set(topicRef, payload, { merge: true });
+        } else if (task.action === 'delete') {
+          batch.delete(topicRef);
         }
+      } else if (task.type === 'note') {
+        const { id: noteId, topicId, ...payload } = sanitizedPayload;
+        const noteRef = doc(firestore, 'users', user.uid, 'topics', topicId, 'notes', noteId);
+        if (task.action === 'add' || task.action === 'update') {
+          batch.set(noteRef, payload, { merge: true });
+        } else if (task.action === 'delete') {
+          batch.delete(noteRef);
+        }
+      }
     }
     
     try {
@@ -377,6 +380,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const newTopic: Topic = { 
         id: tempId, 
         name, 
+        userId: user.uid, // Add userId
         createdAt: Timestamp.now()
     };
     
@@ -385,11 +389,12 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     await setLocalTopic(newTopic);
     
     if (isOnline && topicsRef) {
-        addDoc(topicsRef, { name, createdAt: serverTimestamp(), userId: user.uid })
-          .catch(() => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: topicsRef.path, operation: 'create', requestResourceData: { name, userId: user.uid } }));
+        const { id, ...payload } = newTopic;
+        addDoc(topicsRef, { ...payload, createdAt: serverTimestamp() })
+          .catch(() => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: topicsRef.path, operation: 'create', requestResourceData: payload }));
         });
     } else {
-        await addSyncTask({ type: 'topic', action: 'add', payload: { ...newTopic, userId: user.uid }});
+        await addSyncTask({ type: 'topic', action: 'add', payload: newTopic });
     }
   };
 
@@ -409,7 +414,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             .catch(() => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: topicDocRef.path, operation: 'update', requestResourceData: { name } }));
         });
     } else {
-        await addSyncTask({ type: 'topic', action: 'update', payload: { id: topicId, name }});
+        await addSyncTask({ type: 'topic', action: 'update', payload: { id: topicId, name, userId: user.uid }});
     }
   };
 
@@ -459,6 +464,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         title: note.title,
         type: note.type,
         topicId: activeTopicId,
+        userId: user.uid, // Add userId
         content,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
@@ -480,14 +486,14 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
     if (isOnline && notesCollectionRef) {
         const { id, ...payload } = newNote;
-        const finalPayload = removeUndefined({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), userId: user.uid });
+        const finalPayload = removeUndefined({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
         
         addDoc(notesCollectionRef, finalPayload)
             .catch(() => {
                 errorEmitter.emit('permission-error', new FirestorePermissionError({ path: notesCollectionRef.path, operation: 'create', requestResourceData: finalPayload }));
             });
     } else {
-        await addSyncTask({ type: 'note', action: 'add', payload: { ...newNote, userId: user.uid } });
+        await addSyncTask({ type: 'note', action: 'add', payload: newNote });
     }
   };
   
@@ -502,16 +508,17 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     setNotes(prev => prev.map(n => n.id === noteId ? updatedNote : n));
     await setLocalNote(updatedNote);
     
+    const finalData = removeUndefined({ ...data, updatedAt: serverTimestamp() });
+
     if (isOnline) {
         const noteDocRef = doc(firestore, 'users', user.uid, 'topics', activeTopicId, 'notes', noteId);
-        const finalData = removeUndefined({ ...data, updatedAt: serverTimestamp() });
         await updateDoc(noteDocRef, finalData)
             .catch(() => {
                 errorEmitter.emit('permission-error', new FirestorePermissionError({ path: noteDocRef.path, operation: 'update', requestResourceData: finalData }));
                 throw new Error("Update failed due to permissions");
             });
     } else {
-        await addSyncTask({type: 'note', action: 'update', payload: { id: noteId, topicId: activeTopicId, ...data, updatedAt: serverTimestamp() }})
+        await addSyncTask({type: 'note', action: 'update', payload: { id: noteId, topicId: activeTopicId, userId: user.uid, ...finalData }})
     }
     
     setIsDirty(false);
@@ -538,6 +545,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
   const handleNoteDrop = useCallback(async (activeId: string, overId: string | null) => {
     // This function will now primarily work on local state and queue sync tasks.
+    if(!user || !activeTopicId) return;
+
     const activeNote = notes.find(n => n.id === activeId);
     const overNote = overId ? notes.find(n => n.id === overId) : null;
     if (!activeNote || activeNote.id === overId) return;
@@ -592,11 +601,13 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         if (noteToUpdate) {
             const updatedLocalNote = { ...noteToUpdate, ...changes };
             await setLocalNote(updatedLocalNote);
-            if (isOnline && user && activeTopicId) {
+            const finalChanges = removeUndefined(changes);
+
+            if (isOnline) {
                  const noteRef = doc(firestore, 'users', user.uid, 'topics', activeTopicId, 'notes', id);
-                 updateDoc(noteRef, removeUndefined(changes)).catch(e => console.error("DnD sync error:", e));
-            } else if (user && activeTopicId) {
-                await addSyncTask({ type: 'note', action: 'update', payload: { id, topicId: activeTopicId, ...changes } });
+                 updateDoc(noteRef, finalChanges).catch(e => console.error("DnD sync error:", e));
+            } else {
+                await addSyncTask({ type: 'note', action: 'update', payload: { id, topicId: activeTopicId, userId: user.uid, ...finalChanges } });
             }
         }
     }

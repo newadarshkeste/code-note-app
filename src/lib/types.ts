@@ -3,6 +3,7 @@
 export interface Note {
   id: string;
   topicId: string;
+  userId: string;
   title: string;
   type: 'code' | 'text' | 'folder';
   content: string;
@@ -25,6 +26,7 @@ export type NoteUpdate = Partial<Pick<Note, 'title' | 'content' | 'language' | '
 export interface Topic {
   id: string;
   name: string;
+  userId: string;
   createdAt?: any; // Firestore Timestamp
 }
 
