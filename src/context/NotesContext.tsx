@@ -92,14 +92,14 @@ const NotesContext = createContext<NotesContextType | undefined>(undefined);
  * @param obj The object to sanitize.
  * @returns A new object with `undefined` properties removed.
  */
-function removeUndefined(obj: Record<string, any>): Record<string, any> {
+function removeUndefined<T extends Record<string, any>>(obj: T): T {
   const newObj: Record<string, any> = {};
   for (const key in obj) {
-    if (obj[key] !== undefined) {
+    if (Object.prototype.hasOwnProperty.call(obj, key) && obj[key] !== undefined) {
       newObj[key] = obj[key];
     }
   }
-  return newObj;
+  return newObj as T;
 }
 
 
@@ -392,7 +392,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         const { id, ...payload } = newTopic;
         const finalPayload = { ...payload, createdAt: serverTimestamp() };
 
-        addDoc(topicsRef, finalPayload)
+        addDoc(topicsRef, removeUndefined(finalPayload))
           .catch(() => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: topicsRef.path, operation: 'create', requestResourceData: finalPayload }));
         });
     } else {
@@ -405,18 +405,18 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
     const updatedTopic = topics.find(t => t.id === topicId);
     if (!updatedTopic) return;
-    const finalTopic = { ...updatedTopic, name };
+    const finalTopic = { ...updatedTopic, name, updatedAt: Timestamp.now() };
     
     setTopics(prev => prev.map(t => t.id === topicId ? finalTopic : t));
     await setLocalTopic(finalTopic);
 
     if (isOnline) {
         const topicDocRef = doc(firestore, 'users', user.uid, 'topics', topicId);
-        updateDoc(topicDocRef, { name })
+        updateDoc(topicDocRef, { name, updatedAt: serverTimestamp() })
             .catch(() => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: topicDocRef.path, operation: 'update', requestResourceData: { name } }));
         });
     } else {
-        await addSyncTask({ type: 'topic', action: 'update', payload: { id: topicId, name, userId: user.uid }});
+        await addSyncTask({ type: 'topic', action: 'update', payload: { id: topicId, name, userId: user.uid, updatedAt: finalTopic.updatedAt }});
     }
   };
 
@@ -461,26 +461,24 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const siblings = notes.filter(n => n.parentId === (note.parentId || null));
     const maxOrder = siblings.reduce((max, n) => Math.max(max, n.order || 0), -1);
 
-    const newNoteData: any = {
+    const newNoteData: Partial<Note> = {
+        id: tempId,
+        topicId: activeTopicId,
+        userId: user.uid,
         title: note.title,
         type: note.type,
+        content,
         parentId: note.parentId || null,
         order: maxOrder + 1,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
     };
 
     if (note.type === 'code') {
         newNoteData.language = note.language || 'plaintext';
     }
     
-    const newNote: Note = {
-        id: tempId,
-        topicId: activeTopicId,
-        userId: user.uid,
-        content,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-        ...newNoteData
-    };
+    const newNote = newNoteData as Note;
 
     setNotes(prev => [...prev, newNote]);
     await setLocalNote(newNote);
@@ -490,9 +488,9 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
     if (isOnline && notesCollectionRef) {
         const { id, ...payload } = newNote;
-        const finalPayload = removeUndefined({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        const finalPayload = { ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
         
-        addDoc(notesCollectionRef, finalPayload)
+        addDoc(notesCollectionRef, removeUndefined(finalPayload))
             .catch(() => {
                 errorEmitter.emit('permission-error', new FirestorePermissionError({ path: notesCollectionRef.path, operation: 'create', requestResourceData: finalPayload }));
             });
@@ -512,7 +510,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     setNotes(prev => prev.map(n => n.id === noteId ? updatedNote : n));
     await setLocalNote(updatedNote);
     
-    const finalData = removeUndefined({ ...data, updatedAt: serverTimestamp() });
+    const finalData = removeUndefined({ ...data, updatedAt: isOnline ? serverTimestamp() : Timestamp.now() });
 
     if (isOnline) {
         const noteDocRef = doc(firestore, 'users', user.uid, 'topics', activeTopicId, 'notes', noteId);
@@ -603,9 +601,9 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     for (const { id, changes } of updates) {
         const noteToUpdate = notes.find(n => n.id === id);
         if (noteToUpdate) {
-            const updatedLocalNote = { ...noteToUpdate, ...changes };
+            const updatedLocalNote = { ...noteToUpdate, ...changes, updatedAt: Timestamp.now() };
             await setLocalNote(updatedLocalNote);
-            const finalChanges = removeUndefined(changes);
+            const finalChanges = removeUndefined({ ...changes, updatedAt: isOnline ? serverTimestamp() : Timestamp.now() });
 
             if (isOnline) {
                  const noteRef = doc(firestore, 'users', user.uid, 'topics', activeTopicId, 'notes', id);
@@ -663,7 +661,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
       await updateNote(activeNote.id, { 
           title: dirtyNoteContent.title, 
           content: dirtyNoteContent.content,
-          language: dirtyNoteContent.language || 'plaintext' 
+          language: dirtyNoteContent.language || undefined
       });
       const sessionData: StudySessionData = { sessionMinutes: studyStats.pomodoro.sessionMinutes, linesTyped: charsChanged, topicId: activeNote.topicId };
       studyStats.updateStudyStatsOnNoteSave(sessionData);
@@ -771,5 +769,7 @@ export function useNotes() {
   }
   return context;
 }
+
+    
 
     
