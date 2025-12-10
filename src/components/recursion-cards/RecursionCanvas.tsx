@@ -17,12 +17,13 @@ import 'reactflow/dist/style.css';
 import { useRecursionCards } from '@/context/RecursionCardsContext';
 import { RecursionCardNode } from './RecursionCardNode';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft } from 'lucide-react';
+import { Plus, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export function RecursionCanvas() {
     const {
         nodes,
+        nodesLoading,
         edges,
         onNodesChange,
         onEdgesChange,
@@ -84,7 +85,7 @@ export function RecursionCanvas() {
     }, [nodes]);
 
     return (
-        <div className="h-full w-full flex flex-col bg-background">
+        <div className="h-full w-full flex flex-col bg-background relative">
              <header className="flex-shrink-0 p-2 flex items-center justify-between border-b h-[65px] bg-card/80">
                 <div className="flex items-center gap-2">
                    <Link href="/" passHref>
@@ -102,6 +103,11 @@ export function RecursionCanvas() {
                 </Button>
             </header>
             <div className="flex-grow h-full w-full">
+                {nodesLoading && (
+                    <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-10">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                )}
                 <ReactFlow
                     nodes={validNodes}
                     edges={edges}

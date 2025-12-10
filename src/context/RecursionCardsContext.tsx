@@ -38,6 +38,7 @@ interface RecursionCardsContextType {
     updateBoard: (boardId: string, name: string) => Promise<void>;
     
     nodes: RecursionNode[];
+    nodesLoading: boolean;
     edges: RecursionEdge[];
     onNodesChange: OnNodesChange;
     onEdgesChange: OnEdgesChange;
@@ -64,6 +65,7 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
     const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
 
     const [nodes, setNodes] = useState<RecursionNode[]>([]);
+    const [nodesLoading, setNodesLoading] = useState(true);
     const [edges, setEdges] = useState<RecursionEdge[]>([]);
     const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
 
@@ -106,8 +108,10 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
     useEffect(() => {
         if (!cardsRef) {
             setNodes([]);
+            setNodesLoading(false);
             return;
         }
+        setNodesLoading(true);
         const unsubscribe = onSnapshot(cardsRef, (snapshot) => {
             const newNodes = snapshot.docs.map(doc => {
                 const data = doc.data();
@@ -128,9 +132,11 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
                     return newNode;
                 });
             });
+            setNodesLoading(false);
 
         }, (error) => {
             console.error("Error fetching cards: ", error);
+            setNodesLoading(false);
         });
         return () => unsubscribe();
     }, [cardsRef]);
@@ -343,6 +349,7 @@ export function RecursionCardsProvider({ children }: { children: React.ReactNode
         updateBoard,
         
         nodes,
+        nodesLoading,
         edges,
         onNodesChange,
         onEdgesChange,
