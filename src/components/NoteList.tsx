@@ -107,16 +107,12 @@ function NoteActionsMenu({ note, onRename, onAddChild, onDelete }: { note: Note,
     );
 }
 
-function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }: { note: Note, onNoteSelect: (id: string) => void, onAddInside: (parentId: string) => void, activeId: string | null, overId: string | null }) {
+function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete, activeId, overId }: { note: Note, onNoteSelect: (id: string) => void, onAddInside: (parentId: string) => void, onRename: (note: Note) => void, onDelete: (noteId: string) => void, activeId: string | null, overId: string | null }) {
     const { 
         activeNoteId, 
         getSubNotes, 
-        deleteNote,
-        updateNote,
         notes,
     } = useNotes();
-    const [renameNote, setRenameNote] = useState<Note | null>(null);
-    const [renamingTitle, setRenamingTitle] = useState('');
     const [isExpanded, setIsExpanded] = useState(true);
     
     const {
@@ -136,14 +132,6 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }:
 
     const subNotes = useMemo(() => getSubNotes(note.id), [getSubNotes, note.id, notes]);
     const hasSubNotes = subNotes.length > 0;
-
-    const handleRenameNote = async () => {
-        if (renameNote && renamingTitle.trim()) {
-            await updateNote(renameNote.id, { title: renamingTitle.trim() });
-            setRenameNote(null);
-            setRenamingTitle('');
-        }
-    };
     
     const getNoteIcon = (noteType: Note['type']) => {
         switch (noteType) {
@@ -187,19 +175,19 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }:
                     variant="ghost"
                     onClick={() => onNoteSelect(note.id)}
                     className={cn(
-                        "flex-grow justify-start gap-2 h-full text-sm",
+                        "flex-grow justify-start gap-2 h-full text-sm min-w-0", // Added min-w-0
                         activeNoteId === note.id ? 'bg-primary/10 text-primary font-semibold' : ''
                     )}
                 >
                     {getNoteIcon(note.type)}
-                    <span className="whitespace-nowrap">{note.title}</span>
+                    <span className="truncate">{note.title}</span>
                 </Button>
                 <div className="flex-shrink-0 flex items-center ml-auto">
                     <NoteActionsMenu 
                         note={note}
-                        onRename={(n) => { setRenameNote(n); setRenamingTitle(n.title); }}
+                        onRename={onRename}
                         onAddChild={onAddInside}
-                        onDelete={deleteNote}
+                        onDelete={onDelete}
                     />
                 </div>
             </div>
@@ -209,40 +197,12 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }:
                     <div className="pl-6">
                         <SortableContext items={subNotes.map(n => n.id)} strategy={verticalListSortingStrategy}>
                            {subNotes.map(subNote => (
-                               <SortableNoteItem key={subNote.id} note={subNote} onNoteSelect={onNoteSelect} onAddInside={onAddInside} activeId={activeId} overId={overId} />
+                               <SortableNoteItem key={subNote.id} note={subNote} onNoteSelect={onNoteSelect} onAddInside={onAddInside} onRename={onRename} onDelete={onDelete} activeId={activeId} overId={overId} />
                            ))}
                         </SortableContext>
                     </div>
                 )}
             </CollapsibleContent>
-             <Dialog open={!!renameNote} onOpenChange={(isOpen) => !isOpen && setRenameNote(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Rename Note</DialogTitle>
-                        <DialogDescription>Enter a new name for the item "{renameNote?.title}".</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="rename-note-name" className="text-right">
-                            New Name
-                        </Label>
-                        <Input
-                            id="rename-note-name"
-                            value={renamingTitle}
-                            onChange={(e) => setRenamingTitle(e.target.value)}
-                            className="col-span-3 font-body"
-                            onKeyDown={(e) => e.key === 'Enter' && handleRenameNote()}
-                        />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button type="button" variant="secondary" onClick={() => setRenameNote(null)}>Cancel</Button>
-                        </DialogClose>
-                        <Button onClick={handleRenameNote}>Rename</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </Collapsible>
     );
 }
@@ -253,6 +213,8 @@ export function NoteList() {
         notes,
         notesLoading,
         addNote,
+        updateNote,
+        deleteNote,
         isDirty,
         setIsDirty,
         activeNoteId,
@@ -274,7 +236,8 @@ export function NoteList() {
     const [isUnsavedDialogOpen, setIsUnsavedDialogOpen] = useState(false);
     const [activeDragId, setActiveDragId] = useState<string | null>(null);
     const [overId, setOverId] = useState<string | null>(null);
-
+    const [renameNote, setRenameNote] = useState<Note | null>(null);
+    const [renamingTitle, setRenamingTitle] = useState('');
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -284,13 +247,24 @@ export function NoteList() {
     );
     
     const handleNoteSelection = (noteId: string) => {
-        const note = notes.find(n => n.id === noteId);
-        
         if (isDirty) {
             setPendingNoteId(noteId);
             setIsUnsavedDialogOpen(true);
         } else {
             setActiveNoteId(noteId);
+        }
+    };
+
+    const handleOpenRenameDialog = (note: Note) => {
+        setRenameNote(note);
+        setRenamingTitle(note.title);
+    };
+
+    const handleRenameNote = async () => {
+        if (renameNote && renamingTitle.trim()) {
+            await updateNote(renameNote.id, { title: renamingTitle.trim() });
+            setRenameNote(null);
+            setRenamingTitle('');
         }
     };
 
@@ -459,7 +433,15 @@ export function NoteList() {
                              >
                                  <SortableContext items={notes.map(n => n.id)} strategy={verticalListSortingStrategy}>
                                      {displayedNotes.map(note => (
-                                        <SortableNoteItem key={note.id} note={note} onNoteSelect={handleNoteSelection} onAddInside={handleAddInside} activeId={activeDragId} overId={overId} />
+                                        <SortableNoteItem 
+                                          key={note.id} 
+                                          note={note} 
+                                          onNoteSelect={handleNoteSelection} 
+                                          onAddInside={handleAddInside} 
+                                          onRename={handleOpenRenameDialog}
+                                          onDelete={deleteNote}
+                                          activeId={activeDragId} 
+                                          overId={overId} />
                                     ))}
                                  </SortableContext>
                              </DndContext>
@@ -487,6 +469,35 @@ export function NoteList() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+            
+            <Dialog open={!!renameNote} onOpenChange={(isOpen) => !isOpen && setRenameNote(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Rename Note</DialogTitle>
+                        <DialogDescription>Enter a new name for the item "{renameNote?.title}".</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="rename-note-name" className="text-right">
+                            New Name
+                        </Label>
+                        <Input
+                            id="rename-note-name"
+                            value={renamingTitle}
+                            onChange={(e) => setRenamingTitle(e.target.value)}
+                            className="col-span-3 font-body"
+                            onKeyDown={(e) => e.key === 'Enter' && handleRenameNote()}
+                        />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary" onClick={() => setRenameNote(null)}>Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={handleRenameNote}>Rename</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <Dialog open={isNoteDialogOpen} onOpenChange={(isOpen) => {
                 if(!isOpen) setNewNoteParentId(null);
@@ -578,3 +589,5 @@ export function NoteList() {
         </>
     );
 }
+
+    
