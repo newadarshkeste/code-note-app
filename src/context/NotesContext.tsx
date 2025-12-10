@@ -160,25 +160,26 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const batch = writeBatch(firestore);
 
     for (const task of tasks) {
-      const sanitizedPayload = removeUndefined(task.payload);
+        let payload = { ...task.payload, userId: user.uid };
+        let sanitizedPayload = removeUndefined(payload);
 
-      if (task.type === 'topic') {
-        const { id: topicId, ...payload } = sanitizedPayload;
-        const topicRef = doc(firestore, 'users', user.uid, 'topics', topicId);
-        if (task.action === 'add' || task.action === 'update') {
-          batch.set(topicRef, payload, { merge: true });
-        } else if (task.action === 'delete') {
-          batch.delete(topicRef);
+        if (task.type === 'topic') {
+            const { id: topicId, ...restPayload } = sanitizedPayload;
+            const topicRef = doc(firestore, 'users', user.uid, 'topics', topicId);
+            if (task.action === 'add' || task.action === 'update') {
+                batch.set(topicRef, restPayload, { merge: true });
+            } else if (task.action === 'delete') {
+                batch.delete(topicRef);
+            }
+        } else if (task.type === 'note') {
+            const { id: noteId, topicId, ...restPayload } = sanitizedPayload;
+            const noteRef = doc(firestore, 'users', user.uid, 'topics', topicId, 'notes', noteId);
+             if (task.action === 'add' || task.action === 'update') {
+                batch.set(noteRef, restPayload, { merge: true });
+            } else if (task.action === 'delete') {
+                batch.delete(noteRef);
+            }
         }
-      } else if (task.type === 'note') {
-        const { id: noteId, topicId, ...payload } = sanitizedPayload;
-        const noteRef = doc(firestore, 'users', user.uid, 'topics', topicId, 'notes', noteId);
-        if (task.action === 'add' || task.action === 'update') {
-          batch.set(noteRef, payload, { merge: true });
-        } else if (task.action === 'delete') {
-          batch.delete(noteRef);
-        }
-      }
     }
     
     try {
