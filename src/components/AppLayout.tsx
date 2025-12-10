@@ -14,6 +14,28 @@ export function AppLayout() {
   const [showTopics, setShowTopics] = React.useState(true);
   const [showNotes, setShowNotes] = React.useState(true);
 
+  const headerActions = (
+    <div className="flex gap-1">
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={() => setShowTopics(v => !v)}
+        title="Toggle topics"
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={() => setShowNotes(v => !v)}
+        title="Toggle notes"
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+    </div>
+  );
+
+
   return (
     <div className="h-dvh w-screen flex bg-background overflow-hidden">
       
@@ -33,29 +55,7 @@ export function AppLayout() {
 
       {/* MAIN CONTENT */}
       <main className="flex-1 relative">
-        
-        {/* TOP LEFT BUTTONS (YouTube style) */}
-        <div className="absolute top-3 left-3 z-50 flex gap-2">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => setShowTopics(v => !v)}
-            title="Toggle topics"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => setShowNotes(v => !v)}
-            title="Toggle notes"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-        </div>
-
-        <NoteDisplay isMobile={false} />
+        <NoteDisplay isMobile={false} headerActions={headerActions} />
       </main>
 
       <StudyToolsPanel />

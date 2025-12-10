@@ -125,10 +125,10 @@ function safeClean(code: string): string {
 
 interface NoteDisplayProps {
   isMobile: boolean;
-  mobileHeaderActions?: React.ReactNode;
+  headerActions?: React.ReactNode;
 }
 
-export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps) {
+export function NoteDisplay({ isMobile, headerActions }: NoteDisplayProps) {
   const {
     activeNote,
     isDirty,
@@ -303,12 +303,10 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
     const isFolder = activeNote?.type === 'folder';
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-background/80">
-        {isMobile && (
-           <header className="flex-shrink-0 w-full flex items-center justify-between p-2 border-b h-[65px] bg-background">
-             {mobileHeaderActions}
+        <header className="flex-shrink-0 w-full flex items-center justify-between p-2 border-b h-[65px] bg-background">
+             {headerActions}
             <div/>
-           </header>
-        )}
+        </header>
         <div className="flex-grow w-full">
             {isFolder ? <FolderScreen /> : <WelcomeScreen />}
         </div>
@@ -318,7 +316,7 @@ export function NoteDisplay({ isMobile, mobileHeaderActions }: NoteDisplayProps)
 
   const renderHeader = () => (
      <header className="flex-shrink-0 flex items-center justify-between p-2 md:p-4 border-b h-[65px] bg-background gap-2">
-        {isMobile && mobileHeaderActions}
+        {headerActions}
         <div className="flex items-center gap-3 flex-grow min-w-0">
           <Input
             value={dirtyNoteContent.title}
