@@ -19,7 +19,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 import { TodoList } from './TodoList';
 import { TodoCalendar } from './TodoCalendar';
 
-const TimerProgressButton = ({ onClick }: { onClick: () => void }) => {
+const TimerProgressButton = React.forwardRef<
+    HTMLButtonElement,
+    { onClick: () => void }
+>(({ onClick }, ref) => {
     const { studyStats } = useNotes();
     const { isActive, timeLeft, duration } = studyStats.pomodoro;
 
@@ -30,6 +33,7 @@ const TimerProgressButton = ({ onClick }: { onClick: () => void }) => {
 
     return (
         <button
+            ref={ref}
             onClick={onClick}
             className={cn(
                 "fixed top-1/2 right-0 -translate-y-1/2 z-50 flex items-center justify-center",
@@ -73,7 +77,8 @@ const TimerProgressButton = ({ onClick }: { onClick: () => void }) => {
             <Timer className="h-5 w-5 z-10" />
         </button>
     );
-}
+});
+TimerProgressButton.displayName = 'TimerProgressButton';
 
 
 export function StudyToolsPanel() {
