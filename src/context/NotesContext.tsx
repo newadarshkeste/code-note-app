@@ -92,7 +92,7 @@ const NotesContext = createContext<NotesContextType | undefined>(undefined);
  * @param obj The object to sanitize.
  * @returns A new object with `undefined` properties removed.
  */
-function removeUndefined(obj: Record<string, any>) {
+function removeUndefined(obj: Record<string, any>): Record<string, any> {
   const newObj: Record<string, any> = {};
   for (const key in obj) {
     if (obj[key] !== undefined) {
@@ -160,22 +160,21 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const batch = writeBatch(firestore);
 
     for (const task of tasks) {
-        let payload = { ...task.payload, userId: user.uid };
-        let sanitizedPayload = removeUndefined(payload);
-
         if (task.type === 'topic') {
-            const { id: topicId, ...restPayload } = sanitizedPayload;
+            const { id: topicId, ...restPayload } = task.payload;
             const topicRef = doc(firestore, 'users', user.uid, 'topics', topicId);
+            const sanitizedPayload = removeUndefined({ ...restPayload, userId: user.uid });
             if (task.action === 'add' || task.action === 'update') {
-                batch.set(topicRef, restPayload, { merge: true });
+                batch.set(topicRef, sanitizedPayload, { merge: true });
             } else if (task.action === 'delete') {
                 batch.delete(topicRef);
             }
         } else if (task.type === 'note') {
-            const { id: noteId, topicId, ...restPayload } = sanitizedPayload;
+            const { id: noteId, topicId, ...restPayload } = task.payload;
             const noteRef = doc(firestore, 'users', user.uid, 'topics', topicId, 'notes', noteId);
+            const sanitizedPayload = removeUndefined({ ...restPayload, userId: user.uid });
              if (task.action === 'add' || task.action === 'update') {
-                batch.set(noteRef, restPayload, { merge: true });
+                batch.set(noteRef, sanitizedPayload, { merge: true });
             } else if (task.action === 'delete') {
                 batch.delete(noteRef);
             }
@@ -463,14 +462,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const maxOrder = siblings.reduce((max, n) => Math.max(max, n.order || 0), -1);
 
     const newNoteData: any = {
-        id: tempId,
         title: note.title,
         type: note.type,
-        topicId: activeTopicId,
-        userId: user.uid,
-        content,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
         parentId: note.parentId || null,
         order: maxOrder + 1,
     };
@@ -478,8 +471,16 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     if (note.type === 'code') {
         newNoteData.language = note.language || 'plaintext';
     }
-
-    const newNote = newNoteData as Note;
+    
+    const newNote: Note = {
+        id: tempId,
+        topicId: activeTopicId,
+        userId: user.uid,
+        content,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        ...newNoteData
+    };
 
     setNotes(prev => [...prev, newNote]);
     await setLocalNote(newNote);
@@ -770,3 +771,5 @@ export function useNotes() {
   }
   return context;
 }
+
+    
