@@ -154,7 +154,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             const { topicId, id, ...payload } = task.payload;
             const noteRef = doc(firestore, 'users', user.uid, 'topics', topicId, 'notes', id);
             if (task.action === 'add' || task.action === 'update') {
-                batch.set(noteRef, payload, { merge: true });
+                batch.set(noteRef, payload, { merge: true }); // `payload` here contains the `language: undefined`
             } else if (task.action === 'delete') {
                 batch.delete(noteRef);
             }
@@ -433,18 +433,23 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const siblings = notes.filter(n => n.parentId === (note.parentId || null));
     const maxOrder = siblings.reduce((max, n) => Math.max(max, n.order || 0), -1);
 
-    const newNote: Note = { 
+    const newNoteData: Omit<Note, 'id' | 'language'> & { id: string; language?: string } = {
         id: tempId,
-        title: note.title, 
+        title: note.title,
         type: note.type,
         topicId: activeTopicId,
         content,
-        language: note.type === 'code' ? note.language || 'plaintext' : undefined,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
         parentId: note.parentId || null,
         order: maxOrder + 1,
     };
+
+    if (note.type === 'code') {
+        newNoteData.language = note.language || 'plaintext';
+    }
+
+    const newNote = newNoteData as Note;
     
     setNotes(prev => [...prev, newNote]);
     await setLocalNote(newNote);
