@@ -1,4 +1,3 @@
-
 'use client';
 
 import { TopicSidebar } from '@/components/TopicSidebar';
@@ -11,88 +10,119 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { DailyQuoteModal } from './DailyQuoteModal';
-import { ImperativePanelHandle } from 'react-resizable-panels';
+import type { ImperativePanelHandle } from 'react-resizable-panels';
 import React from 'react';
-import { PanelLeftClose, PanelRightClose } from 'lucide-react';
+import { PanelLeftOpen, PanelLeftClose } from 'lucide-react';
 import { Button } from './ui/button';
-import { cn } from '@/lib/utils';
-
 
 function AppContent() {
-  const topicPanelRef = React.useRef<ImperativePanelHandle>(null);
-  const noteListPanelRef = React.useRef<ImperativePanelHandle>(null);
+  const topicPanelRef = React.useRef<ImperativePanelHandle | null>(null);
+  const noteListPanelRef = React.useRef<ImperativePanelHandle | null>(null);
 
   const [isTopicCollapsed, setIsTopicCollapsed] = React.useState(false);
   const [isNoteListCollapsed, setIsNoteListCollapsed] = React.useState(false);
 
   const toggleTopicPanel = () => {
-      const panel = topicPanelRef.current;
-      if (panel) {
-          if (panel.isCollapsed()) {
-              panel.expand();
-          } else {
-              panel.collapse();
-          }
-      }
+    const panel = topicPanelRef.current;
+    if (!panel) return;
+
+    if (panel.isCollapsed()) {
+      panel.expand();
+      setIsTopicCollapsed(false);
+    } else {
+      panel.collapse();
+      setIsTopicCollapsed(true);
+    }
   };
 
   const toggleNoteListPanel = () => {
-      const panel = noteListPanelRef.current;
-      if (panel) {
-          if (panel.isCollapsed()) {
-              panel.expand();
-          } else {
-              panel.collapse();
-          }
-      }
-  };
+    const panel = noteListPanelRef.current;
+    if (!panel) return;
 
+    if (panel.isCollapsed()) {
+      panel.expand();
+      setIsNoteListCollapsed(false);
+    } else {
+      panel.collapse();
+      setIsNoteListCollapsed(true);
+    }
+  };
 
   return (
     <ResizablePanelGroup direction="horizontal">
-      <ResizablePanel 
+      <ResizablePanel
         ref={topicPanelRef}
-        defaultSize={20} 
-        minSize={15} 
-        maxSize={30} 
+        defaultSize={20}
+        minSize={15}
+        maxSize={30}
         className="min-w-[240px]"
-        collapsible={true}
+        collapsible
         onCollapse={() => setIsTopicCollapsed(true)}
         onExpand={() => setIsTopicCollapsed(false)}
       >
         <TopicSidebar />
       </ResizablePanel>
+
       <ResizableHandle withHandle />
-      <ResizablePanel 
+
+      <ResizablePanel
         ref={noteListPanelRef}
-        defaultSize={22} 
-        minSize={18} 
-        maxSize={35} 
+        defaultSize={22}
+        minSize={18}
+        maxSize={35}
         className="min-w-[260px]"
-        collapsible={true}
+        collapsible
         onCollapse={() => setIsNoteListCollapsed(true)}
         onExpand={() => setIsNoteListCollapsed(false)}
       >
         <NoteList />
       </ResizablePanel>
+
       <ResizableHandle withHandle />
+
       <ResizablePanel defaultSize={58} minSize={30}>
-         <div className="relative h-full w-full">
-            <div className="absolute top-1/2 -translate-y-1/2 left-2 z-10 flex flex-col gap-2">
-                 <Button variant="outline" size="icon" onClick={toggleTopicPanel} className={cn("h-8 w-8", !isTopicCollapsed && "hidden")}>
-                    <PanelRightClose className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" onClick={toggleNoteListPanel} className={cn("h-8 w-8", !isNoteListCollapsed && "hidden")}>
-                    <PanelRightClose className="h-4 w-4" />
-                </Button>
+        <div className="relative h-full w-full">
+          {/* Floating toggle buttons on the left edge */}
+          <div className="absolute inset-y-0 left-0 z-20 flex items-center pointer-events-none">
+            <div className="flex flex-col gap-2 ml-2 pointer-events-auto">
+              {/* Topic panel toggle */}
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={toggleTopicPanel}
+                title={isTopicCollapsed ? 'Show topics' : 'Hide topics'}
+              >
+                {isTopicCollapsed ? (
+                  <PanelLeftOpen className="h-4 w-4" />
+                ) : (
+                  <PanelLeftClose className="h-4 w-4" />
+                )}
+              </Button>
+
+              {/* Note list toggle */}
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={toggleNoteListPanel}
+                title={isNoteListCollapsed ? 'Show note list' : 'Hide note list'}
+              >
+                {isNoteListCollapsed ? (
+                  <PanelLeftOpen className="h-4 w-4" />
+                ) : (
+                  <PanelLeftClose className="h-4 w-4" />
+                )}
+              </Button>
             </div>
-            <NoteDisplay isMobile={false} />
+          </div>
+
+          <NoteDisplay isMobile={false} />
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>
   );
 }
-
 
 export function AppLayout() {
   return (
