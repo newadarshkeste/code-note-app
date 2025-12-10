@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 export const metadata: Metadata = {
   title: "CodeNote",
   description: "Your personal code snippet organizer.",
+  icons: null,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

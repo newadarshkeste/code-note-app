@@ -2,7 +2,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { useNotes } from '@/context/NotesContext';
 import { useToast } from '@/hooks/use-toast';
 import { generatePdf } from '@/lib/pdf-export';
@@ -27,12 +26,7 @@ import { AiAssistantPanel } from './AiAssistantPanel';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { CodeNoteLogo } from './CodeNoteLogo';
 import { Card, CardHeader, CardTitle, CardDescription } from './ui/card';
-
-
-const RichTextEditor = dynamic(() => import('@/components/RichTextEditor').then(mod => mod.RichTextEditor), {
-  ssr: false,
-  loading: () => <Skeleton className="h-full w-full rounded-none" />,
-});
+import { RichTextEditor } from '@/components/RichTextEditor';
 
 
 function WelcomeScreen() {
