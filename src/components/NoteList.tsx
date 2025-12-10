@@ -59,13 +59,13 @@ import { CSS } from '@dnd-kit/utilities';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 
-function NoteActionsMenu({ note, onRename, onAddChild, onDelete }: { note: Note, onRename: (note: Note) => void, onAddChild: (noteId: string) => void, onDelete: (noteId: string) => void }) {
+function NoteActionsMenu({ note, onRename, onAddChild, onDelete, setUiLocked }: { note: Note, onRename: (note: Note) => void, onAddChild: (noteId: string) => void, onDelete: (noteId: string) => void, setUiLocked: (locked: boolean) => void }) {
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     return (
         <>
             {/* --- Dropdown Menu --- */}
-            <DropdownMenu>
+            <DropdownMenu onOpenChange={setUiLocked}>
                 <DropdownMenuTrigger asChild>
                     <Button
                         variant="ghost"
@@ -99,7 +99,10 @@ function NoteActionsMenu({ note, onRename, onAddChild, onDelete }: { note: Note,
             </DropdownMenu>
 
             {/* --- Delete Dialog (SEPARATE) --- */}
-            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <AlertDialog open={showDeleteDialog} onOpenChange={(open) => {
+                setUiLocked(open);
+                setShowDeleteDialog(open);
+            }}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -123,7 +126,7 @@ function NoteActionsMenu({ note, onRename, onAddChild, onDelete }: { note: Note,
     );
 }
 
-function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete, activeId, overId }: { note: Note, onNoteSelect: (id: string) => void, onAddInside: (parentId: string) => void, onRename: (note: Note) => void, onDelete: (noteId: string) => void, activeId: string | null, overId: string | null }) {
+function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete, activeId, overId, uiLocked, setUiLocked }: { note: Note, onNoteSelect: (id: string) => void, onAddInside: (parentId: string) => void, onRename: (note: Note) => void, onDelete: (noteId: string) => void, activeId: string | null, overId: string | null, uiLocked: boolean, setUiLocked: (locked: boolean) => void }) {
     const { 
         activeNoteId, 
         getSubNotes, 
@@ -138,7 +141,10 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete,
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: note.id });
+    } = useSortable({ 
+        id: note.id,
+        disabled: uiLocked,
+    });
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -204,6 +210,7 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete,
                         onRename={onRename}
                         onAddChild={onAddInside}
                         onDelete={onDelete}
+                        setUiLocked={setUiLocked}
                     />
                 </div>
             </div>
@@ -213,7 +220,7 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete,
                     <div className="pl-6">
                         <SortableContext items={subNotes.map(n => n.id)} strategy={verticalListSortingStrategy}>
                            {subNotes.map(subNote => (
-                               <SortableNoteItem key={subNote.id} note={subNote} onNoteSelect={onNoteSelect} onAddInside={onAddInside} onRename={onRename} onDelete={onDelete} activeId={activeId} overId={overId} />
+                               <SortableNoteItem key={subNote.id} note={subNote} onNoteSelect={onNoteSelect} onAddInside={onAddInside} onRename={onRename} onDelete={onDelete} activeId={activeId} overId={overId} uiLocked={uiLocked} setUiLocked={setUiLocked} />
                            ))}
                         </SortableContext>
                     </div>
@@ -254,6 +261,8 @@ export function NoteList() {
     const [overId, setOverId] = useState<string | null>(null);
     const [renameNote, setRenameNote] = useState<Note | null>(null);
     const [renamingTitle, setRenamingTitle] = useState('');
+    const [uiLocked, setUiLocked] = useState(false);
+
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -461,7 +470,9 @@ export function NoteList() {
                                           onRename={handleOpenRenameDialog}
                                           onDelete={deleteNote}
                                           activeId={activeDragId} 
-                                          overId={overId} />
+                                          overId={overId}
+                                          uiLocked={uiLocked}
+                                          setUiLocked={setUiLocked} />
                                     ))}
                                  </SortableContext>
                              </DndContext>
@@ -490,7 +501,10 @@ export function NoteList() {
                 </AlertDialogContent>
             </AlertDialog>
             
-            <Dialog open={!!renameNote} onOpenChange={(isOpen) => !isOpen && setRenameNote(null)}>
+            <Dialog open={!!renameNote} onOpenChange={(open) => {
+                setUiLocked(open);
+                if (!open) setRenameNote(null);
+            }}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Rename Note</DialogTitle>
@@ -519,9 +533,10 @@ export function NoteList() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={isNoteDialogOpen} onOpenChange={(isOpen) => {
-                if(!isOpen) setNewNoteParentId(null);
-                setIsNoteDialogOpen(isOpen);
+            <Dialog open={isNoteDialogOpen} onOpenChange={(open) => {
+                if(!open) setNewNoteParentId(null);
+                setUiLocked(open);
+                setIsNoteDialogOpen(open);
             }}>
                 <DialogContent>
                 <DialogHeader>
@@ -609,5 +624,3 @@ export function NoteList() {
         </>
     );
 }
-
-    
