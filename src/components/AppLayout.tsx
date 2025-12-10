@@ -28,7 +28,7 @@ function AppContent() {
   const toggleTopicPanel = () => {
       const panel = topicPanelRef.current;
       if (panel) {
-          if (panel.getCollapsed()) {
+          if (panel.isCollapsed()) {
               panel.expand();
           } else {
               panel.collapse();
@@ -39,7 +39,7 @@ function AppContent() {
   const toggleNoteListPanel = () => {
       const panel = noteListPanelRef.current;
       if (panel) {
-          if (panel.getCollapsed()) {
+          if (panel.isCollapsed()) {
               panel.expand();
           } else {
               panel.collapse();
