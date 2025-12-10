@@ -445,9 +445,11 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     if (!user || !activeTopicId) return;
 
     const tempId = `local_${Date.now()}`;
-    const content = note.type === 'code' 
-        ? `// Start writing your ${note.title} note here...` 
-        : `<p>Start writing your ${note.title} note here...</p>`;
+    const content = note.type === 'folder' 
+        ? ''
+        : note.type === 'code'
+            ? `// Start writing your ${note.title} note here...`
+            : `<p>Start writing your ${note.title} note here...</p>`;
 
     const siblings = notes.filter(n => n.parentId === (note.parentId || null));
     const maxOrder = siblings.reduce((max, n) => Math.max(max, n.order || 0), -1);
@@ -754,5 +756,7 @@ export function useNotes() {
   }
   return context;
 }
+
+    
 
     
