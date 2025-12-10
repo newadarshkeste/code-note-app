@@ -103,6 +103,67 @@ function removeUndefined<T extends Record<string, any>>(obj: T): T {
 }
 
 
+/** Basic deep-clean: remove undefined and functions (Firestore rejects undefined) */
+function deepClean<T>(obj: T): T {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(item => deepClean(item)) as unknown as T;
+  }
+  const out: any = {};
+  for (const key of Object.keys(obj as any)) {
+    const val = (obj as any)[key];
+    if (val === undefined) continue;
+    if (typeof val === 'function') continue;
+    if (val && typeof val === 'object') {
+      out[key] = deepClean(val);
+    } else {
+      out[key] = val;
+    }
+  }
+  return out;
+}
+
+/** Validate a sync task for required fields. Returns { ok, reason, payload } */
+function validateSyncTask(task: SyncTask & { payload: any }, currentUserId: string) {
+  const result = { ok: false, reason: '', payload: null as any };
+
+  if (!task || !task.type || !task.action || !task.payload) {
+    result.reason = 'Missing core task fields';
+    return result;
+  }
+
+  if (task.type === 'topic') {
+    const { id, name, userId } = task.payload || {};
+    if (!id || !name) {
+      result.reason = 'Topic task missing id or name';
+      return result;
+    }
+    // ensure userId set to current user
+    const payload = { ...task.payload, userId: userId || currentUserId };
+    result.ok = true;
+    result.payload = deepClean(payload);
+    return result;
+  }
+
+  if (task.type === 'note') {
+    const { id, topicId, title, type } = task.payload || {};
+    if (!id || !topicId || !title || !type) {
+      result.reason = 'Note task missing id / topicId / title / type';
+      return result;
+    }
+    const payload = { ...task.payload, userId: task.payload.userId || currentUserId };
+    result.ok = true;
+    result.payload = deepClean(payload);
+    return result;
+  }
+
+  // fallback: accept and deepClean unknown types
+  result.ok = true;
+  result.payload = deepClean(task.payload);
+  return result;
+}
+
+
 export function NotesProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const firestore = useFirestore();
@@ -149,51 +210,101 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   }, []);
   
   const syncOfflineChanges = useCallback(async () => {
-    if (!user || !firestore) return;
-    
-    const tasks = await getSyncQueue();
-    if (tasks.length === 0) return;
-    
-    console.log(`Syncing ${tasks.length} offline changes...`);
-    toast({ title: 'Syncing Data...', description: `Syncing ${tasks.length} offline changes.` });
-    
-    const batch = writeBatch(firestore);
+  if (!user || !firestore) return;
 
-    for (const task of tasks) {
-        if (task.type === 'topic') {
-            const { id: topicId, ...restPayload } = task.payload;
-            const topicRef = doc(firestore, 'users', user.uid, 'topics', topicId);
-            const sanitizedPayload = removeUndefined({ ...restPayload, userId: user.uid });
-            if (task.action === 'add' || task.action === 'update') {
-                batch.set(topicRef, sanitizedPayload, { merge: true });
-            } else if (task.action === 'delete') {
-                batch.delete(topicRef);
-            }
-        } else if (task.type === 'note') {
-            const { id: noteId, topicId, ...restPayload } = task.payload;
-            const noteRef = doc(firestore, 'users', user.uid, 'topics', topicId, 'notes', noteId);
-            const sanitizedPayload = removeUndefined({ ...restPayload, userId: user.uid });
-             if (task.action === 'add' || task.action === 'update') {
-                batch.set(noteRef, sanitizedPayload, { merge: true });
-            } else if (task.action === 'delete') {
-                batch.delete(noteRef);
-            }
-        }
+  const tasks = await getSyncQueue();
+  if (!tasks || tasks.length === 0) return;
+
+  console.log(`Syncing ${tasks.length} offline changes...`);
+  toast({ title: 'Syncing Data...', description: `Syncing ${tasks.length} offline changes.` });
+
+  // Build a batch from only VALID tasks. Invalid tasks will be removed.
+  const batch = writeBatch(firestore);
+  const tasksToRemove: number[] = [];
+  let validCount = 0;
+
+  for (const task of tasks) {
+    const validation = validateSyncTask(task as SyncTask & { payload: any }, user.uid);
+
+    if (!validation.ok) {
+      console.warn('Dropping invalid sync task:', task, 'reason:', validation.reason);
+      // Remove corrupt task so it doesn't break future syncs
+      if (task.id) {
+        try { await deleteSyncTask(task.id); } catch (e) { console.error('deleteSyncTask failed:', e); }
+      }
+      continue;
     }
-    
+
+    // safe payload to write
+    const payload = validation.payload;
+
     try {
-        await batch.commit();
-        // Clear queue after successful sync
-        for (const task of tasks) {
-            if (task.id) await deleteSyncTask(task.id);
+      if (task.type === 'topic') {
+        const topicId = payload.id;
+        const topicRef = doc(firestore, 'users', user.uid, 'topics', topicId);
+        if (task.action === 'add' || task.action === 'update') {
+          // remove id from payload doc fields (we store id in doc id)
+          const payloadForDoc = { ...payload };
+          delete payloadForDoc.id;
+          batch.set(topicRef, removeUndefined(payloadForDoc), { merge: true });
+        } else if (task.action === 'delete') {
+          batch.delete(topicRef);
         }
-        toast({ title: 'Sync Complete!', description: 'Your data is up to date.' });
-        console.log('Offline changes synced successfully.');
-    } catch (error) {
-        console.error("Error syncing offline changes: ", error);
-        toast({ variant: 'destructive', title: 'Sync Failed', description: 'Could not sync all offline changes.' });
+      } else if (task.type === 'note') {
+        const noteId = payload.id;
+        const topicId = payload.topicId;
+        if (!topicId) {
+          // Should never happen due to validation; just in case
+          console.warn('Skipping note sync task with missing topicId:', task);
+          if (task.id) await deleteSyncTask(task.id);
+          continue;
+        }
+        const noteRef = doc(firestore, 'users', user.uid, 'topics', topicId, 'notes', noteId);
+        if (task.action === 'add' || task.action === 'update') {
+          const payloadForDoc = { ...payload };
+          delete payloadForDoc.id;
+          // ensure no local-only sentinel remains
+          batch.set(noteRef, removeUndefined(payloadForDoc), { merge: true });
+        } else if (task.action === 'delete') {
+          batch.delete(noteRef);
+        }
+      } else {
+        // unknown task type: remove it
+        console.warn('Unknown sync task type, deleting:', task);
+        if (task.id) await deleteSyncTask(task.id);
+      }
+
+      validCount++;
+      // mark for deletion after commit
+      if (task.id) tasksToRemove.push(task.id);
+    } catch (err) {
+      console.error('Error preparing task for batch:', task, err);
+      // if preparing fails, remove the corrupt task to avoid future fail loops
+      if (task.id) {
+        try { await deleteSyncTask(task.id); } catch (e) { console.error('deleteSyncTask failed:', e); }
+      }
     }
-  }, [user, firestore, toast]);
+  }
+
+  if (validCount === 0) {
+    toast({ title: 'Sync Skipped', description: 'No valid offline changes to sync.' });
+    return;
+  }
+
+  try {
+    await batch.commit();
+    // remove synced tasks from queue
+    for (const id of tasksToRemove) {
+      try { await deleteSyncTask(id); } catch (e) { console.error('deleteSyncTask after commit failed for', id, e); }
+    }
+    toast({ title: 'Sync Complete!', description: 'Your data is up to date.' });
+    console.log('Offline changes synced successfully.');
+  } catch (error) {
+    console.error('Error syncing offline changes: ', error);
+    toast({ variant: 'destructive', title: 'Sync Failed', description: 'Could not sync all offline changes.' });
+    // don't delete tasks here: we want to retry later for transient permission/network errors
+  }
+}, [user, firestore, toast]);
 
   useEffect(() => {
     if (isOnline) {
@@ -388,15 +499,15 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     setActiveTopicId(tempId);
     await setLocalTopic(newTopic);
     
-    if (isOnline && topicsRef) {
-        const { id, ...payload } = newTopic;
-        const finalPayload = { ...payload, createdAt: serverTimestamp() };
+    const { id, ...payload } = newTopic;
+    const finalPayload = { ...payload, createdAt: isOnline ? serverTimestamp() : Timestamp.now() };
 
+    if (isOnline && topicsRef) {
         addDoc(topicsRef, removeUndefined(finalPayload))
           .catch(() => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: topicsRef.path, operation: 'create', requestResourceData: finalPayload }));
         });
     } else {
-        await addSyncTask({ type: 'topic', action: 'add', payload: newTopic });
+        await addSyncTask({ type: 'topic', action: 'add', payload: {id: tempId, ...finalPayload} });
     }
   };
 
@@ -409,14 +520,16 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     
     setTopics(prev => prev.map(t => t.id === topicId ? finalTopic : t));
     await setLocalTopic(finalTopic);
+    
+    const payload = { name, updatedAt: isOnline ? serverTimestamp() : Timestamp.now() };
 
     if (isOnline) {
         const topicDocRef = doc(firestore, 'users', user.uid, 'topics', topicId);
-        updateDoc(topicDocRef, { name, updatedAt: serverTimestamp() })
+        updateDoc(topicDocRef, payload)
             .catch(() => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: topicDocRef.path, operation: 'update', requestResourceData: { name } }));
         });
     } else {
-        await addSyncTask({ type: 'topic', action: 'update', payload: { id: topicId, name, userId: user.uid, updatedAt: finalTopic.updatedAt }});
+        await addSyncTask({ type: 'topic', action: 'update', payload: { id: topicId, userId: user.uid, ...payload }});
     }
   };
 
@@ -486,16 +599,16 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         setActiveNoteId(tempId);
     }
 
+    const { id, ...payload } = newNote;
+    const finalPayload = { ...payload, createdAt: isOnline ? serverTimestamp() : Timestamp.now(), updatedAt: isOnline ? serverTimestamp() : Timestamp.now() };
+
     if (isOnline && notesCollectionRef) {
-        const { id, ...payload } = newNote;
-        const finalPayload = { ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
-        
         addDoc(notesCollectionRef, removeUndefined(finalPayload))
             .catch(() => {
                 errorEmitter.emit('permission-error', new FirestorePermissionError({ path: notesCollectionRef.path, operation: 'create', requestResourceData: finalPayload }));
             });
     } else {
-        await addSyncTask({ type: 'note', action: 'add', payload: newNote });
+        await addSyncTask({ type: 'note', action: 'add', payload: {id: tempId, ...finalPayload} });
     }
   };
   
@@ -769,7 +882,3 @@ export function useNotes() {
   }
   return context;
 }
-
-    
-
-    
