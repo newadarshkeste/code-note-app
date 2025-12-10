@@ -154,7 +154,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             const { topicId, id, ...payload } = task.payload;
             const noteRef = doc(firestore, 'users', user.uid, 'topics', topicId, 'notes', id);
             if (task.action === 'add' || task.action === 'update') {
-                batch.set(noteRef, payload, { merge: true }); // `payload` here contains the `language: undefined`
+                batch.set(noteRef, payload, { merge: true });
             } else if (task.action === 'delete') {
                 batch.delete(noteRef);
             }
@@ -426,14 +426,16 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
   const addNote = async (note: NoteCreate) => {
     if (!user || !activeTopicId) return;
-    
+
     const tempId = `local_${Date.now()}`;
-    let content = note.type === 'code' ? `// Start writing your ${note.title} note here...` : `<p>Start writing your ${note.title} note here...</p>`;
-    
+    const content = note.type === 'code' 
+        ? `// Start writing your ${note.title} note here...` 
+        : `<p>Start writing your ${note.title} note here...</p>`;
+
     const siblings = notes.filter(n => n.parentId === (note.parentId || null));
     const maxOrder = siblings.reduce((max, n) => Math.max(max, n.order || 0), -1);
 
-    const newNoteData: Omit<Note, 'id' | 'language'> & { id: string; language?: string } = {
+    const newNoteData: any = {
         id: tempId,
         title: note.title,
         type: note.type,
@@ -450,19 +452,28 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     }
 
     const newNote = newNoteData as Note;
-    
+
     setNotes(prev => [...prev, newNote]);
     await setLocalNote(newNote);
-    if (newNote.type !== 'folder') { setActiveNoteId(tempId); }
+    if (newNote.type !== 'folder') {
+        setActiveNoteId(tempId);
+    }
 
     if (isOnline && notesCollectionRef) {
         const { id, ...payload } = newNote;
         const finalPayload = { ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), userId: user.uid };
+        
+        // Ensure language is not undefined
+        if (finalPayload.language === undefined) {
+          delete finalPayload.language;
+        }
+
         addDoc(notesCollectionRef, finalPayload)
-            .catch(() => { errorEmitter.emit('permission-error', new FirestorePermissionError({ path: notesCollectionRef.path, operation: 'create', requestResourceData: finalPayload }));
-        });
+            .catch(() => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: notesCollectionRef.path, operation: 'create', requestResourceData: finalPayload }));
+            });
     } else {
-        await addSyncTask({ type: 'note', action: 'add', payload: { ...newNote, userId: user.uid }});
+        await addSyncTask({ type: 'note', action: 'add', payload: { ...newNote, userId: user.uid } });
     }
   };
   

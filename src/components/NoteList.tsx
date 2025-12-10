@@ -26,7 +26,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
-import { FilePlus2, Search, Trash2, Pencil, Type, Code, GripVertical, ChevronRight, ChevronDown, Folder, Plus } from 'lucide-react';
+import { FilePlus2, Search, Trash2, Pencil, Type, Code, GripVertical, ChevronRight, ChevronDown, Folder, Plus, MoreHorizontal } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Note, Topic } from '@/lib/types';
@@ -52,6 +52,12 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 function NoteActionsMenu({
   note,
@@ -113,6 +119,7 @@ function NoteActionsMenu({
     </div>
   );
 }
+
 
 function SortableNoteItem({ note, onNoteSelect, onAddInside, onRename, onDelete, activeId, overId }: { note: Note, onNoteSelect: (id: string) => void, onAddInside: (parentId: string) => void, onRename: (note: Note) => void, onDelete: (noteId: string) => void, activeId: string | null, overId: string | null }) {
     const { 
@@ -331,12 +338,17 @@ export function NoteList() {
 
     const handleAddNote = async () => {
         if (newNoteTitle.trim() && activeTopic) {
-            await addNote({ 
+            const noteData: any = { 
                 title: newNoteTitle.trim(), 
                 type: newNoteType,
                 parentId: newNoteParentId,
-                language: newNoteType === 'code' ? newNoteLanguage : undefined
-            });
+            };
+
+            if (newNoteType === 'code') {
+              noteData.language = newNoteLanguage;
+            }
+
+            await addNote(noteData);
             setNewNoteTitle('');
             setNewNoteType('code');
             setIsNoteDialogOpen(false);
