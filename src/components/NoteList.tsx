@@ -27,7 +27,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
-import { FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight, GripVertical, ChevronRight, ChevronDown, Folder, Plus } from 'lucide-react';
+import { FilePlus2, Search, Trash2, Pencil, Type, Code, CornerDownRight, GripVertical, ChevronRight, ChevronDown, Folder, Plus, Menu } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Note, Topic } from '@/lib/types';
@@ -214,12 +214,10 @@ function SortableNoteItem({ note, onNoteSelect, onAddInside, activeId, overId }:
 }
 
 interface NoteListProps {
-  isMobile?: boolean;
-  onNoteSelect?: () => void;
-  onBack?: () => void;
+  onToggle: () => void;
 }
 
-export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListProps) {
+export function NoteList({ onToggle }: NoteListProps) {
     const {
         activeTopic,
         notes,
@@ -264,9 +262,6 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
             setIsUnsavedDialogOpen(true);
         } else {
             setActiveNoteId(noteId);
-            if (isMobile && onNoteSelect && note?.type !== 'folder') {
-                onNoteSelect();
-            }
         }
     };
 
@@ -301,9 +296,6 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         setIsDirty(false);
         if (pendingNoteId) {
             setActiveNoteId(pendingNoteId);
-             if (isMobile && onNoteSelect) {
-                onNoteSelect();
-            }
         }
         setIsUnsavedDialogOpen(false);
         setPendingNoteId(null);
@@ -313,9 +305,6 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         setIsDirty(false);
         if (pendingNoteId) {
             setActiveNoteId(pendingNoteId);
-            if (isMobile && onNoteSelect) {
-                onNoteSelect();
-            }
         }
         setIsUnsavedDialogOpen(false);
         setPendingNoteId(null);
@@ -400,11 +389,9 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
             <div className="h-full w-full flex flex-col bg-card border-r">
                 <header className="flex-shrink-0 p-4 flex items-center justify-between border-b h-[65px]">
                     <div className="flex items-center gap-2 min-w-0">
-                        {isMobile && onBack && (
-                            <Button variant="ghost" size="icon" onClick={onBack} className="mr-2">
-                                <CornerDownRight className="h-4 w-4 rotate-180" />
-                            </Button>
-                        )}
+                         <Button variant="ghost" size="icon" onClick={onToggle} className="mr-1">
+                            <Menu className="h-5 w-5" />
+                        </Button>
                         <h2 className="text-lg font-headline font-semibold truncate" title={activeTopic.name}>
                             {activeTopic.name}
                         </h2>
@@ -566,5 +553,3 @@ export function NoteList({ isMobile = false, onNoteSelect, onBack }: NoteListPro
         </>
     );
 }
-
-    

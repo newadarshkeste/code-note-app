@@ -14,48 +14,49 @@ export function AppLayout() {
   const [showTopics, setShowTopics] = React.useState(true);
   const [showNotes, setShowNotes] = React.useState(true);
 
-  const headerActions = (
-    <div className="flex gap-1">
-      <Button
-        size="icon"
-        variant="ghost"
-        onClick={() => setShowTopics(v => !v)}
-        title="Toggle topics"
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
-      <Button
-        size="icon"
-        variant="ghost"
-        onClick={() => setShowNotes(v => !v)}
-        title="Toggle notes"
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
-    </div>
-  );
-
-
   return (
     <div className="h-dvh w-screen flex bg-background overflow-hidden">
-      
-      {/* LEFT: TOPICS */}
-      {showTopics && (
-        <aside className="w-[240px] shrink-0 border-r">
-          <TopicSidebar />
+      {/* Topic Sidebar */}
+      {showTopics ? (
+        <aside className="w-[240px] shrink-0">
+          <TopicSidebar onToggle={() => setShowTopics(false)} />
         </aside>
+      ) : (
+        <div className="flex-shrink-0 border-r">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowTopics(true)}
+            title="Show topics"
+            className="m-2"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
       )}
 
-      {/* MIDDLE: NOTES */}
-      {showNotes && (
-        <aside className="w-[260px] shrink-0 border-r">
-          <NoteList />
+      {/* Note List Sidebar */}
+      {showNotes ? (
+        <aside className="w-[260px] shrink-0">
+          <NoteList onToggle={() => setShowNotes(false)} />
         </aside>
+      ) : (
+        <div className="flex-shrink-0 border-r">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowNotes(true)}
+            title="Show notes"
+            className="m-2"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
       )}
 
-      {/* MAIN CONTENT */}
+      {/* Main Content */}
       <main className="flex-1 relative">
-        <NoteDisplay isMobile={false} headerActions={headerActions} />
+        <NoteDisplay isMobile={false} />
       </main>
 
       <StudyToolsPanel />

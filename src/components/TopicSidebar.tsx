@@ -31,7 +31,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ThemeToggle } from './ThemeToggle';
-import { Folder, Search, Trash2, Plus, Pencil, LogOut, Share2 } from 'lucide-react';
+import { Folder, Search, Trash2, Plus, Pencil, LogOut, Share2, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
 import {
@@ -49,11 +49,10 @@ import { usePathname } from 'next/navigation';
 import { Separator } from './ui/separator';
 
 interface TopicSidebarProps {
-  isMobile?: boolean;
-  onTopicSelect?: (topicId: string) => void;
+  onToggle: () => void;
 }
 
-export function TopicSidebar({ isMobile = false, onTopicSelect }: TopicSidebarProps) {
+export function TopicSidebar({ onToggle }: TopicSidebarProps) {
   const {
     topics,
     topicsLoading,
@@ -90,9 +89,6 @@ export function TopicSidebar({ isMobile = false, onTopicSelect }: TopicSidebarPr
   
   const handleSelectTopic = (topicId: string) => {
     setActiveTopicId(topicId);
-    if(isMobile && onTopicSelect) {
-      onTopicSelect(topicId);
-    }
   };
 
 
@@ -100,9 +96,14 @@ export function TopicSidebar({ isMobile = false, onTopicSelect }: TopicSidebarPr
     topic.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
-  const headerContent = !isMobile && (
+  const headerContent = (
       <header className="flex-shrink-0 p-4 flex items-center justify-between border-b h-[65px]">
-          <CodeNoteLogo />
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={onToggle} className="mr-1">
+                <Menu className="h-5 w-5" />
+            </Button>
+            <CodeNoteLogo />
+          </div>
           <div className="flex items-center gap-2">
               <ThemeCustomizer />
               <ThemeToggle />
@@ -137,7 +138,7 @@ export function TopicSidebar({ isMobile = false, onTopicSelect }: TopicSidebarPr
 
   return (
     <>
-      <div className={cn("h-full flex flex-col bg-card/80", !isMobile && "border-r")}>
+      <div className="h-full flex flex-col bg-card/80 border-r">
         {headerContent}
 
         <div className="p-4 flex-shrink-0">

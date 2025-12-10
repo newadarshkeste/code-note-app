@@ -125,10 +125,9 @@ function safeClean(code: string): string {
 
 interface NoteDisplayProps {
   isMobile: boolean;
-  headerActions?: React.ReactNode;
 }
 
-export function NoteDisplay({ isMobile, headerActions }: NoteDisplayProps) {
+export function NoteDisplay({ isMobile }: NoteDisplayProps) {
   const {
     activeNote,
     isDirty,
@@ -184,7 +183,7 @@ export function NoteDisplay({ isMobile, headerActions }: NoteDisplayProps) {
     } else {
       setDirtyNoteContent(null);
     }
-  }, [activeNote?.id]);
+  }, [activeNote?.id, setDirtyNoteContent, setIsDirty]);
 
 
   const handleContentChange = (newContent: string | undefined) => {
@@ -304,7 +303,6 @@ export function NoteDisplay({ isMobile, headerActions }: NoteDisplayProps) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-background/80">
         <header className="flex-shrink-0 w-full flex items-center justify-between p-2 border-b h-[65px] bg-background">
-             {headerActions}
             <div/>
         </header>
         <div className="flex-grow w-full">
@@ -316,7 +314,6 @@ export function NoteDisplay({ isMobile, headerActions }: NoteDisplayProps) {
 
   const renderHeader = () => (
      <header className="flex-shrink-0 flex items-center justify-between p-2 md:p-4 border-b h-[65px] bg-background gap-2">
-        {headerActions}
         <div className="flex items-center gap-3 flex-grow min-w-0">
           <Input
             value={dirtyNoteContent.title}
