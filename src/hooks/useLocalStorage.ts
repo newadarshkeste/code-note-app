@@ -1,11 +1,10 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 
-function getValueSafe<T>(key: string, initialValue: T | (() => T)): T {
-  if (typeof window === 'undefined') {
-    return initialValue instanceof Function ? initialValue() : initialValue;
-  }
+// This function will now only be called from within useEffect on the client
+function getValueFromLocalStorage<T>(key: string, initialValue: T | (() => T)): T {
   try {
     const item = window.localStorage.getItem(key);
     return item ? JSON.parse(item) : (initialValue instanceof Function ? initialValue() : initialValue);
@@ -16,7 +15,15 @@ function getValueSafe<T>(key: string, initialValue: T | (() => T)): T {
 }
 
 export function useLocalStorage<T>(key: string, initialValue: T | (() => T)) {
-  const [storedValue, setStoredValue] = useState(() => getValueSafe(key, initialValue));
+  // Initialize state with the initialValue. This runs on server and client.
+  // It avoids accessing localStorage during server-side rendering.
+  const [storedValue, setStoredValue] = useState(initialValue);
+
+  // This effect runs ONLY on the client, after the component mounts.
+  useEffect(() => {
+    // On the client, we read the value from localStorage and update the state.
+    setStoredValue(getValueFromLocalStorage(key, initialValue));
+  }, [key, initialValue]);
 
   const setValue = useCallback((value: T | ((val: T) => T)) => {
     if (typeof window === 'undefined') {
@@ -24,6 +31,7 @@ export function useLocalStorage<T>(key: string, initialValue: T | (() => T)) {
       return;
     }
     try {
+      // The state updater function allows us to get the latest value.
       const valueToStore = value instanceof Function ? value(storedValue) : value;
       setStoredValue(valueToStore);
       window.localStorage.setItem(key, JSON.stringify(valueToStore));
@@ -31,10 +39,6 @@ export function useLocalStorage<T>(key: string, initialValue: T | (() => T)) {
       console.warn(`Error setting localStorage key “${key}”:`, error);
     }
   }, [key, storedValue]);
-
-  useEffect(() => {
-    setStoredValue(getValueSafe(key, initialValue));
-  }, [key, initialValue]);
 
   return [storedValue, setValue] as const;
 }
