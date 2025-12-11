@@ -7,6 +7,8 @@ import { LoginPage } from '@/components/LoginPage';
 import { Loader2 } from 'lucide-react';
 import { ClientProviders } from '@/components/ClientProviders';
 
+export const dynamic = 'force-dynamic';
+
 function App() {
   const { user, loading } = useAuth();
 
