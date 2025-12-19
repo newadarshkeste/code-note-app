@@ -14,12 +14,10 @@ import TextStyle from '@tiptap/extension-text-style';
 import { FontSize } from '@/lib/tiptap-font-size';
 import { LineHeight } from '@/lib/tiptap-line-height';
 import { ExcalidrawModal } from './ExcalidrawModal';
-import {
-  Table,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from '@tiptap/extension-table';
+import Table from '@tiptap/extension-table';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
+import TableRow from '@tiptap/extension-table-row';
 
 
 import {
