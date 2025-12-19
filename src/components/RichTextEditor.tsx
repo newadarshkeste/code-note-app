@@ -14,6 +14,12 @@ import TextStyle from '@tiptap/extension-text-style';
 import { FontSize } from '@/lib/tiptap-font-size';
 import { LineHeight } from '@/lib/tiptap-line-height';
 import { ExcalidrawModal } from './ExcalidrawModal';
+import {
+  Table,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from '@tiptap/extension-table';
 
 
 import {
@@ -33,6 +39,7 @@ import {
   ChevronDown,
   Baseline,
   Brush, // New icon for drawing
+  Table as TableIcon,
 } from 'lucide-react';
 import { Toggle } from './ui/toggle';
 import {
@@ -42,6 +49,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from './ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { cn } from '@/lib/utils';
 
 // Extend the default Image extension to use our React component
 const ResizableImageExtension = TiptapImage.extend({
@@ -67,6 +76,35 @@ const ResizableImageExtension = TiptapImage.extend({
     return ReactNodeViewRenderer(ResizableImageNodeView)
   },
 });
+
+const TablePopover = ({ onInsert }: { onInsert: (rows: number, cols: number) => void }) => {
+    const [hovered, setHovered] = useState({ rows: 0, cols: 0 });
+
+    return (
+        <div className="flex flex-col p-2">
+            <div className="grid grid-cols-10 gap-1">
+                {Array.from({ length: 100 }).map((_, i) => {
+                    const row = Math.floor(i / 10) + 1;
+                    const col = (i % 10) + 1;
+                    return (
+                        <div
+                            key={i}
+                            onMouseEnter={() => setHovered({ rows: row, cols: col })}
+                            onClick={() => onInsert(row, col)}
+                            className={cn(
+                                'h-4 w-4 border border-border cursor-pointer',
+                                row <= hovered.rows && col <= hovered.cols ? 'bg-primary' : 'bg-background'
+                            )}
+                        />
+                    );
+                })}
+            </div>
+            <div className="text-center text-sm mt-2">
+                {hovered.rows > 0 ? `${hovered.rows} x ${hovered.cols}` : 'Insert Table'}
+            </div>
+        </div>
+    );
+};
 
 
 interface RichTextEditorProps {
@@ -265,6 +303,16 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
       >
         <Brush className="h-4 w-4" />
       </Toggle>
+      <Popover>
+        <PopoverTrigger asChild>
+            <Toggle size="sm" pressed={editor.isActive('table')}>
+                <TableIcon className="h-4 w-4" />
+            </Toggle>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0">
+            <TablePopover onInsert={(rows, cols) => editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()} />
+        </PopoverContent>
+      </Popover>
     </div>
     <ExcalidrawModal
         isOpen={isDrawModalOpen}
@@ -319,6 +367,12 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         inline: true,
         allowBase64: true,
       }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: value,
     editorProps: {
